@@ -1,0 +1,71 @@
+/* =============================================================== */
+/* GLOBAIS E CORREÇÃO DE LAYOUT
+/* =============================================================== */
+:host {
+  // Adiciona o fundo padrão à página
+  background-color: #f8f9fa;
+  display: block;
+}
+
+.form-container {
+  /* --- O SEGREDO PARA IGNORAR O STYLES.SCSS --- */
+  position: absolute;
+  top: 120px;                   // Distância do topo (ajuste se precisar)
+  left: 50%;
+  transform: translateX(-50%); // Truque para centralizar na horizontal
+
+  // Definindo a largura do container do formulário
+  width: 90%;
+  max-width: 750px; // Um bom tamanho para formulários
+}
+
+/* =============================================================== */
+/* ESTILO DO CARD E CABEÇALHO
+/* =============================================================== */
+mat-card {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 1rem; // Padding geral para o card
+}
+
+mat-card-header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 1.5rem;
+}
+
+mat-card-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+mat-card-subtitle {
+  color: #6c757d;
+  font-size: 1rem;
+  margin-top: 0.25rem;
+}
+
+/* =============================================================== */
+/* FORMULÁRIO E BOTÃO
+/* =============================================================== */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; // Espaçamento aprimorado entre os campos
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+// Botão de submissão
+button[mat-raised-button] {
+  // Tamanho mais equilibrado
+  padding: 0.8rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 1rem; // Espaço extra antes do botão
+  border-radius: 8px; // Bordas levemente arredondadas
+}

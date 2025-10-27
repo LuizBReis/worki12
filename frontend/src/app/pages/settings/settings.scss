@@ -1,0 +1,107 @@
+/* =============================================================== */
+/* GLOBAIS E CORREÇÃO DE LAYOUT
+/* =============================================================== */
+:host {
+  // Adiciona o fundo padrão à página
+  background-color: #f8f9fa;
+  display: block;
+}
+
+.settings-container {
+  /* --- O SEGREDO PARA IGNORAR O STYLES.SCSS --- */
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  // Layout e espaçamento entre os cards
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; // Espaço consistente entre os cards e a danger zone
+
+  // Largura do container
+  width: 90%;
+  max-width: 650px; // Um bom tamanho para formulários de configuração
+}
+
+/* =============================================================== */
+/* ESTILO GERAL DOS CARDS E FORMULÁRIOS
+/* =============================================================== */
+mat-card {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+}
+
+mat-card-header {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+mat-card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem; // Espaçamento entre os campos
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+button[mat-raised-button] {
+  padding: 0.8rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  border-radius: 8px;
+}
+
+/* =============================================================== */
+/* ZONA DE PERIGO (DANGER ZONE)
+/* =============================================================== */
+.danger-zone {
+  // Fundo e borda para alertar o usuário
+  background-color: #fff5f5;
+  border: 1px solid #f1c4c4;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: right;
+  margin-top: 1rem; // Espaço extra no topo
+
+  // Estilo aprimorado para o botão de deletar
+  button[mat-stroked-button] {
+    transition: all 0.2s ease-in-out;
+
+    // Efeito de hover mais forte para indicar perigo
+    &:hover {
+      background-color: #dc3545; // Vermelho do warn color
+      color: #ffffff;
+    }
+  }
+}
+
+/* =============================================================== */
+/* CORES DOS BOTÕES PRINCIPAIS
+/* =============================================================== */
+button[mat-raised-button][color="primary"] {
+  // Aplica a cor de fundo verde que definimos
+  background-color: var(--primary-color);
+  
+  // Garante que o texto do botão seja branco
+  color: #5ca855;
+
+  // Adiciona uma transição suave para o efeito hover
+  transition: background-color 0.2s ease-in-out;
+
+  // Escurece um pouco o botão ao passar o mouse
+  &:hover {
+    background-color: #2eaf4f;
+  }
+}

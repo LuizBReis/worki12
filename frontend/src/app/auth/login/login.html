@@ -1,0 +1,34 @@
+<!-- 🔹 Logo fixo no canto superior esquerdo -->
+<a routerLink="/" class="fixed-logo-link">
+  <img src="assets/logo/worki.png" alt="Worki logo" class="fixed-logo">
+</a>
+
+<div class="login-container">
+  <h2>Entrando no WORKI</h2>
+
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" type="email" placeholder="email@example.com">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Senha</mat-label>
+      <input matInput formControlName="password" type="password" placeholder="Enter your password">
+    </mat-form-field>
+
+    <!-- ✅ Aplica classe condicional quando formulário for válido -->
+    <button
+      mat-raised-button
+      color="primary"
+      class="submit-button"
+      type="submit"
+      [disabled]="loginForm.invalid"
+      [ngClass]="{ 'active-glow': loginForm.valid }"
+    >
+      Entrar
+    </button>
+  </form>
+
+  <p>Não tem conta ? <a routerLink="/register">Cadastre-se</a></p>
+</div>

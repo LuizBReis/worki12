@@ -1,0 +1,48 @@
+<h2 mat-dialog-title>{{ data ? 'Editar' : 'Adicionar' }} Experiência Profissional</h2>
+<mat-dialog-content>
+  <form [formGroup]="experienceForm" class="experience-form">
+    <mat-form-field>
+      <mat-label>Cargo</mat-label>
+      <input matInput formControlName="title">
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Empresa</mat-label>
+      <input matInput formControlName="company">
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Tipo de Contrato</mat-label>
+      <mat-select formControlName="employmentType">
+        @for (type of employmentTypes; track type) {
+          <mat-option [value]="type">{{ type | titlecase }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="date-fields">
+      <mat-form-field>
+        <mat-label>Data de Início</mat-label>
+        <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+        <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>Data de Término (opcional)</mat-label>
+        <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+        <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field>
+      <mat-label>Descrição</mat-label>
+      <textarea matInput formControlName="description"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="experienceForm.invalid">Salvar</button>
+</mat-dialog-actions>

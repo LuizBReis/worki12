@@ -1,0 +1,66 @@
+<div class="page-layout">
+
+  <aside class="filters-sidebar">
+    <h3>Filtrar Por</h3>
+    <form [formGroup]="filterForm" class="filter-form">
+      <mat-form-field appearance="outline">
+        <input matInput formControlName="search" placeholder="Buscar por título">
+      </mat-form-field>
+
+      <h4>Orçamento (BRL)</h4>
+      <!-- Wrapper removido -->
+      <mat-form-field appearance="outline">
+        <input matInput formControlName="minBudget" type="number" placeholder="Mín">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <input matInput formControlName="maxBudget" type="number" placeholder="Máx">
+      </mat-form-field>
+
+      <h4>Selecione Habilidade</h4>
+      <mat-form-field appearance="outline">
+        <mat-select formControlName="skills" multiple>
+          <mat-option *ngFor="let s of skills" [value]="s.name">{{ s.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button type="button" mat-stroked-button (click)="clearFilters()">Limpar filtros</button>
+    </form>
+  </aside>
+
+  <main class="feed-container">
+    <div class="feed-header">
+      <h1 class="feed-title">Encontre Seu Próximo Projeto</h1>
+      <a *ngIf="userRole === 'CLIENT'" mat-raised-button color="primary" routerLink="/jobs/new">
+        Publicar uma Vaga
+      </a>
+    </div>
+
+    <div *ngIf="jobs.length > 0; else noJobs" class="jobs-grid">
+
+      <mat-card *ngFor="let job of jobs" class="job-card" [routerLink]="['/jobs', job.id]">
+        <mat-card-header>
+          <mat-card-title>{{ job.title }}</mat-card-title>
+          <mat-card-subtitle>Publicado por {{ job.author.companyName || job.author.user.firstName }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p>
+            {{ job.description.substring(0, 100) }}...
+          </p>
+          <p class="budget" *ngIf="job.budget">
+            Orçamento: {{ job.budget | currency:'BRL' }}
+          </p>
+          <p *ngIf="job.skills?.length">Skills:
+            <ng-container *ngFor="let s of job.skills; let last = last">
+              {{ s.name }}<span *ngIf="!last">, </span>
+            </ng-container>
+          </p>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <ng-template #noJobs>
+      <p>Nenhuma vaga encontrada com os filtros atuais.</p>
+    </ng-template>
+  </main>
+
+</div>

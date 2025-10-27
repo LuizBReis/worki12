@@ -1,0 +1,23 @@
+<h2 class="dialog-title">{{ title }}</h2>
+<p class="dialog-subtitle">{{ subTitle }}</p>
+
+<form [formGroup]="form" (ngSubmit)="submit()" class="review-form">
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Nota (1 a 5)</mat-label>
+    <input matInput type="number" formControlName="rating" min="1" max="5" />
+    <mat-error *ngIf="form.get('rating')?.hasError('required')">Informe uma nota.</mat-error>
+    <mat-error *ngIf="form.get('rating')?.hasError('min') || form.get('rating')?.hasError('max')">A nota deve estar entre 1 e 5.</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Comentário</mat-label>
+    <textarea matInput rows="4" formControlName="comment" placeholder="Compartilhe detalhes da sua experiência"></textarea>
+    <mat-error *ngIf="form.get('comment')?.hasError('required')">Comentário é obrigatório.</mat-error>
+    <mat-error *ngIf="form.get('comment')?.hasError('minlength')">Comentário muito curto.</mat-error>
+  </mat-form-field>
+
+  <div class="actions">
+    <button mat-stroked-button type="button" (click)="close()">Cancelar</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Enviar Avaliação</button>
+  </div>
+</form>

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "outDir": "dist",
+    "strict": true,
+    "lib": ["esnext"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "module": "CommonJS", // Esta é a linha mais importante para o ts-node funcionar
+    "moduleResolution": "node"
+  },
+  "include": ["prisma/seed.ts", "src/**/*.ts"], // Diz ao TS para olhar estes arquivos
+  "exclude": ["node_modules"]
+}

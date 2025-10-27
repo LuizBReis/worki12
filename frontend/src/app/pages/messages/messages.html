@@ -1,0 +1,80 @@
+<div class="chat-layout-container">
+  <aside class="conversations-sidebar">
+    <div class="sidebar-header">
+      <h2>Mensagens</h2>
+      <button mat-icon-button matTooltip="Nova Conversa">
+        <mat-icon>add_comment</mat-icon>
+      </button>
+    </div>
+
+    @if (conversations$ | async; as conversations) {
+      <mat-nav-list>
+        @for (conv of conversations; track conv.id) {
+          <a mat-list-item [routerLink]="['/messages', conv.id]" routerLinkActive="active" class="conversation-item">
+            <div class="conversation-details">
+              <span class="conversation-name">
+                @if (currentUserId === conv.application.applicant.id) {
+                  {{ conv.application.job.author.user.firstName }} {{ conv.application.job.author.user.lastName }}
+                } @else {
+                  {{ conv.application.applicant.firstName }} {{ conv.application.applicant.lastName }}
+                }
+              </span>
+              <span class="last-message">{{ conv.application.job.title }}</span>
+            </div>
+          </a>
+        }
+      </mat-nav-list>
+    }
+  </aside>
+
+  <main class="chat-window">
+    @if (activeConversation$ | async; as activeConv) {
+      <div class="chat-header">
+        <h3>
+          @if (currentUserId === activeConv.application.applicant.id) {
+            {{ activeConv.application.job.author.user.firstName }} {{ activeConv.application.job.author.user.lastName }}
+          } @else {
+            {{ activeConv.application.applicant.firstName }} {{ activeConv.application.applicant.lastName }}
+          }
+        </h3>
+        <span class="job-context">Assunto: {{ activeConv.application.job.title }}</span>
+      </div>
+
+      <div class="message-list" #messageListContainer>
+        @if (messages$ | async; as messages) {
+          @for (msg of messages; track msg.id) {
+            <div class="message" [class.sent]="msg.senderId === currentUserId" [class.received]="msg.senderId !== currentUserId">
+              <p>{{ msg.content }}</p>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="chat-input-area">
+  @if (activeConv.isLocked) {
+    <div class="conversation-locked-message">
+      <mat-icon>lock</mat-icon>
+      <span>Esta conversa foi encerrada e não pode mais receber mensagens.</span>
+    </div>
+  } @else {
+    <mat-form-field appearance="outline">
+      <mat-label>Digite sua mensagem</mat-label>
+      <textarea matInput 
+                cdkTextareaAutosize 
+                cdkAutosizeMinRows="1"
+                [formControl]="messageControl"
+                (keyup.enter)="onSendMessage()"></textarea>
+    </mat-form-field>
+    <button mat-fab color="primary" (click)="onSendMessage()" [disabled]="messageControl.invalid">
+      <mat-icon>send</mat-icon>
+    </button>
+  }
+</div>
+    } @else {
+      <div class="no-conversation-selected">
+        <mat-icon>chat</mat-icon>
+        <p>Selecione uma conversa para começar a conversar</p>
+      </div>
+    }
+  </main>
+</div>

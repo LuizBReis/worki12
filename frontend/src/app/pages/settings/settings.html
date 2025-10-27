@@ -1,0 +1,60 @@
+<div class="settings-container">
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Alterar Senha</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="changePasswordForm" (ngSubmit)="onSubmitPassWord()">
+        <mat-form-field appearance="outline">
+          <mat-label>Senha Antiga</mat-label>
+          <input matInput formControlName="oldPassword" type="password">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nova Senha</mat-label>
+          <input matInput formControlName="newPassword" type="password">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirmar Nova Senha</mat-label>
+          <input matInput formControlName="confirmPassword" type="password">
+          @if (changePasswordForm.hasError('passwordsDoNotMatch') && changePasswordForm.get('confirmPassword')?.touched) {
+            <mat-error>As senhas não coincidem.</mat-error>
+          }
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="changePasswordForm.invalid">
+          Salvar Alterações de Senha
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Alterar E-mail</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="changeEmailForm" (ngSubmit)="onSubmitEmail()">
+        <p>Para alterar seu e-mail, por favor, confirme sua senha atual.</p>
+        <mat-form-field appearance="outline">
+          <mat-label>Senha Atual</mat-label>
+          <input matInput formControlName="password" type="password">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Novo E-mail</mat-label>
+          <input matInput formControlName="newEmail" type="email">
+        </mat-form-field>
+        <button mat-raised-button color="primary" type="submit" [disabled]="changeEmailForm.invalid">
+          Salvar Novo E-mail
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="danger-zone">
+    <button mat-stroked-button color="warn" (click)="onDeleteAccount()">Excluir Conta</button>
+  </div>
+
+</div>

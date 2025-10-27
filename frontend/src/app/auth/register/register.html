@@ -1,0 +1,62 @@
+<!-- 🔹 Logo fixo no canto superior esquerdo -->
+<a routerLink="/" class="fixed-logo-link">
+  <img src="assets/logo/worki.png" alt="Worki logo" class="fixed-logo">
+</a>
+
+<div class="register-container">
+  <h2>Junte-se como empresa ou freelancer</h2>
+
+  <mat-button-toggle-group [formControl]="roleControl" class="role-selector">
+    <mat-button-toggle value="CLIENT">
+      <mat-icon>business</mat-icon> Sou uma empresa, procurando freelas
+    </mat-button-toggle>
+    <mat-button-toggle value="FREELANCER">
+      <mat-icon>person</mat-icon> Sou um freela, procurando vaga
+    </mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <h2>WORKI conosco!!</h2>
+
+  <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+    @if (roleControl.value === 'FREELANCER') {
+      <div class="name-fields">
+        <mat-form-field appearance="outline">
+          <mat-label>Nome</mat-label>
+          <input matInput formControlName="firstName">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Sobrenome</mat-label>
+          <input matInput formControlName="lastName">
+        </mat-form-field>
+      </div>
+    } @else {
+      <mat-form-field appearance="outline">
+        <mat-label>Nome da empresa</mat-label>
+        <input matInput formControlName="companyName">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Localização</mat-label>
+        <input matInput formControlName="location" placeholder="e.g., São Paulo, SP">
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" formControlName="email">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Senha</mat-label>
+      <input matInput type="password" formControlName="password">
+      @if (registerForm.get('password')?.hasError('minlength')) {
+        <mat-error>A senha deve ter no mínimo 6 caracteres.</mat-error>
+      }
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" class="submit-button" type="submit" [disabled]="registerForm.invalid">
+      Criar minha conta
+    </button>
+  </form>
+
+  <p>Já tem uma conta? <a routerLink="/login">Entrar</a></p>
+</div>

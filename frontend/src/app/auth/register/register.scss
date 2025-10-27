@@ -1,0 +1,174 @@
+@use 'sass:color';
+/* src/app/auth/register/register.component.scss */
+/* 🔹 Logo fixo no canto superior esquerdo */
+.fixed-logo-link {
+  position: fixed;
+  top: 20px;
+  left: 30px;
+  z-index: 1000;
+}
+
+.fixed-logo {
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* 🎨 Variáveis de cor */
+$primary-color: #34c759;
+$light-green: #eaf9ed;
+$border-green: #2db14b;
+
+/* 🧱 Container principal */
+.register-container {
+  max-width: 700px; /* 🔹 aumentamos um pouco a largura */
+  width: 100%;
+  padding: 3rem 2rem; /* 🔹 mais espaçamento interno */
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  margin: 2rem auto;
+  position: relative;
+  overflow: visible; /* 🔹 permite que o conteúdo interno cresça sem ser cortado */
+}
+
+/* 🏷️ Título */
+h2 {
+  color: #333;
+  font-weight: 500;
+  margin-top: 0;
+  margin-bottom: 2rem; /* 🔹 mais espaço entre o título e as boxes */
+}
+
+/* 🔘 Seletor de papel */
+.role-selector {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  border-radius: 10px;
+  overflow: visible;
+  margin-bottom: 2.5rem; /* 🔹 mais espaço abaixo */
+  position: relative;
+  gap: 1rem;
+  padding: 0.5rem; /* 🔹 espaço extra ao redor para quando crescer */
+
+  .mat-button-toggle {
+    flex: 1;
+    padding: 1.5rem 1rem;
+    font-size: 0.9rem;
+    color: #555;
+    background-color: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    text-align: center;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.4rem;
+    transition: all 0.35s ease;
+    transform: scale(1);
+    box-sizing: border-box;
+    z-index: 1;
+
+    mat-icon {
+      font-size: 1.3rem;
+      color: #555;
+      transition: all 0.3s ease;
+    }
+
+    ::ng-deep .mat-pseudo-checkbox,
+    ::ng-deep .mat-button-toggle-icon {
+      display: none !important;
+    }
+  }
+
+  /* ✅ Quando selecionado */
+  .mat-button-toggle-checked {
+    background-color: $light-green !important;
+    border: 2px solid $border-green !important;
+    color: #111 !important;
+    font-weight: 600;
+    z-index: 3;
+    transform: scale(1.08);
+    box-shadow: 0 6px 25px rgba($primary-color, 0.25);
+    transition: all 0.35s ease;
+
+    mat-icon {
+      color: #111 !important;
+      transform: scale(1.15);
+    }
+
+    span,
+    p {
+      font-size: 1rem !important;
+    }
+  }
+
+  /* 🔹 O não selecionado encolhe levemente */
+  .mat-button-toggle:not(.mat-button-toggle-checked) {
+    opacity: 0.9;
+    transform: scale(0.96);
+    transition: all 0.35s ease;
+  }
+}
+
+/* 🧾 Formulário */
+.register-form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 🧍‍♂️ Campos de nome (lado a lado) */
+.name-fields {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Campos do Angular Material */
+mat-form-field {
+  width: 100%;
+}
+
+/* 🚀 Botão principal */
+.submit-button {
+  background-color: #e0e0e0;
+  color: #a0a0a0;
+  cursor: not-allowed;
+  padding: 1.5rem 0;
+  width: 100%;
+  font-size: 1rem;
+  margin-top: 1rem;
+  transition: background-color 0.3s ease;
+
+  &:not([disabled]) {
+    background-color: $primary-color;
+    color: white;
+    cursor: pointer;
+
+    &:hover {
+      background-color: color.adjust($primary-color, $lightness: -5%);
+    }
+  }
+}
+
+/* 🔗 Link de login */
+p {
+  margin-top: 2rem;
+  color: #777;
+
+  a {
+    color: $primary-color;
+    text-decoration: none;
+    font-weight: 500;
+  }
+}

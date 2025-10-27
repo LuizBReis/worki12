@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  firstName         String
+  lastName          String
+  password          String
+  role              UserRole
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  clientProfile     ClientProfile?
+  freelancerProfile FreelancerProfile?
+  applications      JobApplication[]
+  messages          Message[]
+  freelancerReviewsAuthored FreelancerReview[] @relation("FreelancerReviewAuthor")
+  freelancerReviewsReceived FreelancerReview[] @relation("FreelancerReviewRecipient")
+  clientReviewsAuthored     ClientReview[]     @relation("ClientReviewAuthor")
+  clientReviewsReceived     ClientReview[]     @relation("ClientReviewRecipient")
+}
+
+model FreelancerProfile {
+  id              String           @id @default(cuid())
+  description     String?
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workExperiences WorkExperience[]
+  skills          Skill[]          @relation("FreelancerProfileToSkill")
+}
+
+model ClientProfile {
+  id          String  @id @default(cuid())
+  companyName String?
+  location    String?
+  userId      String  @unique
+  description String?
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs        Job[]
+}
+
+model Job {
+  id           String           @id @default(cuid())
+  title        String
+  description  String
+  budget       Float?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  authorId     String
+  author       ClientProfile    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+  skills       Skill[]          @relation("JobToSkill")
+}
+
+model JobApplication {
+  id           String            @id @default(cuid())
+  createdAt    DateTime          @default(now())
+  jobId        String
+  applicantId  String
+  status       ApplicationStatus @default(PENDING)
+  jobStatus    JobStatus         @default(ACTIVE)
+  conversation Conversation?
+  applicant    User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  job          Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancerReview FreelancerReview?
+  clientReview    ClientReview?
+
+  @@unique([jobId, applicantId])
+}
+
+model Skill {
+  id          String              @id @default(cuid())
+  name        String              @unique
+  isSuggested Boolean             @default(false)
+  freelancers FreelancerProfile[] @relation("FreelancerProfileToSkill")
+  jobs        Job[]               @relation("JobToSkill")
+}
+
+model WorkExperience {
+  id                  String            @id @default(cuid())
+  title               String
+  company             String
+  employmentType      EmploymentType
+  location            String?
+  startDate           DateTime
+  endDate             DateTime?
+  description         String?
+  freelancerProfileId String
+  freelancerProfile   FreelancerProfile @relation(fields: [freelancerProfileId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id            String         @id @default(cuid())
+  createdAt     DateTime       @default(now())
+  applicationId String         @unique
+  isLocked      Boolean        @default(false)
+  application   JobApplication @relation(fields: [applicationId], references: [id])
+  messages      Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  content        String
+  createdAt      DateTime     @default(now())
+  conversationId String
+  senderId       String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  CLIENT
+  FREELANCER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  REJECTED
+}
+
+model FreelancerReview {
+  id            String         @id @default(cuid())
+  rating        Int
+  comment       String?
+  applicationId String         @unique
+  authorId      String
+  recipientId   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User           @relation("FreelancerReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipient     User           @relation("FreelancerReviewRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+model ClientReview {
+  id            String         @id @default(cuid())
+  rating        Int
+  comment       String?
+  applicationId String         @unique
+  authorId      String
+  recipientId   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User           @relation("ClientReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  recipient     User           @relation("ClientReviewRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+enum JobStatus {
+  ACTIVE
+  PENDING_CLOSE
+  COMPLETED
+  REVIEWED
+}

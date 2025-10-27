@@ -1,0 +1,223 @@
+/* Variaveis para manter a consistência */
+:host {
+  --primary-color: #34c759;
+  --text-primary: #1a1a1a;
+  --text-secondary: #5e5e5e;
+  --surface-background: #ffffff;
+  --border-color: #e9eaee;
+}
+
+/* =============================================================== */
+/* NOVO LAYOUT COM CSS GRID                                        */
+/* =============================================================== */
+.details-container {
+  /* --- O SEGREDO APLICADO AOS DETALHES DA VAGA --- */
+  position: absolute;
+  top: 210px;                   // Distância do topo (ajuste se precisar)
+  left: 50%;
+  transform: translateX(-50%); // Truque para centralizar na horizontal
+
+  /* Preservando o layout interno de grid */
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  grid-template-areas:
+    "back sidebar"
+    "main sidebar";
+
+  /* Definindo a largura */
+  width: 95%;
+  max-width: 1440px;
+}
+
+
+/* --- Posicionando os itens nas áreas do Grid --- */
+
+// Botão "Back to all jobs" vai para a área 'back'
+/* --- Posicionando os itens nas áreas do Grid --- */
+
+// Botão "Back to all jobs" vai para a área 'back'
+.details-container > a[mat-stroked-button] {
+  grid-area: back;
+  justify-self: start;
+}
+
+// Card de detalhes vai para a área 'main'
+.job-details-card {
+  grid-area: main;
+}
+
+// Card de candidatos vai para a área 'sidebar'
+.applicants-card {
+  grid-area: sidebar;
+  margin-top: 0; // O gap do grid já cuida do espaçamento
+}
+
+/* =============================================================== */
+/* ESTILOS DOS COMPONENTES (Seu código original, agora organizado) */
+/* =============================================================== */
+
+/* --- Card Principal de Detalhes da Vaga --- */
+.job-details-card, .applicants-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: none;
+  padding: 1rem;
+}
+
+.job-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+
+  span {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+}
+
+.mat-mdc-card-subtitle a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.mat-mdc-card-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.description {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.budget {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* --- Card de Candidatos --- */
+.filter-input {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.applicant-item .mdc-list-item__content {
+  display: flex;                // Transforma o conteúdo em um contêiner flexível
+  justify-content: space-between; // Empurra o nome para a esquerda e as ações para a direita
+  align-items: center;          // Centraliza tudo verticalmente
+  width: 100%;                  // Garante que o flexbox use a largura total
+  
+  // ✅ Remova o padding padrão do Material que atrapalha o nosso layout
+  padding: 0 !important;
+}
+
+/* Estes são os estilos visuais para a linha inteira,
+  eles continuam no container de fora.
+*/
+.applicant-item {
+  // Zeramos a altura para que o nosso conteúdo interno a defina
+  height: auto !important;
+  padding: 0.75rem 0 !important;
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.applicant-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.applicant-link {
+  text-decoration: none;
+  color: var(--text-primary);
+  font-weight: 500;
+  // Adiciona um espaçamento para não colar nos botões
+  margin-right: 1rem;
+
+  &:hover {
+    color: var(--primary-color);
+  }
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.status-chip {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+
+  &.shortlisted {
+    background-color: var(--primary-color);
+  }
+  &.rejected {
+    background-color: #f44336;
+  }
+}
+
+.applicant-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  // Impede que os botões sejam "espremidos"
+  flex-shrink: 0;
+}
+
+/* =============================================================== */
+/* RESPONSIVIDADE PARA CELULARES E TELAS MENORES                   */
+/* =============================================================== */
+@media (max-width: 992px) {
+  .details-container {
+    // Em telas menores, voltamos para uma coluna única
+    grid-template-columns: 1fr;
+    
+    // O layout agora é vertical
+    grid-template-areas:
+      "back"
+      "main"
+      "sidebar";
+  }
+}
+/* =============================================================== */
+/* ESTILOS DE FEEDBACK (snackbars personalizados)                  */
+/* =============================================================== */
+
+.success-snackbar {
+  background-color: #34c759 !important; /* verde sucesso */
+  color: #fff !important;
+}
+
+.error-snackbar {
+  background-color: #f44336 !important; /* vermelho erro */
+  color: #fff !important;
+}
+
+.swal2-popup {
+  border-radius: 16px !important;
+  font-family: 'Inter', sans-serif !important;
+}
+.swal2-confirm {
+  border-radius: 8px !important;
+}

@@ -1,0 +1,38 @@
+/* src/styles.scss */
+
+// 1. Importar uma fonte limpa do Google Fonts
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+
+// 2. Configurações globais
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Poppins', sans-serif; // Define a fonte padrão
+  background-color: #f7f9fc; // Um cinza muito claro, similar ao design
+}
+
+// Centraliza o conteúdo principal (nossos formulários) na tela
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mat-mdc-autocomplete-panel,
+.mat-mdc-select-panel,
+.mat-mdc-datepicker-popup { /* <-- A CORREÇÃO ESTÁ NESTA LINHA */
+  background-color: white !important;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Elevar o z-index dos overlays para ficarem acima do header fixo */
+.cdk-overlay-container { z-index: 2000 !important; }
+.mat-mdc-select-panel { z-index: 2001 !important; }
+
+// Em styles.scss (adicione no final)
+.error-snackbar {
+  --mdc-snackbar-container-color: #f44336; // Cor vermelha para erros
+  --mat-mdc-snack-bar-button-color: white;
+  --mdc-snackbar-supporting-text-color: white;
+}
+

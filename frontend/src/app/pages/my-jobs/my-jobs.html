@@ -1,0 +1,82 @@
+<div class="my-jobs-container">
+  @if (isLoading) {
+    <mat-spinner></mat-spinner>
+  } @else {
+
+    @if (userRole === 'CLIENT') {
+      <h1 class="page-title">Meus Trabalhos Postados</h1>
+
+      @if (postedJobs.length > 0) {
+        <div class="jobs-grid">
+          @for (job of postedJobs; track job.id) {
+            <mat-card class="job-card" [routerLink]="['/jobs', job.id]">
+              <mat-card-header>
+                <mat-card-title>{{ job.title }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <p>{{ job.description.substring(0, 100) }}...</p>
+                @if (job.budget) {
+                  <p class="budget">Orçamento: {{ job.budget | currency:'BRL' }}</p>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      } @else {
+        <p>Você ainda não postou nenhum trabalho.</p>
+      }
+    }
+
+    @else if (userRole === 'FREELANCER') {
+      <h1 class="page-title">Minhas Candidaturas</h1>
+
+      @if (applications && applications.length > 0) {
+        <div class="jobs-grid">
+          @for (app of applications; track app.id) {
+            <mat-card class="job-card" [routerLink]="['/jobs', app.job.id]">
+              <mat-card-header>
+                <mat-card-title>{{ app.job.title }}</mat-card-title>
+                <mat-card-subtitle>Postado por {{ app.job.author.companyName || app.job.author.user.firstName }}</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>{{ app.job.description.substring(0, 100) }}...</p>
+                <mat-divider style="margin-top: 1rem;"></mat-divider> 
+                @if (app.job.budget) {
+                  <p class="budget">Orçamento: {{ app.job.budget | currency:'BRL' }}</p>
+                }
+              </mat-card-content>
+             <mat-card-footer>
+               <div class="footer-content">
+                 <p class="applied-date">Candidatura enviada em: {{ app.createdAt | date:'dd/MM/yyyy' }}</p>
+
+                 <span class="application-status" [ngClass]="app.status.toLowerCase()">
+                   {{ app.status | titlecase }}
+                 </span>
+                 <span class="application-status small" *ngIf="app.jobStatus">{{ app.jobStatus | titlecase }}</span>
+
+                 <!-- Ações do fluxo de encerramento e avaliação para freelancer -->
+                 @if (app.status === 'SHORTLISTED') {
+                   @if (app.jobStatus === 'PENDING_CLOSE') {
+                     <button mat-button color="primary" (click)="onConfirmClosure(app.id)">
+                       <mat-icon>check_circle</mat-icon>
+                       Confirmar Encerramento
+                     </button>
+                   }
+                   @if (app.jobStatus === 'COMPLETED' && !app.freelancerReview) {
+                     <button mat-stroked-button color="accent" (click)="openFreelancerReview(app)">
+                       <mat-icon>rate_review</mat-icon>
+                       Avaliar Cliente
+                     </button>
+                   }
+                 }
+               </div>
+             </mat-card-footer>
+            </mat-card>
+          }
+        </div>
+      } @else {
+        <p>Você ainda não se candidatou a nenhum trabalho.</p>
+      }
+    }
+  }
+</div>

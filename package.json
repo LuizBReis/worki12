@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@angular/fire": "^20.0.1",
+    "@fortawesome/fontawesome-free": "^7.1.0",
+    "firebase": "^11.10.0",
+    "sweetalert2": "^11.26.2"
+  }
+}

@@ -1,0 +1,104 @@
+// ===================================================
+// PADRÃO DEFINITIVO PARA TODOS OS HEADERS
+// ===================================================
+
+// ===================================================
+// PADRÃO DEFINITIVO PARA TODOS OS HEADERS
+// ===================================================
+
+.app-header {
+  width: 100%;
+  height: 70px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+
+  /* --- ADICIONE ESTA LINHA PARA FORÇAR A FONTE --- */
+  font-family: 'Poppins', sans-serif;
+}
+
+// Seletor forte que funciona tanto no <header> quanto no <mat-toolbar>
+.app-header .container, mat-toolbar.app-header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+// --- Estilos para o Conteúdo Interno ---
+.logo img {
+  height: 40px;
+  display: block;
+}
+
+// Nome padrão para os links de navegação
+.navigation-links {
+  display: flex;
+  gap: 30px;
+
+  a {
+    color: #333;
+    font-weight: 500;
+    text-decoration: none;
+    padding-bottom: 5px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      color: #00b050;
+    }
+
+    // Para o header da aplicação
+    &.active-link {
+      color: #00b050;
+      border-bottom: 2px solid #00b050;
+    }
+  }
+}
+
+// Container para os botões de ação (Login/Cadastro)
+.actions {
+  display: flex;
+  gap: 10px;
+
+  .btn-primary {
+    background: #00c853;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-outline {
+    border: 2px solid #00c853;
+    background: transparent;
+    color: #00c853;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+}
+
+// Para o ícone de usuário no header da aplicação
+.user-menu-button {
+  color: #333;
+}
+
+// Garante que o conteúdo principal da página não comece embaixo do header
+body {
+  padding-top: 70px;
+}

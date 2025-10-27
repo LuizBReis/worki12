@@ -1,0 +1,217 @@
+<div class="profile-container">
+  
+  @if (isLoading) {
+    <mat-spinner></mat-spinner>
+  }
+
+  @if (!isLoading && userProfile) {
+    <div class="profile-layout">
+      <aside class="profile-sidebar">
+        <mat-card>
+          <mat-card-content class="user-info">
+            <img class="profile-avatar" src="https://i.pravatar.cc/150?u={{userProfile.id}}" alt="User Avatar">
+            
+            @if (!isEditing) {
+              @if(userProfile.role === 'CLIENT' && userProfile.clientProfile?.companyName) {
+                <h2>{{ userProfile.clientProfile?.companyName }}</h2>
+                <p>{{ userProfile.firstName }} {{ userProfile.lastName }}</p>
+              } @else {
+                <h2>{{ userProfile.firstName }} {{ userProfile.lastName }}</h2>
+              }
+            } @else {
+              @if(userProfile.role === 'FREELANCER') {
+                <div [formGroup]="profileForm" class="edit-name-form">
+                  <mat-form-field appearance="outline"><mat-label>Nome</mat-label><input matInput formControlName="firstName"></mat-form-field>
+                  <mat-form-field appearance="outline"><mat-label>Sobrenome</mat-label><input matInput formControlName="lastName"></mat-form-field>
+                </div>
+              } @else {
+                @if(userProfile.clientProfile?.companyName) {
+                  <h2>{{ userProfile.clientProfile?.companyName }}</h2>
+                  <p>{{ userProfile.firstName }} {{ userProfile.lastName }}</p>
+                } @else {
+                  <h2>{{ userProfile.firstName }} {{ userProfile.lastName }}</h2>
+                }
+              }
+            }
+            <p class="user-role">{{ userProfile.role | titlecase }}</p>
+
+
+            @if (userProfile.role === 'CLIENT' && userProfile.clientProfile?.averageRating != null) {
+              <div class="average-rating">
+                <div class="rating-stars">
+                  @for (starType of getStars(userProfile.clientProfile?.averageRating); track $index) {
+                    <mat-icon>{{ starType }}</mat-icon>
+                  }
+                </div>
+                <span>{{ userProfile.clientProfile?.averageRating | number:'1.1-1' }} de 5</span>
+              </div>
+            }
+
+            @if (userProfile.role === 'FREELANCER' && userProfile.averageFreelancerRating != null) {
+              <div class="average-rating">
+                <div class="rating-stars">
+                  @for (starType of getStars(userProfile.averageFreelancerRating); track $index) {
+                    <mat-icon>{{ starType }}</mat-icon>
+                  }
+                </div>
+                <span>{{ userProfile.averageFreelancerRating | number:'1.1-1' }} de 5</span>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </aside>
+
+      <main class="profile-main">
+        <mat-card>
+          <mat-card-title class="card-title-container">
+            <span>Perfil</span>
+            @if (isOwnProfile && !isEditing) {
+              <button mat-icon-button (click)="toggleEditMode()"><mat-icon>edit</mat-icon></button>
+            }
+          </mat-card-title>
+
+          <mat-card-content>
+            <div [formGroup]="profileForm">
+
+              @if (userProfile.role === 'FREELANCER' && userProfile.freelancerProfile) {
+                <h3>Sobre Mim</h3>
+                @if(!isEditing) {
+                  <p>{{ userProfile.freelancerProfile.description || 'Adicione uma descrição ao seu perfil.' }}</p>
+                } @else {
+                  <mat-form-field appearance="outline" class="full-width"><mat-label>Sua Descrição</mat-label><textarea matInput cdkTextareaAutosize formControlName="description"></textarea></mat-form-field>
+                }
+                <hr>
+                
+                <h3>Habilidades</h3>
+                @if(!isEditing) {
+                  <div class="skills-container">
+                    @for (skill of userProfile.freelancerProfile.skills; track skill.id) { <button mat-stroked-button class="skill-button">{{ skill.name }}</button> }
+                    @if(userProfile.freelancerProfile.skills.length === 0) { <p><i>Adicione suas skills ao perfil.</i></p> }
+                  </div>
+                } @else {
+                  <div class="skills-container">
+                    @for (skill of userProfile.freelancerProfile.skills; track skill.id) {
+                      <button mat-stroked-button class="skill-button-editing">
+                        <span>{{ skill.name }}</span>
+                        <mat-icon (click)="onRemoveSkill(skill.name)">cancel</mat-icon>
+                      </button>
+                    }
+                  </div>
+                  <div class="skill-form">
+                    <mat-form-field appearance="outline" class="skill-input">
+                      <mat-label>Nova Habilidade</mat-label>
+                      <input matInput [formControl]="skillControl" (keyup.enter)="onAddSkill()" [matAutocomplete]="auto">
+                      <mat-autocomplete #auto="matAutocomplete">
+                        @for (skill of filteredSkills$ | async; track skill.id) {
+                          <mat-option [value]="skill.name">{{ skill.name }}</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
+                    <button mat-stroked-button type="button" (click)="onAddSkill()" [disabled]="skillControl.invalid">Adicionar</button>
+                  </div>
+                }
+                <hr>
+                <h3>Experiência Profissional</h3>
+                <div class="section-header-add-button">
+                  <span></span>
+                  @if (isOwnProfile && isEditing) {
+                    <button mat-icon-button color="primary" (click)="openExperienceDialog()"><mat-icon>add</mat-icon></button>
+                  }
+                </div>
+
+                @if (userProfile.freelancerProfile.workExperiences && userProfile.freelancerProfile.workExperiences.length > 0) {
+                  <div class="experience-list">
+                    @for (exp of userProfile.freelancerProfile.workExperiences; track exp.id) {
+                      <div class="experience-item">
+                        <div class="experience-header">
+                          <h4>{{ exp.title }}</h4>
+                          @if(isOwnProfile && isEditing){
+                            <div class="item-actions">
+                              <button mat-icon-button (click)="openExperienceDialog(exp)"><mat-icon>edit</mat-icon></button>
+                              <button mat-icon-button (click)="onDeleteExperience(exp.id)"><mat-icon>delete</mat-icon></button>
+                            </div>
+                          }
+                        </div>
+                        <p class="experience-company">{{ exp.company }} · {{ exp.employmentType | titlecase }}</p>
+                        <p class="experience-period">{{ exp.startDate | date:'MMM yyyy' }} – {{ exp.endDate ? (exp.endDate | date:'MMM yyyy') : 'Atual' }}</p>
+                        @if (exp.description) { <p class="experience-description">{{ exp.description }}</p> }
+                      </div>
+                    }
+                  </div>
+                } @else { <p><i>Adicione suas experiências de trabalho ao perfil.</i></p> }
+
+                <hr>
+                <h3>Avaliações Recebidas</h3>
+                @if (userProfile.freelancerReviewsReceived && userProfile.freelancerReviewsReceived.length > 0) {
+                  <div class="reviews-list">
+                    @for (rev of userProfile.freelancerReviewsReceived; track rev.id) {
+                      <div class="review-item">
+                        <div class="rating-stars">
+                          @for (star of getStars(rev.rating); track $index) { <mat-icon>{{ star }}</mat-icon> }
+                        </div>
+                        @if (rev.comment) { <p class="review-comment">{{ rev.comment }}</p> } @else { <p class="review-comment"><i>Sem comentário</i></p> }
+                        <div class="review-meta">
+                          <span>Por {{ (rev.author.firstName || rev.author.clientProfile?.companyName || rev.author.email) }} {{ rev.author.lastName || '' }}</span>
+                          <span>· {{ rev.createdAt | date:'shortDate' }}</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else { <p><i>Sem avaliações ainda.</i></p> }
+              }
+
+              @if (userProfile.role === 'CLIENT' && userProfile.clientProfile) {
+                <h3>Sobre a Empresa</h3>
+                @if(!isEditing) {
+                  <p>{{ userProfile.clientProfile.description || 'Adicione uma descrição sobre a empresa.' }}</p>
+                } @else {
+                  <mat-form-field appearance="outline" class="full-width"><mat-label>Sobre a Empresa</mat-label><textarea matInput cdkTextareaAutosize formControlName="description"></textarea></mat-form-field>
+                }
+                <hr>
+                <h3>Nome da Empresa</h3>
+                @if(!isEditing) {
+                  <p>{{ userProfile.clientProfile.companyName || 'Não informado' }}</p>
+                } @else {
+                  <mat-form-field appearance="outline"><mat-label>Nome da Empresa</mat-label><input matInput formControlName="companyName"></mat-form-field>
+                }
+                <hr>
+                <h3>Localização</h3>
+                @if(!isEditing) {
+                  <p>{{ userProfile.clientProfile.location || 'Não informado' }}</p>
+                } @else {
+                  <mat-form-field appearance="outline"><mat-label>Localização</mat-label><input matInput formControlName="location"></mat-form-field>
+                }
+
+                <hr>
+                <h3>Avaliações Recebidas</h3>
+                @if (userProfile.clientProfile.receivedReviews && userProfile.clientProfile.receivedReviews.length > 0) {
+                  <div class="reviews-list">
+                    @for (rev of userProfile.clientProfile.receivedReviews; track rev.id) {
+                      <div class="review-item">
+                        <div class="rating-stars">
+                          @for (star of getStars(rev.rating); track $index) { <mat-icon>{{ star }}</mat-icon> }
+                        </div>
+                        @if (rev.comment) { <p class="review-comment">{{ rev.comment }}</p> } @else { <p class="review-comment"><i>Sem comentário</i></p> }
+                        <div class="review-meta">
+                          <span>Por {{ (rev.author.firstName || rev.author.email) }} {{ rev.author.lastName || '' }}</span>
+                          <span>· {{ rev.createdAt | date:'shortDate' }}</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else { <p><i>Sem avaliações ainda.</i></p> }
+              }
+
+            </div> @if (isEditing) {
+              <hr>
+              <div class="edit-actions">
+                <button mat-stroked-button type="button" (click)="toggleEditMode()">Cancelar</button>
+                <button mat-raised-button color="primary" type="button" (click)="onSave()">Salvar Alterações</button>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </main>
+    </div>
+  }
+</div>

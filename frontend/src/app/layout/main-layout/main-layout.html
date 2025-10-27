@@ -1,0 +1,37 @@
+<mat-toolbar class="app-header">
+  <div class="container">
+    <a class="logo" routerLink="/dashboard"> <img src="assets/logo/worki.png" alt="Worki Logo">
+    </a>
+
+    <div class="navigation-links">
+      <a routerLink="/dashboard" routerLinkActive="active-link">Encontrar Vagas</a>
+      <a routerLink="/my-jobs" routerLinkActive="active-link">Meus Trabalhos</a>
+      <a routerLink="/messages/inbox" routerLinkActive="active-link">Mensagens</a>
+    </div>
+
+    <span class="spacer"></span>
+
+    <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-menu-button">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item (click)="navigateToProfile()">
+        <mat-icon>person</mat-icon>
+        <span>Meu Perfil</span>
+      </button>
+      <button mat-menu-item routerLink="/settings">
+        <mat-icon>settings</mat-icon>
+        <span>Configurações</span>
+      </button>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Sair</span>
+      </button>
+    </mat-menu>
+  </div>
+</mat-toolbar>
+
+<main class="main-content-area">
+  <router-outlet></router-outlet>
+</main>

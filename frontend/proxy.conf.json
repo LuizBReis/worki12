@@ -1,0 +1,15 @@
+{
+  "/api": {
+    "target": "https://worki-backend-uoskgqlj3a-uc.a.run.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/api/socket.io": {
+    "target": "https://worki-backend-uoskgqlj3a-uc.a.run.app",
+    "ws": true,
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
