@@ -1,5 +1,49 @@
+/* src/app/components/job-form/job-form.scss */
+
+// Estilo principal do formulário (copiado do create-job)
 .job-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1.5rem; // ✅ Aumenta o espaçamento entre os campos
 }
+
+// Garante que todos os campos ocupem a largura total
+mat-form-field {
+  width: 100%;
+}
+
+// Container que agrupa a seção de skills
+.skills-section-container {
+  // ✅ Ajuste pequeno: A margem negativa pode não ser necessária aqui
+  //    Vamos começar sem ela e ajustar se precisar.
+  // margin-top: -0.5rem; 
+}
+
+// O label "Habilidades Necessárias"
+.skills-section-label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 0.75rem;
+}
+
+// Garante que a chip-grid tenha um espaço antes do input
+mat-chip-grid {
+  margin-bottom: 1rem;
+}
+
+// O campo de input para adicionar skills
+.skill-input-field {
+  width: 100%;
+}
+
+// Opcional: Estilo para os botões de data (se estiverem lado a lado)
+.date-fields {
+   display: flex;
+   gap: 1rem;
+   // Se quiser que eles dividam o espaço igualmente:
+   // > mat-form-field {
+   //   flex: 1;
+   // }
+ }

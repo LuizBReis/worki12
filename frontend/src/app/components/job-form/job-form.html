@@ -1,7 +1,4 @@
-<h2 mat-dialog-title>Editar Vaga</h2>
-<mat-dialog-content>
-  <form [formGroup]="jobForm" class="job-form">
-    <mat-form-field appearance="outline">
+<h2 mat-dialog-title>{{ data ? 'Editar' : 'Adicionar' }} Experiência Profissional</h2> <mat-dialog-content> <form [formGroup]="jobForm" class="job-form"> <mat-form-field appearance="outline">
       <mat-label>Título da Vaga</mat-label>
       <input matInput formControlName="title">
     </mat-form-field>
@@ -15,9 +12,38 @@
       <mat-label>Orçamento (BRL)</mat-label>
       <input matInput formControlName="budget" type="number">
     </mat-form-field>
-  </form>
-</mat-dialog-content>
-<mat-dialog-actions align="end">
+
+    <div class="skills-section-container">
+      <mat-label class="skills-section-label">Habilidades Necessárias</mat-label>
+
+      <mat-chip-grid #chipGridEdit aria-label="Seleção de Habilidades">
+        @for (skill of selectedSkills; track skill) {
+          <mat-chip-row (removed)="removeSkill(skill)">
+            {{skill}}
+            <button matChipRemove aria-label="'remover ' + skill">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip-row>
+        }
+      </mat-chip-grid>
+
+      <mat-form-field appearance="outline" class="skill-input-field">
+        <mat-label>Adicionar habilidade...</mat-label>
+        <input
+          matInput
+          id="skill-input-edit"
+          placeholder="Digite ou selecione"
+          [formControl]="skillCtrl"
+          [matAutocomplete]="autoEdit"
+          [matChipInputFor]="chipGridEdit"
+          (matChipInputTokenEnd)="addSkill($event)">
+        <mat-autocomplete #autoEdit="matAutocomplete" (optionSelected)="selected($event)">
+          @for (skill of filteredSkills$ | async; track skill.id) {
+            <mat-option [value]="skill.name">{{skill.name}}</mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+    </div> </form> </mat-dialog-content> <mat-dialog-actions align="end">
   <button mat-button (click)="onCancel()">Cancelar</button>
-  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="jobForm.invalid">Salvar Alterações</button>
+  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="jobForm.invalid || selectedSkills.length === 0">Salvar Alterações</button> 
 </mat-dialog-actions>

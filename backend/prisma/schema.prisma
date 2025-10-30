@@ -16,6 +16,8 @@ model User {
   role              UserRole
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  passwordResetToken  String?   // Token para resetar a senha (opcional)
+  passwordResetExpires DateTime? // Data/Hora que o token expira (opcional)
   clientProfile     ClientProfile?
   freelancerProfile FreelancerProfile?
   applications      JobApplication[]

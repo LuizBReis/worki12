@@ -26,14 +26,22 @@
         </mat-card-subtitle>
       </mat-card-header>
 
-      <mat-card-content>
-        <h3>Descrição</h3>
-        <p class="description">{{ job.description }}</p>
-        @if (job.budget) {
-          <h3>Orçamento</h3>
-          <p class="budget">{{ job.budget | currency:'BRL' }}</p>
-        }
-      </mat-card-content>
+<mat-card-content>
+    <h3>Descrição</h3>
+    <p class="description">{{ job.description }}</p>
+    
+    @if (job.budget) {
+      <h3>Orçamento</h3>
+      <p class="budget">{{ job.budget | currency:'BRL' }}</p>
+    }
+
+    @if (job.requiredSkills && job.requiredSkills.length > 0) {
+      <h3>Habilidades Necessárias</h3>
+      <mat-chip-listbox aria-label="Habilidades da vaga">
+        @for (skill of job.requiredSkills; track skill.id) { <mat-chip disabled>{{ skill.name }}</mat-chip> }
+      </mat-chip-listbox>
+    }
+    </mat-card-content>
       
       <mat-card-actions>
         @if (userRole === 'FREELANCER' && !job.hasApplied) {

@@ -36,3 +36,29 @@ body {
   --mdc-snackbar-supporting-text-color: white;
 }
 
+// 2. Garante fundo e sombra para DIÁLOGOS, MENUS e SELECTS (geralmente funciona bem)
+.mat-mdc-dialog-surface,
+.mat-mdc-menu-panel,
+.mat-mdc-select-panel,
+.mdc-tooltip .mdc-tooltip__surface {
+  background-color: white !important;
+  box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+              0 8px 10px 1px rgba(0, 0, 0, 0.14),
+              0 3px 14px 2px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 4px !important;
+}
+
+// 3. --- ✅ FOCO NO DATEPICKER ---
+//    Aplica fundo e sombra especificamente ao painel principal do Datepicker E ao seu conteúdo interno.
+.mat-datepicker-popup,          // O contêiner geral do pop-up do calendário
+.mat-datepicker-content {       // O contêiner interno que segura o calendário em si
+  background-color: white !important; // Força o fundo branco
+}
+
+// Aplica sombra apenas ao contêiner externo do popup do datepicker
+.mat-datepicker-popup {
+   box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+               0 8px 10px 1px rgba(0, 0, 0, 0.14),
+               0 3px 14px 2px rgba(0, 0, 0, 0.12) !important;
+   border-radius: 4px !important;
+}

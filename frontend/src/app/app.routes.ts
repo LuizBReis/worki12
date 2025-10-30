@@ -16,13 +16,16 @@ import { MyJobs } from './pages/my-jobs/my-jobs';
 import { Messages } from './pages/messages/messages';
 // 🚀 Importando a nova Home Page
 import { Home } from './pages/home/home';
+import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
 
 export const routes: Routes = [
   // --- GRUPO 1: Rotas que NÃO usam o layout principal (tela cheia) ---
   { path: '', component: Home }, // ✅ Home Page pública (sem login)
   { path: 'login', component: Login },
   { path: 'register', component: Register },
-
+  { path: 'forgot-password', component: ForgotPasswordComponent }, // ✅ Rota adicionada
+  { path: 'reset-password/:token', component: ResetPasswordComponent }, // ✅ Rota adicionada
   // --- GRUPO 2: Rota "Pai" que carrega o layout principal ---
   {
     path: '',

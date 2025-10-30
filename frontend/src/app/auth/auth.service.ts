@@ -57,4 +57,13 @@ export class AuthService {
   changeEmail(emailData: any): Observable<any> {
     return this.http.post(`${this.profileApiUrl}/me/change-email`, emailData);
   }
+
+  requestPasswordReset(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<any> {
+    // Atenção ao nome da propriedade: 'newPassword' como no backend
+    return this.http.post(`${this.apiUrl}/reset-password/${token}`, { newPassword });
+  }
 }

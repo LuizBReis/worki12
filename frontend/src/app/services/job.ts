@@ -24,7 +24,7 @@ export interface Job {
   budget?: number;
   author: JobAuthor;
   hasApplied?: boolean;
-  skills?: Skill[];
+  requiredSkills?: Skill[]; // ✅ RENAMED FROM 'skills' to 'requiredSkills'
 }
 
 export interface JobApplication {

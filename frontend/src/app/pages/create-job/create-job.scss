@@ -69,3 +69,28 @@ button[mat-raised-button] {
   margin-top: 1rem; // Espaço extra antes do botão
   border-radius: 8px; // Bordas levemente arredondadas
 }
+
+// Container que agrupa a seção de skills
+.skills-section-container {
+  // Remove a margem superior extra causada pelo gap do form
+  margin-top: -0.5rem; // Ajuste este valor se precisar de mais/menos espaço acima
+}
+
+// O label "Habilidades Necessárias"
+.skills-section-label {
+  display: block; // Garante que o label ocupe sua própria linha
+  font-size: 0.85em; // Tamanho um pouco menor, como um subtítulo
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.6); // Cor padrão de label do Material
+  margin-bottom: 0.75rem; // Espaço ABAIXO do label, antes dos chips/input
+}
+
+// Garante que a chip-grid tenha um espaço antes do input
+mat-chip-grid {
+  margin-bottom: 1rem;
+}
+
+// O campo de input para adicionar skills
+.skill-input-field {
+  width: 100%;
+}

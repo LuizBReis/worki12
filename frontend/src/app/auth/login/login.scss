@@ -84,3 +84,10 @@ p {
     font-weight: 500;
   }
 }
+// Em login.scss
+
+  // Link específico do "Esqueci minha senha"
+  .forgot-password-link {
+    font-size: 0.9rem;
+    color: #555; // Uma cor um pouco mais sutil
+  }

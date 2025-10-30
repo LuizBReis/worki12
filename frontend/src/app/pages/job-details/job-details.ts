@@ -21,6 +21,7 @@ import { MatInputModule } from '@angular/material/input';
 import Swal from 'sweetalert2';
 import { ReviewDialog } from '../../components/review-dialog/review-dialog';
 import { NotificationService } from '../../services/notification';
+import { MatChipsModule } from '@angular/material/chips'; // ✅ Adicionar
 
 @Component({
   selector: 'app-job-details',
@@ -36,7 +37,8 @@ import { NotificationService } from '../../services/notification';
     MatListModule,
     ReactiveFormsModule,
     MatFormFieldModule,
-    MatInputModule
+    MatInputModule,
+    MatChipsModule
   ],
   templateUrl: './job-details.html',
   styleUrls: ['./job-details.scss']
