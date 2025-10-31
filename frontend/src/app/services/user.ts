@@ -66,6 +66,7 @@ export interface UserProfile {
   lastName: string;
   role: string;
   createdAt: Date;
+  avatarUrl?: string | null;
   freelancerProfile: FreelancerProfileModel | null;
   clientProfile: ClientProfileModel | null;
   averageFreelancerRating?: number | null;
@@ -119,5 +120,20 @@ export class UserService {
 
   getMyApplications(): Observable<JobApplication[]> {
     return this.http.get<JobApplication[]>(`${this.profileApiUrl}/me/applications`);
+  }
+
+  updateUserAvatar(file: File): Observable<UserProfile> {
+    // Para enviar arquivos, precisamos usar FormData
+    const formData = new FormData();
+    // A chave 'avatar' DEVE ser a mesma que usamos no middleware do backend:
+    // uploadAvatar.single('avatar')
+    formData.append('avatar', file, file.name);
+
+    // O browser vai definir o 'Content-Type' como 'multipart/form-data' automaticamente
+    return this.http.post<UserProfile>(`${this.profileApiUrl}/me/avatar`, formData);
+  }
+
+  deleteUserAvatar(): Observable<UserProfile> {
+    return this.http.delete<UserProfile>(`${this.profileApiUrl}/me/avatar`);
   }
 }

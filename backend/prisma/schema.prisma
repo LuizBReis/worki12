@@ -16,6 +16,7 @@ model User {
   role              UserRole
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  avatarUrl String?  // URL da foto de perfil
   passwordResetToken  String?   // Token para resetar a senha (opcional)
   passwordResetExpires DateTime? // Data/Hora que o token expira (opcional)
   clientProfile     ClientProfile?

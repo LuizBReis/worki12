@@ -207,6 +207,30 @@ const getApplicationsByUser = async (userId) => {
   });
 };
 
+const updateUserAvatar = async (userId, newAvatarUrl) => {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      avatarUrl: newAvatarUrl // Atualiza o campo que criamos no schema
+    }
+  });
+  
+  // Retorna o perfil completo e atualizado
+  return getUserById(userId); 
+};
+
+const deleteUserAvatar = async (userId) => {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      avatarUrl: null // Define o avatarUrl como null
+    }
+  });
+  
+  // Retorna o perfil completo e atualizado
+  return getUserById(userId); 
+};
+
 module.exports = {
   getUserById,
   updateUserProfile,
@@ -220,4 +244,6 @@ module.exports = {
   changeEmail,
   getPostedJobsByUser,
   getApplicationsByUser,
+  updateUserAvatar,
+  deleteUserAvatar,
 };

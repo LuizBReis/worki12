@@ -197,6 +197,42 @@ const getMyApplications = async (req, res) => {
   }
 };
 
+const updateMyAvatar = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    // 1. Verifica se o upload foi feito
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
+    }
+
+    // 2. O `req.file.path` contém a URL segura do Cloudinary (não é o caminho do arquivo local)
+    const newAvatarUrl = req.file.path;
+
+    // 3. Chama o service para salvar a URL no banco
+    const updatedUser = await userService.updateUserAvatar(userId, newAvatarUrl);
+    
+    delete updatedUser.password;
+    res.status(200).json(updatedUser); // Retorna o usuário atualizado com a nova URL
+  } catch (error) {
+    console.error('ERRO AO ATUALIZAR AVATAR:', error);
+    res.status(500).json({ message: 'Erro ao atualizar avatar.', error: error.message });
+  }
+};
+
+const deleteMyAvatar = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const updatedUser = await userService.deleteUserAvatar(userId);
+    
+    delete updatedUser.password;
+    res.status(200).json(updatedUser); // Retorna o usuário com avatarUrl = null
+  } catch (error) {
+    console.error('ERRO AO DELETAR AVATAR:', error);
+    res.status(500).json({ message: 'Erro ao deletar avatar.', error: error.message });
+  }
+}
+
 
 module.exports = {
   getMyProfile,
@@ -211,4 +247,6 @@ module.exports = {
   changeEmail,
   getMyPostedJobs,
   getMyApplications,
+  updateMyAvatar,
+  deleteMyAvatar,
 };

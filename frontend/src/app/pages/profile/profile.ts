@@ -248,4 +248,52 @@ export class Profile implements OnInit {
       });
     });
   }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      // Opcional: Validar tamanho do arquivo (ex: max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        this.notification.error('Erro!', 'A imagem não pode ter mais de 5MB.');
+        return;
+      }
+
+      this.isLoading = true; // Ativa o spinner global
+      this.userService.updateUserAvatar(file).subscribe({
+        next: (updatedProfile) => {
+          this.userProfile = updatedProfile; // Atualiza o perfil com a nova URL
+          this.notification.success('Sucesso!', 'Sua foto de perfil foi atualizada.');
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Erro ao enviar avatar:', err);
+          this.notification.error('Erro!', 'Não foi possível atualizar sua foto.');
+          this.isLoading = false;
+        }
+      });
+    }
+  }
+
+  onDeleteAvatar(): void {
+    if (!confirm('Tem certeza que deseja remover sua foto de perfil?')) {
+      return; // Opcional: confirmação do usuário
+    }
+
+    this.isLoading = true;
+    this.userService.deleteUserAvatar().subscribe({
+      next: (updatedProfile) => {
+        this.userProfile = updatedProfile;
+        this.notification.success('Sucesso!', 'Sua foto de perfil foi removida.');
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Erro ao deletar avatar:', err);
+        this.notification.error('Erro!', 'Não foi possível remover sua foto.');
+        this.isLoading = false;
+      }
+    });
+  }
 }

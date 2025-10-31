@@ -372,3 +372,16 @@ hr {
   gap: 1rem;
   width: 100%;
 }
+
+/* Adicione no final do seu profile.scss */
+
+/* --- Estilo da Seção de Edição de Avatar --- */
+.avatar-edit-section {
+  // Centraliza o botão
+  display: flex;
+  justify-content: center;
+  
+  // Espaçamento
+  margin-top: 1rem; // Espaço acima do botão
+  margin-bottom: 0.5rem; // Espaço abaixo, antes do nome
+}

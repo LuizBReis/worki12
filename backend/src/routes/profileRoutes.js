@@ -2,6 +2,7 @@
 const express = require('express');
 const profileController = require('../controllers/profileController');
 const authMiddleware = require('../middleware/authMiddleware'); // Importa o middleware
+const uploadAvatar = require('../config/cloudinary');
 
 const router = express.Router();
 
@@ -27,5 +28,18 @@ router.post('/me/change-email', authMiddleware, profileController.changeEmail);
 // --- NOVAS ROTAS PARA A PÁGINA "MY JOBS" ---
 router.get('/me/jobs', authMiddleware, profileController.getMyPostedJobs);
 router.get('/me/applications', authMiddleware, profileController.getMyApplications);
+
+router.post(
+  '/me/avatar',          // A rota da API
+  authMiddleware,        // 1º: Garante que o usuário está logado
+  uploadAvatar.single('avatar'), // 2º: O Multer intercepta UM arquivo chamado 'avatar'
+  profileController.updateMyAvatar // 3º: O controller finaliza
+);
+
+router.delete(
+  '/me/avatar',        // A rota da API (mesma da POST, mas método DELETE)
+  authMiddleware,      // Garante que o usuário está logado
+  profileController.deleteMyAvatar // O controller que fará o trabalho
+);
 
 module.exports = router;

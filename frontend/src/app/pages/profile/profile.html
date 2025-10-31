@@ -9,8 +9,33 @@
       <aside class="profile-sidebar">
         <mat-card>
           <mat-card-content class="user-info">
-            <img class="profile-avatar" src="https://i.pravatar.cc/150?u={{userProfile.id}}" alt="User Avatar">
-
+            
+            <img 
+              class="profile-avatar" 
+              [src]="userProfile.avatarUrl || 'https://api.dicebear.com/7.x/initials/svg?seed=' + userProfile.firstName + '+' + userProfile.lastName" 
+              alt="Avatar do Usuário">
+            
+            @if (isOwnProfile && isEditing) {
+              <div class="avatar-edit-section">
+                <input 
+                  type="file" 
+                  hidden
+                  #fileInput 
+                  (change)="onFileSelected($event)"
+                  accept="image/png, image/jpeg, image/jpg">
+                
+                <button mat-stroked-button color="primary" (click)="fileInput.click()">
+                  <mat-icon>upload</mat-icon>
+                  Trocar Foto
+                </button>
+                @if (userProfile.avatarUrl) {
+              <button mat-stroked-button color="warn" (click)="onDeleteAvatar()">
+                <mat-icon>delete</mat-icon>
+                Remover Foto
+              </button>
+            }
+              </div>
+            }
             @if (!isEditing) {
               @if(userProfile.role === 'CLIENT' && userProfile.clientProfile?.companyName) {
                 <h2>{{ userProfile.clientProfile?.companyName }}</h2>
