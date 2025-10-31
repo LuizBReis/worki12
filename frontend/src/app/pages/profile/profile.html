@@ -15,27 +15,32 @@
               [src]="userProfile.avatarUrl || 'https://api.dicebear.com/7.x/initials/svg?seed=' + userProfile.firstName + '+' + userProfile.lastName" 
               alt="Avatar do Usuário">
             
-            @if (isOwnProfile && isEditing) {
-              <div class="avatar-edit-section">
-                <input 
-                  type="file" 
-                  hidden
-                  #fileInput 
-                  (change)="onFileSelected($event)"
-                  accept="image/png, image/jpeg, image/jpg">
-                
-                <button mat-stroked-button color="primary" (click)="fileInput.click()">
-                  <mat-icon>upload</mat-icon>
-                  Trocar Foto
-                </button>
-                @if (userProfile.avatarUrl) {
-              <button mat-stroked-button color="warn" (click)="onDeleteAvatar()">
-                <mat-icon>delete</mat-icon>
-                Remover Foto
-              </button>
-            }
-              </div>
-            }
+           @if (isOwnProfile && isEditing) {
+  <div class="avatar-edit-section">
+    <input 
+      type="file" 
+      hidden
+      #fileInput 
+      (change)="onFileSelected($event)"
+      accept="image/png, image/jpeg, image/jpg"
+      [disabled]="isUploading"> <button mat-stroked-button color="primary" (click)="fileInput.click()" [disabled]="isUploading"> <mat-icon>upload</mat-icon>
+      Trocar Foto
+    </button>
+
+    @if (userProfile.avatarUrl) {
+      <button mat-stroked-button color="warn" (click)="onDeleteAvatar()" [disabled]="isUploading"> <mat-icon>delete</mat-icon>
+        Remover Foto
+      </button>
+    }
+  </div>
+
+  @if (isUploading) {
+    <div class="upload-spinner">
+      <mat-spinner diameter="30"></mat-spinner> <span>Enviando...</span>
+    </div>
+  }
+}
+
             @if (!isEditing) {
               @if(userProfile.role === 'CLIENT' && userProfile.clientProfile?.companyName) {
                 <h2>{{ userProfile.clientProfile?.companyName }}</h2>
@@ -97,6 +102,7 @@
             <div [formGroup]="profileForm">
 
               @if (userProfile.role === 'FREELANCER' && userProfile.freelancerProfile) {
+                
                 <h3>Sobre Mim</h3>
                 @if(!isEditing) {
                   <p>{{ userProfile.freelancerProfile.description || 'Adicione uma descrição ao seu perfil.' }}</p>
@@ -134,6 +140,7 @@
                   </div>
                 }
                 <hr>
+
                 <h3>Experiência Profissional</h3>
                 <div class="section-header-add-button">
                   <span></span>
@@ -141,7 +148,6 @@
                     <button mat-icon-button color="primary" (click)="openExperienceDialog()"><mat-icon>add</mat-icon></button>
                   }
                 </div>
-
                 @if (userProfile.freelancerProfile.workExperiences && userProfile.freelancerProfile.workExperiences.length > 0) {
                   <div class="experience-list">
                     @for (exp of userProfile.freelancerProfile.workExperiences; track exp.id) {
@@ -163,6 +169,51 @@
                   </div>
                 } @else { <p><i>Adicione suas experiências de trabalho ao perfil.</i></p> }
 
+                <hr>
+                <h3>Vídeo de Apresentação</h3>
+                
+                @if (isOwnProfile || userRole === 'CLIENT') {
+
+                  @if (userProfile.freelancerProfile?.videoUrl) {
+                    <div class="video-container">
+                      <video controls [src]="userProfile.freelancerProfile.videoUrl" width="100%"></video>
+                    </div>
+                  } @else {
+                    @if (!isEditing) {
+                      <p><i>O freelancer ainda não adicionou um vídeo de apresentação.</i></p>
+                    }
+                  }
+
+                  @if (isOwnProfile && isEditing) {
+  <div class="video-edit-section">
+    <input 
+      type="file" 
+      hidden
+      #videoInput 
+      (change)="onVideoFileSelected($event)"
+      accept="video/mp4,video/quicktime,video/webm"
+      [disabled]="isUploading"> <button mat-stroked-button color="primary" (click)="videoInput.click()" [disabled]="isUploading"> <mat-icon>videocam</mat-icon>
+      {{ userProfile.freelancerProfile?.videoUrl ? 'Trocar Vídeo' : 'Adicionar Vídeo' }}
+    </button>
+
+    @if (userProfile.freelancerProfile?.videoUrl) {
+      <button mat-stroked-button color="warn" (click)="onDeleteVideo()" [disabled]="isUploading"> <mat-icon>delete</mat-icon>
+        Remover Vídeo
+      </button>
+    }
+  </div>
+  
+  @if (isUploading) {
+    <div class="upload-spinner">
+      <mat-spinner diameter="30"></mat-spinner>
+      <span>Enviando...</span>
+    </div>
+  }
+}
+
+                } @else {
+                  <p><i>Vídeos de apresentação são visíveis apenas para clientes.</i></p>
+                }
                 <hr>
                 <h3>Avaliações Recebidas</h3>
                 @if (userProfile.freelancerReviewsReceived && userProfile.freelancerReviewsReceived.length > 0) {

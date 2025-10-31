@@ -29,7 +29,7 @@ import { MatSelectModule } from '@angular/material/select';
   imports: [
     CommonModule, ReactiveFormsModule, DatePipe, TitleCasePipe,
     MatAutocompleteModule, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressSpinnerModule,MatSelectModule
+    MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule
   ],
   templateUrl: './profile.html',
   styleUrls: ['./profile.scss']
@@ -37,6 +37,7 @@ import { MatSelectModule } from '@angular/material/select';
 export class Profile implements OnInit {
   userProfile: UserProfile | null = null;
   isLoading = true;
+  isUploading = false;
   isOwnProfile = false;
   isEditing = false;
   profileForm: FormGroup;
@@ -45,12 +46,14 @@ export class Profile implements OnInit {
   allSuggestedSkills: Skill[] = [];
   filteredSkills$: Observable<Skill[]>;
 
-  // ✅ ADICIONA A LISTA DE ESTADOS
   states: string[] = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
     'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
     'SP', 'SE', 'TO'
   ];
+
+  // --- ✅ NOVA PROPRIEDADE ---
+  userRole: string | null = null; // Para saber o role do visitante (para o vídeo)
 
   constructor(
     private route: ActivatedRoute,
@@ -72,6 +75,9 @@ export class Profile implements OnInit {
       address: [''],
     });
     this.filteredSkills$ = new Observable<Skill[]>();
+    
+    // --- ✅ NOVO CÓDIGO NO CONSTRUCTOR ---
+    this.userRole = this.authService.getUserRole(); // Armazena o role do visitante
   }
 
   ngOnInit(): void {
@@ -98,9 +104,9 @@ export class Profile implements OnInit {
             lastName: data.lastName,
             description: data.role === 'FREELANCER' ? data.freelancerProfile?.description : data.clientProfile?.description,
             companyName: data.clientProfile?.companyName,
-            city: data.clientProfile?.city,       // ✅ Adicionado
-            state: data.clientProfile?.state,     // ✅ Adicionado
-            address: data.clientProfile?.address, // ✅ Adicionado
+            city: data.clientProfile?.city,
+            state: data.clientProfile?.state,
+            address: data.clientProfile?.address,
           });
           this.isLoading = false;
         },
@@ -112,7 +118,7 @@ export class Profile implements OnInit {
     }
   }
 
-  // --- Helper para estrelas de classificação (0–5 com meia estrela) ---
+  // --- Helper para estrelas (já existe) ---
   getStars(average: number | null | undefined): string[] {
     const icons: string[] = [];
     const value = typeof average === 'number' ? Math.max(0, Math.min(5, average)) : 0;
@@ -249,51 +255,105 @@ export class Profile implements OnInit {
     });
   }
 
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-
-      // Opcional: Validar tamanho do arquivo (ex: max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        this.notification.error('Erro!', 'A imagem não pode ter mais de 5MB.');
-        return;
-      }
-
-      this.isLoading = true; // Ativa o spinner global
-      this.userService.updateUserAvatar(file).subscribe({
-        next: (updatedProfile) => {
-          this.userProfile = updatedProfile; // Atualiza o perfil com a nova URL
-          this.notification.success('Sucesso!', 'Sua foto de perfil foi atualizada.');
-          this.isLoading = false;
-        },
-        error: (err) => {
-          console.error('Erro ao enviar avatar:', err);
-          this.notification.error('Erro!', 'Não foi possível atualizar sua foto.');
-          this.isLoading = false;
-        }
-      });
+  // --- Funções de Avatar (já existem) ---
+onFileSelected(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      this.notification.error('Erro!', 'A imagem não pode ter mais de 5MB.');
+      return;
     }
-  }
-
-  onDeleteAvatar(): void {
-    if (!confirm('Tem certeza que deseja remover sua foto de perfil?')) {
-      return; // Opcional: confirmação do usuário
-    }
-
-    this.isLoading = true;
-    this.userService.deleteUserAvatar().subscribe({
+    
+    // ✅ USA A NOVA VARIÁVEL
+    this.isUploading = true; 
+    
+    this.userService.updateUserAvatar(file).subscribe({
       next: (updatedProfile) => {
         this.userProfile = updatedProfile;
-        this.notification.success('Sucesso!', 'Sua foto de perfil foi removida.');
-        this.isLoading = false;
+        this.notification.success('Sucesso!', 'Sua foto de perfil foi atualizada.');
+        this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
       },
       error: (err) => {
-        console.error('Erro ao deletar avatar:', err);
-        this.notification.error('Erro!', 'Não foi possível remover sua foto.');
-        this.isLoading = false;
+        console.error('Erro ao enviar avatar:', err);
+        this.notification.error('Erro!', 'Não foi possível atualizar sua foto.');
+        this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
       }
     });
   }
+}
+
+// --- Função de Deletar Avatar ATUALIZADA ---
+onDeleteAvatar(): void {
+  if (!confirm('Tem certeza que deseja remover sua foto de perfil?')) {
+    return;
+  }
+  
+  // ✅ USA A NOVA VARIÁVEL
+  this.isUploading = true; 
+  
+  this.userService.deleteUserAvatar().subscribe({
+    next: (updatedProfile) => {
+      this.userProfile = updatedProfile;
+      this.notification.success('Sucesso!', 'Sua foto de perfil foi removida.');
+      this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
+    },
+    error: (err) => {
+      console.error('Erro ao deletar avatar:', err);
+      this.notification.error('Erro!', 'Não foi possível remover sua foto.');
+      this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
+    }
+  });
+}
+
+// --- Função de Vídeo ATUALIZADA ---
+onVideoFileSelected(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    if (file.size > 100 * 1024 * 1024) {
+      this.notification.error('Erro!', 'O vídeo não pode ter mais de 100MB.');
+      return;
+    }
+
+    // ✅ USA A NOVA VARIÁVEL
+    this.isUploading = true; 
+    
+    this.userService.updateUserVideo(file).subscribe({
+      next: (updatedProfile) => {
+        this.userProfile = updatedProfile;
+        this.notification.success('Sucesso!', 'Seu vídeo foi enviado.');
+        this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
+      },
+      error: (err) => {
+        console.error('Erro ao enviar vídeo:', err);
+        this.notification.error('Erro!', 'Não foi possível enviar seu vídeo.');
+        this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
+      }
+    });
+  }
+}
+
+// --- Função de Deletar Vídeo ATUALIZADA ---
+onDeleteVideo(): void {
+  if (!confirm('Tem certeza que deseja remover seu vídeo de apresentação?')) {
+    return;
+  }
+  
+  // ✅ USA A NOVA VARIÁVEL
+  this.isUploading = true; 
+  
+  this.userService.deleteUserVideo().subscribe({
+    next: (updatedProfile) => {
+      this.userProfile = updatedProfile;
+      this.notification.success('Sucesso!', 'Seu vídeo foi removido.');
+      this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
+    },
+    error: (err) => {
+      console.error('Erro ao deletar vídeo:', err);
+      this.notification.error('Erro!', 'Não foi possível remover seu vídeo.');
+      this.isUploading = false; // ✅ USA A NOVA VARIÁVEL
+    }
+  });
+}
 }

@@ -2,7 +2,7 @@
 const express = require('express');
 const profileController = require('../controllers/profileController');
 const authMiddleware = require('../middleware/authMiddleware'); // Importa o middleware
-const uploadAvatar = require('../config/cloudinary');
+const { uploadAvatar, uploadVideo } = require('../config/cloudinary'); // ✅ Importa os dois
 
 const router = express.Router();
 
@@ -40,6 +40,19 @@ router.delete(
   '/me/avatar',        // A rota da API (mesma da POST, mas método DELETE)
   authMiddleware,      // Garante que o usuário está logado
   profileController.deleteMyAvatar // O controller que fará o trabalho
+);
+
+router.post(
+  '/me/video',
+  authMiddleware,
+  uploadVideo.single('video'), // Usa o novo uploader
+  profileController.updateMyVideo // Nova função
+);
+
+router.delete(
+  '/me/video',
+  authMiddleware,
+  profileController.deleteMyVideo // Nova função
 );
 
 module.exports = router;

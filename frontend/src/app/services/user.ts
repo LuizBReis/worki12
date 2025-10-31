@@ -46,6 +46,7 @@ export interface FreelancerProfileModel {
   description?: string;
   skills: Skill[];
   workExperiences: WorkExperience[];
+  videoUrl?: string | null;
 }
 
 export interface ClientProfileModel {
@@ -135,5 +136,16 @@ export class UserService {
 
   deleteUserAvatar(): Observable<UserProfile> {
     return this.http.delete<UserProfile>(`${this.profileApiUrl}/me/avatar`);
+  }
+
+  updateUserVideo(file: File): Observable<UserProfile> {
+    const formData = new FormData();
+    // A chave 'video' DEVE ser a mesma do middleware: uploadVideo.single('video')
+    formData.append('video', file, file.name); 
+    return this.http.post<UserProfile>(`${this.profileApiUrl}/me/video`, formData);
+  }
+
+  deleteUserVideo(): Observable<UserProfile> {
+    return this.http.delete<UserProfile>(`${this.profileApiUrl}/me/video`);
   }
 }

@@ -233,6 +233,35 @@ const deleteMyAvatar = async (req, res) => {
   }
 }
 
+const updateMyVideo = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nenhum arquivo de vídeo enviado.' });
+    }
+    // O service agora atualiza o FreelancerProfile
+    const updatedUser = await userService.updateUserVideo(userId, req.file.path);
+    delete updatedUser.password;
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error('ERRO AO ATUALIZAR VÍDEO:', error);
+    res.status(500).json({ message: 'Erro ao atualizar vídeo.', error: error.message });
+  }
+};
+
+// --- ✅ NOVA FUNÇÃO ---
+const deleteMyVideo = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const updatedUser = await userService.deleteUserVideo(userId);
+    delete updatedUser.password;
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error('ERRO AO DELETAR VÍDEO:', error);
+    res.status(500).json({ message: 'Erro ao deletar vídeo.', error: error.message });
+  }
+};
+
 
 module.exports = {
   getMyProfile,
@@ -249,4 +278,6 @@ module.exports = {
   getMyApplications,
   updateMyAvatar,
   deleteMyAvatar,
+  updateMyVideo,  // ✅ Exporta
+  deleteMyVideo,
 };

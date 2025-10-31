@@ -231,6 +231,29 @@ const deleteUserAvatar = async (userId) => {
   return getUserById(userId); 
 };
 
+// --- ✅ NOVA FUNÇÃO ---
+const updateUserVideo = async (userId, newVideoUrl) => {
+  // Atualiza o FreelancerProfile, não o User
+  await prisma.freelancerProfile.update({
+    where: { userId: userId }, // Encontra o perfil pelo userId
+    data: {
+      videoUrl: newVideoUrl 
+    }
+  });
+  return getUserById(userId); 
+};
+
+// --- ✅ NOVA FUNÇÃO ---
+const deleteUserVideo = async (userId) => {
+  await prisma.freelancerProfile.update({
+    where: { userId: userId },
+    data: {
+      videoUrl: null // Define o videoUrl como null
+    }
+  });
+  return getUserById(userId); 
+};
+
 module.exports = {
   getUserById,
   updateUserProfile,
@@ -246,4 +269,6 @@ module.exports = {
   getApplicationsByUser,
   updateUserAvatar,
   deleteUserAvatar,
+  updateUserVideo, // ✅ Exporta
+  deleteUserVideo, // ✅ Exporta
 };
