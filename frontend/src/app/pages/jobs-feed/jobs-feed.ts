@@ -1,13 +1,10 @@
-// src/app/pages/jobs-feed/jobs-feed.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms'; // Já está ok
 import { debounceTime, startWith, switchMap } from 'rxjs/operators';
 
-
-// Imports do Material e do nosso Serviço/Interface
+// Imports do Material
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 
 import { Job, JobService } from '../../services/job';
-import { AuthService } from '../../auth/auth.service'; 
+import { AuthService } from '../../auth/auth.service';
 import { SkillService, Skill } from '../../services/skill';
 
 @Component({
@@ -24,8 +21,8 @@ import { SkillService, Skill } from '../../services/skill';
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule, // Adicionamos o módulo de cards aqui
-    RouterLink, 
+    MatCardModule,
+    RouterLink,
     MatButtonModule,
     ReactiveFormsModule,
     MatFormFieldModule,
@@ -37,24 +34,38 @@ import { SkillService, Skill } from '../../services/skill';
   styleUrls: ['./jobs-feed.scss']
 })
 export class JobsFeed implements OnInit {
-  
-  jobs: Job[] = []; // Variável para armazenar nossa lista de vagas
+
+  jobs: Job[] = [];
   userRole: string | null = null;
   filterForm: FormGroup;
   skills: Skill[] = [];
 
-  // Injetamos o JobService no construtor
-  constructor(private jobService: JobService, private authService: AuthService, private fb: FormBuilder, private skillService: SkillService) {
-    // 1. Cria o formulário de filtros
+  // ✅ Lista de estados (mesma do registro)
+  states: string[] = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+    'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+    'SP', 'SE', 'TO'
+  ];
+
+  constructor(
+    private jobService: JobService,
+    private authService: AuthService,
+    private fb: FormBuilder,
+    private skillService: SkillService
+  ) {
+    // ✅ 1. Atualiza o formulário de filtros
     this.filterForm = this.fb.group({
-      search: [''],
+      search: [''],      // Filtro de Título
       minBudget: [null],
       maxBudget: [null],
-      skills: [[]]
+      skills: [[]],
+      // --- NOVOS CAMPOS DE FILTRO ---
+      city: [''],       // Filtro de Cidade
+      state: [''],      // Filtro de Estado
+      address: ['']     // Filtro de Endereço (para sua ideia)
     });
   }
 
-  // Este método é chamado automaticamente quando o componente é iniciado
   ngOnInit(): void {
     this.userRole = this.authService.getUserRole();
 
@@ -82,12 +93,17 @@ export class JobsFeed implements OnInit {
     });
   }
 
+  // ✅ 2. Atualiza o clearFilters
   clearFilters(): void {
     this.filterForm.patchValue({
       search: '',
       minBudget: null,
       maxBudget: null,
-      skills: []
+      skills: [],
+      // --- LIMPA NOVOS CAMPOS ---
+      city: '',
+      state: '',
+      address: ''
     });
   }
 }

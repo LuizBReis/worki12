@@ -51,8 +51,10 @@ export interface FreelancerProfileModel {
 export interface ClientProfileModel {
   id: string;
   companyName?: string;
-  location?: string;
   description?: string;
+  city?: string;
+  state?: string;
+  address?: string;
   averageRating?: number | null;
   receivedReviews?: PublicClientReview[];
 }

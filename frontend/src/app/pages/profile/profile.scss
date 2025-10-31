@@ -359,3 +359,16 @@ hr {
 .profile-sidebar .user-info .average-rating {
   border: none;
 }
+
+/* Campo de formulário de largura total (reutilizável) */
+.full-width {
+  width: 100%;
+}
+
+/* Grid para Cidade/Estado */
+.location-fields-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; // Cidade (2/3), Estado (1/3)
+  gap: 1rem;
+  width: 100%;
+}

@@ -40,9 +40,15 @@ model FreelancerProfile {
 model ClientProfile {
   id          String  @id @default(cuid())
   companyName String?
-  location    String?
-  userId      String  @unique
   description String?
+
+  // --- ✅ A ESTRUTURA CORRETA ---
+  city        String? // (Item #7 - Coletado no registro)
+  state       String? // (Item #7 - Coletado no registro)
+  address     String? // (Item #8 - Endereço completo principal)
+  // (Vamos adicionar as "unidades" depois, como um JSON talvez)
+
+  userId      String  @unique
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobs        Job[]
 }

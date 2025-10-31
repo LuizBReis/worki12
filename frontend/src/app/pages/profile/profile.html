@@ -1,5 +1,5 @@
 <div class="profile-container">
-  
+
   @if (isLoading) {
     <mat-spinner></mat-spinner>
   }
@@ -10,7 +10,7 @@
         <mat-card>
           <mat-card-content class="user-info">
             <img class="profile-avatar" src="https://i.pravatar.cc/150?u={{userProfile.id}}" alt="User Avatar">
-            
+
             @if (!isEditing) {
               @if(userProfile.role === 'CLIENT' && userProfile.clientProfile?.companyName) {
                 <h2>{{ userProfile.clientProfile?.companyName }}</h2>
@@ -35,7 +35,6 @@
             }
             <p class="user-role">{{ userProfile.role | titlecase }}</p>
 
-
             @if (userProfile.role === 'CLIENT' && userProfile.clientProfile?.averageRating != null) {
               <div class="average-rating">
                 <div class="rating-stars">
@@ -46,7 +45,6 @@
                 <span>{{ userProfile.clientProfile?.averageRating | number:'1.1-1' }} de 5</span>
               </div>
             }
-
             @if (userProfile.role === 'FREELANCER' && userProfile.averageFreelancerRating != null) {
               <div class="average-rating">
                 <div class="rating-stars">
@@ -172,16 +170,46 @@
                 @if(!isEditing) {
                   <p>{{ userProfile.clientProfile.companyName || 'Não informado' }}</p>
                 } @else {
-                  <mat-form-field appearance="outline"><mat-label>Nome da Empresa</mat-label><input matInput formControlName="companyName"></mat-form-field>
+                  <mat-form-field appearance="outline" class="full-width"><mat-label>Nome da Empresa</mat-label><input matInput formControlName="companyName"></mat-form-field>
                 }
+                
                 <hr>
                 <h3>Localização</h3>
+                
                 @if(!isEditing) {
-                  <p>{{ userProfile.clientProfile.location || 'Não informado' }}</p>
+                  <p>
+                    @if(userProfile.clientProfile.address) {
+                      <span>{{ userProfile.clientProfile.address }}<br></span>
+                    }
+                    @if(userProfile.clientProfile.city || userProfile.clientProfile.state) {
+                      <span>{{ userProfile.clientProfile.city }}, {{ userProfile.clientProfile.state }}</span>
+                    } @else if (!userProfile.clientProfile.address) {
+                      <i>Nenhuma localização informada.</i>
+                    }
+                  </p>
                 } @else {
-                  <mat-form-field appearance="outline"><mat-label>Localização</mat-label><input matInput formControlName="location"></mat-form-field>
-                }
+                  <div class="location-fields-grid">
+                    <mat-form-field appearance="outline" class="city-field">
+                      <mat-label>Cidade</mat-label>
+                      <input matInput formControlName="city" placeholder="Ex: Brasília">
+                    </mat-form-field>
 
+                    <mat-form-field appearance="outline" class="state-field">
+                      <mat-label>Estado</mat-label>
+                      <mat-select formControlName="state">
+                        @for (state of states; track state) {
+                          <mat-option [value]="state">{{ state }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Endereço Completo (para filtro)</mat-label>
+                    <textarea matInput cdkTextareaAutosize formControlName="address" placeholder="Ex: SQS 411 Bloco A"></textarea>
+                    <mat-hint>Este endereço será usado para freelancers filtrarem vagas próximas.</mat-hint>
+                  </mat-form-field>
+                }
                 <hr>
                 <h3>Avaliações Recebidas</h3>
                 @if (userProfile.clientProfile.receivedReviews && userProfile.clientProfile.receivedReviews.length > 0) {

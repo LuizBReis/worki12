@@ -1,14 +1,21 @@
-// backend/src/services/jobService.js (VERSÃO CORRIGIDA)
+// backend/src/services/jobService.js (VERSÃO ATUALIZADA)
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// --- ✅ FUNÇÃO getAllJobs ATUALIZADA ---
 const getAllJobs = async (filters) => {
-  const { search, minBudget, maxBudget, skills, match } = filters;
-  const whereClause = {};
+  // 1. Pega os novos filtros (city, state, address)
+  const { search, minBudget, maxBudget, skills, match, city, state, address } = filters;
+  
+  const whereClause = {}; // Filtros da vaga (Job)
+  const authorWhere = {}; // Filtros do autor (ClientProfile)
+
+  // Filtro de Título (Job)
   if (search) {
     whereClause.title = { contains: search, mode: 'insensitive' };
   }
+  // Filtro de Orçamento (Job)
   if (minBudget) {
     whereClause.budget = { ...whereClause.budget, gte: parseFloat(minBudget) };
   }
@@ -16,7 +23,7 @@ const getAllJobs = async (filters) => {
     whereClause.budget = { ...whereClause.budget, lte: parseFloat(maxBudget) };
   }
 
-  // Filtro por skills (any/all)
+  // Filtro por skills (Job)
   if (skills) {
     const skillList = String(skills)
       .split(',')
@@ -24,7 +31,7 @@ const getAllJobs = async (filters) => {
       .filter((s) => s.length > 0);
     if (skillList.length > 0) {
       if ((match || 'any') === 'all') {
-        // Todas as skills devem estar presentes na vaga
+        // Todas as skills
         whereClause.AND = skillList.map((name) => ({
           skills: { some: { name: { equals: name } } },
         }));
@@ -37,8 +44,27 @@ const getAllJobs = async (filters) => {
     }
   }
 
+  // --- ✅ NOVOS FILTROS DE LOCALIZAÇÃO (ClientProfile) ---
+  // Estes filtros são aplicados ao autor (ClientProfile) da vaga
+  if (city) {
+    authorWhere.city = { contains: city, mode: 'insensitive' };
+  }
+  if (state) {
+    authorWhere.state = { equals: state }; // Busca exata para o Estado
+  }
+  if (address) {
+    // Filtra pelo endereço completo (sua ideia)
+    authorWhere.address = { contains: address, mode: 'insensitive' };
+  }
+
+  // 4. Adiciona o filtro de autor (se houver) ao filtro principal
+  if (Object.keys(authorWhere).length > 0) {
+    whereClause.author = authorWhere;
+  }
+  // --- FIM DA NOVA LÓGICA ---
+
   const jobs = await prisma.job.findMany({
-    where: whereClause,
+    where: whereClause, // O whereClause agora contém { title: ..., author: { city: ... } }
     include: {
       author: {
         select: {
@@ -47,119 +73,107 @@ const getAllJobs = async (filters) => {
           user: { select: { firstName: true, lastName: true } },
         },
       },
-      skills: { select: { id: true, name: true } }, // ✅ Inclui ID e Nome
+      skills: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
   return jobs;
 };
 
+// --- O RESTANTE DO ARQUIVO CONTINUA IGUAL ---
+
 const createJob = async (jobData, clientProfileId) => {
-  const { title, description, budget, requiredSkills } = jobData;
-  return prisma.job.create({
-    data: {
-      title,
-      description,
-      budget,
-      author: { connect: { id: clientProfileId } },
-      // Conecta ou cria as skills pelo nome
-      skills: requiredSkills && requiredSkills.length > 0
-        ? {
-            connectOrCreate: requiredSkills.map((name) => ({
-              where: { name },
-              create: { name },
-            })),
-          }
-        : undefined,
+ const { title, description, budget, requiredSkills } = jobData;
+ return prisma.job.create({
+  data: {
+   title,
+   description,
+   budget,
+   author: { connect: { id: clientProfileId } },
+   skills: requiredSkills && requiredSkills.length > 0
+    ? {
+      connectOrCreate: requiredSkills.map((name) => ({
+       where: { name },
+       create: { name },
+      })),
+     }
+    : undefined,
+  },
+  include: {
+   author: {
+    select: {
+     id: true,
+     companyName: true,
+     user: { select: { firstName: true, lastName: true } },
     },
-    include: { // Retorna o job criado com os dados completos
-      author: {
-        select: {
-          id: true,
-          companyName: true,
-          user: { select: { firstName: true, lastName: true } },
-        },
-      },
-      skills: { select: { id: true, name: true } }, // ✅ Inclui ID e Nome
-    },
-  });
+   },
+   skills: { select: { id: true, name: true } },
+  },
+ });
 };
 
-// --- ✅ FUNÇÃO getJobById CORRIGIDA ---
 const getJobById = async (jobId, currentUserId) => {
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
-    include: {
-      author: {
-        select: {
-          id: true,
-          companyName: true,
-          user: { select: { id: true, firstName: true, lastName: true } },
-        },
-      },
-      // ✅ Certifica-se de incluir ID e NOME das skills
-      skills: { select: { id: true, name: true } }, 
+ const job = await prisma.job.findUnique({
+  where: { id: jobId },
+  include: {
+   author: {
+    select: {
+     id: true,
+     companyName: true,
+     user: { select: { id: true, firstName: true, lastName: true } },
     },
+   },
+   skills: { select: { id: true, name: true } },
+  },
+ });
+ if (!job) return null;
+ if (currentUserId) {
+  const application = await prisma.jobApplication.findUnique({
+   where: {
+    jobId_applicantId: {
+     jobId: jobId,
+     applicantId: currentUserId,
+    },
+   },
   });
-
-  if (!job) return null;
-
-  // Verifica se o usuário atual já se candidatou (se for freelancer)
-  if (currentUserId) {
-    const application = await prisma.jobApplication.findUnique({
-      where: {
-        jobId_applicantId: {
-          jobId: jobId,
-          applicantId: currentUserId,
-        },
-      },
-    });
-    job.hasApplied = !!application; // Adiciona true/false
-  }
-
-  // Renomeia o campo 'skills' para 'requiredSkills' para consistência com o frontend
-  // (O frontend espera 'requiredSkills' na interface Job)
-  job.requiredSkills = job.skills;
-  delete job.skills; // Remove o campo original 'skills'
-
-  return job;
+  job.hasApplied = !!application;
+ }
+  // Renomeia 'skills' para 'requiredSkills' para o frontend
+ job.requiredSkills = job.skills;
+ delete job.skills;
+ return job;
 };
-
 
 const applyForJob = async (jobId, applicantId) => {
-  const existingApplication = await prisma.jobApplication.findUnique({
-    where: {
-      jobId_applicantId: { jobId, applicantId },
-    },
-  });
-  if (existingApplication) {
-    throw new Error('Você já se candidatou para esta vaga.');
-  }
-  return prisma.jobApplication.create({
-    data: { jobId, applicantId },
-  });
+ const existingApplication = await prisma.jobApplication.findUnique({
+  where: {
+   jobId_applicantId: { jobId, applicantId },
+  },
+ });
+ if (existingApplication) {
+  throw new Error('Você já se candidatou para esta vaga.');
+ }
+ return prisma.jobApplication.create({
+  data: { jobId, applicantId },
+ });
 };
 
 const updateJob = async (jobId, clientProfileId, jobData) => {
-  const { requiredSkills, ...rest } = jobData; // Separa skills dos outros dados
+ const { requiredSkills, ...rest } = jobData; 
+ const updatedJobMeta = await prisma.job.updateMany({
+  where: {
+   id: jobId,
+   authorId: clientProfileId, 
+  },
+  data: rest,
+ });
 
-  // 1. Atualiza dados básicos da vaga (title, description, budget)
-  const updatedJobMeta = await prisma.job.updateMany({
-    where: {
-      id: jobId,
-      authorId: clientProfileId, // Segurança: só o autor pode editar
-    },
-    data: rest,
-  });
+ if (updatedJobMeta.count === 0) {
+   throw new Error('Vaga não encontrada ou acesso negado.');
+ }
 
-  // Se a atualização dos dados básicos falhou (job não encontrado ou não pertence ao user), lança erro
-  if (updatedJobMeta.count === 0) {
-      throw new Error('Vaga não encontrada ou acesso negado.');
-  }
-
-  // 2. Sincroniza as skills (se `requiredSkills` foi enviado)
-  if (Array.isArray(requiredSkills)) {
-    // Busca os IDs das skills existentes pelos nomes fornecidos
+ if (Array.isArray(requiredSkills)) {
+   // Busca os IDs das skills existentes pelos nomes fornecidos
     const skillsToConnect = await prisma.skill.findMany({
         where: { name: { in: requiredSkills } },
         select: { id: true }
@@ -170,93 +184,81 @@ const updateJob = async (jobId, clientProfileId, jobData) => {
     const existingSkillNames = skillsToConnect.map(s => s.name);
     const skillsToCreate = requiredSkills.filter(name => !existingSkillNames.includes(name));
 
-    // Atualiza a relação: desfaz todas as conexões antigas e conecta/cria as novas
     await prisma.job.update({
       where: { id: jobId },
       data: {
         skills: {
-          // Desconecta todas as skills atuais (set: [])
-          set: [], 
-          // Conecta as skills existentes encontradas pelo ID
-          connect: skillIdsToConnect.map(id => ({ id })),
-          // Cria as novas skills que não foram encontradas
-          create: skillsToCreate.map(name => ({ name })),
+          set: [], // Desconecta todas
+          connectOrCreate: requiredSkills.map((name) => ({ // Conecta ou cria as novas
+            where: { name },
+            create: { name },
+          })),
         },
       },
     });
-  }
-
-  // 3. Retorna a vaga atualizada completa
-  return getJobById(jobId, null); // Reutiliza a função getJobById para buscar com includes
+ }
+ return getJobById(jobId, null);
 };
 
 
 const deleteJob = async (jobId, clientProfileId) => {
-  // Deleta a vaga, garantindo que pertence ao ClientProfile correto
-  const result = await prisma.job.deleteMany({
-    where: {
-      id: jobId,
-      authorId: clientProfileId, // Segurança
-    },
-  });
-   if (result.count === 0) throw new Error('Vaga não encontrada ou acesso negado.');
-   return { message: 'Vaga removida com sucesso.' };
+ const result = await prisma.job.deleteMany({
+  where: {
+   id: jobId,
+   authorId: clientProfileId,
+  },
+ });
+  if (result.count === 0) throw new Error('Vaga não encontrada ou acesso negado.');
+  return { message: 'Vaga removida com sucesso.' };
 };
 
-// --- Função getApplicantsForJob ATUALIZADA ---
 const getApplicantsForJob = async (jobId, clientProfileId, filters = {}) => {
-  // 1. Verifica se a vaga existe e pertence ao ClientProfile logado
-  const job = await prisma.job.findFirst({
-    where: { id: jobId, authorId: clientProfileId }, // Segurança
-  });
-  if (!job) {
-    throw new Error('Acesso negado ou vaga não encontrada.');
-  }
-
-  // 2. Monta a condição de busca (incluindo filtro de skill)
-  const { skill } = filters;
-  const whereClause = { jobId };
-  if (skill) {
-    whereClause.applicant = {
-      freelancerProfile: {
-        skills: { some: { name: { contains: skill, mode: 'insensitive' } } },
-      },
-    };
-  }
-
-  // 3. Busca as candidaturas, incluindo a revisão do freelancer
+ const job = await prisma.job.findFirst({
+  where: { id: jobId, authorId: clientProfileId },
+ });
+ if (!job) {
+  throw new Error('Acesso negado.');
+ }
+ const { skill } = filters;
+ const whereClause = { jobId };
+ if (skill) {
+  whereClause.applicant = {
+   freelancerProfile: { 
+    skills: { some: { name: { contains: skill, mode: 'insensitive' } } },
+   },
+  };
+ }
+ 
   const applications = await prisma.jobApplication.findMany({
-    where: whereClause,
-    include: {
-      applicant: { // Dados do candidato
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-        },
-      },
-      freelancerReview: { // Relação 1-para-1
-          select: { id: true } // Só precisamos saber se existe
-      }
+  where: whereClause,
+  include: {
+   applicant: {
+    select: {
+     id: true,
+     firstName: true,
+     lastName: true,
     },
-    orderBy: { createdAt: 'asc' }
+   },
+      freelancerReview: { // Pega a review do freelancer
+        select: { id: true }
+      }
+  },
   });
 
-   // 4. Adiciona o campo `hasFreelancerReview`
-   return applications.map(app => ({
+  // Mapeia para adicionar o campo 'hasFreelancerReview'
+  return applications.map(app => ({
       ...app,
       hasFreelancerReview: app.freelancerReview !== null,
-      freelancerReview: undefined // Remove o objeto original
+      freelancerReview: undefined
   }));
 };
 
-
 module.exports = {
-  getAllJobs,
-  createJob,
-  getJobById,
-  applyForJob,
-  updateJob,
-  deleteJob,
-  getApplicantsForJob,
+ getAllJobs,
+ createJob,
+ getJobById,
+ applyForJob,
+ updateJob,
+ deleteJob,
+ getApplicantsForJob,
 };

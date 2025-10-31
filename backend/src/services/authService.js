@@ -1,18 +1,22 @@
-// src/services/authService.js
+// backend/src/services/authService.js (VERSÃO CORRIGIDA)
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
 
-
 const prisma = new PrismaClient();
 
-// --- FUNÇÃO DE REGISTRO REFATORADA ---
+// --- FUNÇÃO DE REGISTRO CORRIGIDA ---
 const registerUser = async (userData) => {
-  const { firstName, lastName, email, password, role, companyName, location } = userData;
+  // ✅ Pega os novos campos 'city' e 'state'
+  const { 
+    firstName, lastName, email, password, role, 
+    companyName, city, state // 'location' não é mais usado
+  } = userData;
 
-  // 1. Verificar se o email já existe (permanece igual)
+  // 1. Verificar se o email já existe
   const existingUser = await prisma.user.findUnique({
     where: { email },
   });
@@ -20,11 +24,11 @@ const registerUser = async (userData) => {
     throw new Error('Este e-mail já está em uso.');
   }
 
-  // 2. Hashear a senha (permanece igual)
+  // 2. Hashear a senha
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // 3. Criar o novo usuário E o seu perfil correspondente
-const newUser = await prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       firstName,
       lastName,
@@ -35,10 +39,12 @@ const newUser = await prisma.user.create({
         create: {},
       } : undefined,
       clientProfile: role === 'CLIENT' ? {
-        // 2. Agora, passamos os novos dados para a criação do perfil
+        // ✅ CRIA O PERFIL COM OS NOVOS CAMPOS
         create: {
           companyName: companyName,
-          location: location,
+          city: city,   // Salva a cidade do registro
+          state: state, // Salva o estado do registro
+          // 'address' (Item #8) será adicionado depois no perfil
         },
       } : undefined,
     },
@@ -48,37 +54,31 @@ const newUser = await prisma.user.create({
   return newUser;
 };
 
-// --- NOVA FUNÇÃO DE LOGIN ---
+// --- FUNÇÃO DE LOGIN (sem mudanças) ---
 const loginUser = async (loginData) => {
   const { email, password } = loginData;
 
-  // 1. Encontrar o usuário pelo e-mail
   const user = await prisma.user.findUnique({
     where: { email },
   });
 
   if (!user) {
-    throw new Error('Credenciais inválidas'); // Mensagem genérica por segurança
+    throw new Error('Credenciais inválidas');
   }
 
-  // 2. Comparar a senha enviada com a senha hasheada no banco
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
     throw new Error('Credenciais inválidas');
   }
 
-  // 3. Se as credenciais estiverem corretas, gerar um token JWT
   const token = jwt.sign(
-    { userId: user.id, role: user.role }, // Payload: o que queremos guardar no token
-    process.env.JWT_SECRET, // A chave secreta para assinar o token
-    { expiresIn: '24h' } // Opções, como o tempo de expiração do token
+    { userId: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
   );
 
-  // 4. Remover a senha do objeto de usuário antes de retornar
   delete user.password;
-
-  // 5. Retornar os dados do usuário e o token
   return { user, token };
 };
 

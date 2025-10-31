@@ -47,8 +47,11 @@ export class JobService {
 
   constructor(private http: HttpClient) { }
 
+  // ✅ FUNÇÃO getJobs ATUALIZADA
   getJobs(filters: any): Observable<Job[]> {
     let params = new HttpParams();
+    
+    // Filtros existentes
     if (filters.search) params = params.append('search', filters.search);
     if (filters.minBudget) params = params.append('minBudget', filters.minBudget);
     if (filters.maxBudget) params = params.append('maxBudget', filters.maxBudget);
@@ -56,6 +59,18 @@ export class JobService {
       params = params.append('skills', filters.skills.join(','));
     }
     if (filters.match) params = params.append('match', filters.match);
+    
+    // --- ✅ NOVOS FILTROS DE LOCALIZAÇÃO ---
+    if (filters.city) {
+      params = params.append('city', filters.city);
+    }
+    if (filters.state) {
+      params = params.append('state', filters.state);
+    }
+    if (filters.address) {
+      params = params.append('address', filters.address);
+    }
+
     return this.http.get<Job[]>(this.apiUrl, { params });
   }
 

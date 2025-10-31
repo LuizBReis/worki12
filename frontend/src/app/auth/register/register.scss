@@ -172,3 +172,24 @@ p {
     font-weight: 500;
   }
 }
+
+/* Garante que o ícone de visibilidade tenha uma cor sutil */
+mat-form-field {
+  .mat-icon-button {
+    color: #999;
+  }
+}
+
+/* 📍 Campos de localização (lado a lado) */
+.location-fields {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap; // Permite quebrar a linha em telas pequenas
+
+  .city-field {
+    flex: 2; // Campo de cidade ocupa 2/3 do espaço
+  }
+  .state-field {
+    flex: 1; // Campo de estado ocupa 1/3
+  }
+}

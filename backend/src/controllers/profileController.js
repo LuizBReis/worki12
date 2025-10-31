@@ -17,23 +17,39 @@ const getMyProfile = async (req, res) => {
   }
 };
 
+// --- ✅ FUNÇÃO updateMyProfile ATUALIZADA ---
 const updateMyProfile = async (req, res) => {
   try {
-    const { userId } = req.user; // Pega o ID do usuário logado (do token)
-    const profileData = req.body; // Pega os dados a serem atualizados (ex: { description })
+    const { userId } = req.user;
+    const profileData = req.body; // Dados completos do formulário
 
-    // Filtra para permitir apenas a atualização de campos seguros
+    // ✅ O filtro agora inclui TODOS os campos editáveis do formulário
     const allowedUpdates = {
-      description: profileData.description,
+      // Campos do User
       firstName: profileData.firstName,
       lastName: profileData.lastName,
+      // Campos do FreelancerProfile
+      description: profileData.description,
+      // Campos do ClientProfile
+      companyName: profileData.companyName,
+      city: profileData.city,
+      state: profileData.state,
+      address: profileData.address,
     };
 
+    // Filtra chaves que são 'undefined' para não enviar dados desnecessários
+    // (Opcional, mas limpo)
+    Object.keys(allowedUpdates).forEach(key => 
+      allowedUpdates[key] === undefined && delete allowedUpdates[key]
+    );
+
+    // O service agora recebe o objeto completo com os campos permitidos
     const updatedUser = await userService.updateUserProfile(userId, allowedUpdates);
 
-    delete updatedUser.password; // Sempre remova a senha da resposta
+    delete updatedUser.password; // Sempre remova a senha
     res.status(200).json(updatedUser);
   } catch (error) {
+    console.error('ERRO DETALHADO AO ATUALIZAR PERFIL:', error); // Adiciona log de erro
     res.status(500).json({ message: 'Erro ao atualizar perfil.', error: error.message });
   }
 };

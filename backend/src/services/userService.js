@@ -12,14 +12,14 @@ const getUserById = async (userId) => {
           workExperiences: { orderBy: { startDate: 'desc' } },
         },
       },
-      clientProfile: true,
+      clientProfile: true, // Isso busca todos os campos escalares (id, companyName, city, state, address, etc.)
     },
   });
   if (!user) return null;
   if (user) delete user.password;
 
   // --- Aggregates for ratings and review lists ---
-  // Freelancer: average rating from reviews received (by clients)
+  // (Seu código de agregação de avaliações está ótimo, sem mudanças)
   const freelancerAgg = await prisma.freelancerReview.aggregate({
     where: { recipientId: userId },
     _avg: { rating: true },
@@ -30,15 +30,11 @@ const getUserById = async (userId) => {
     where: { recipientId: userId },
     orderBy: { createdAt: 'desc' },
     select: {
-      id: true,
-      rating: true,
-      comment: true,
-      createdAt: true,
+      id: true, rating: true, comment: true, createdAt: true,
       author: { select: { id: true, firstName: true, lastName: true, email: true, clientProfile: { select: { companyName: true } } } },
     },
   });
 
-  // Client: average rating and public reviews received (by freelancers)
   if (user.clientProfile) {
     const clientAgg = await prisma.clientReview.aggregate({
       where: { recipientId: userId },
@@ -46,15 +42,11 @@ const getUserById = async (userId) => {
       _count: { _all: true },
     });
     user.clientProfile.averageRating = clientAgg._avg.rating ?? null;
-
     user.clientProfile.receivedReviews = await prisma.clientReview.findMany({
       where: { recipientId: userId },
       orderBy: { createdAt: 'desc' },
       select: {
-        id: true,
-        rating: true,
-        comment: true,
-        createdAt: true,
+        id: true, rating: true, comment: true, createdAt: true,
         author: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     });
@@ -63,10 +55,12 @@ const getUserById = async (userId) => {
   return user;
 };
 
+// --- ✅ FUNÇÃO updateUserProfile CORRIGIDA ---
 const updateUserProfile = async (userId, profileData) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('Usuário não encontrado.');
 
+  // Atualiza os dados do 'User' (nome, sobrenome)
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -81,12 +75,17 @@ const updateUserProfile = async (userId, profileData) => {
       data: { description: profileData.description },
     });
   } else if (user.role === 'CLIENT') {
+    // Atualiza o ClientProfile com os novos campos
     await prisma.clientProfile.update({
       where: { userId },
       data: {
         companyName: profileData.companyName,
-        location: profileData.location,
-        description: profileData.description // <-- ADICIONADO AQUI
+        description: profileData.description,
+        // --- ✅ CAMPOS CORRIGIDOS ---
+        city: profileData.city,
+        state: profileData.state,
+        address: profileData.address
+        // location: profileData.location, // ❌ Campo antigo removido
       },
     });
   }

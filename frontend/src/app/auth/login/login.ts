@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon'; // ✅ 1. Importe o MatIconModule
 
 @Component({
   selector: 'app-login',
@@ -20,13 +21,15 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatButtonModule
+    MatButtonModule,
+    MatIconModule // ✅ 2. Adicione aos imports
   ],
   templateUrl: './login.html',
   styleUrls: ['./login.scss']
 })
 export class Login {
   loginForm: FormGroup;
+  hidePassword = true; // ✅ 3. Adicione a propriedade de visibilidade
 
   constructor(
     private fb: FormBuilder,
@@ -40,7 +43,7 @@ export class Login {
     });
   }
 
-onSubmit() {
+  onSubmit() {
     if (this.loginForm.valid) {
       this.authService.login(this.loginForm.value).subscribe({
         next: (response) => {
@@ -48,7 +51,7 @@ onSubmit() {
           // 1. Salva o token no localStorage do navegador
           localStorage.setItem('authToken', response.token);
           // 2. Redireciona o usuário para uma futura página de dashboard
-          this.router.navigate(['/dashboard']); 
+          this.router.navigate(['/dashboard']);
         },
         error: (err) => {
           this.notification.error('Erro!', err.error.message || 'Ocorreu um erro no login.');

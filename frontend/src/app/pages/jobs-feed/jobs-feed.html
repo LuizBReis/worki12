@@ -16,6 +16,27 @@
         <input matInput formControlName="maxBudget" type="number" placeholder="Máx">
       </mat-form-field>
 
+      <h4>Localização</h4>
+      <mat-form-field appearance="outline">
+        <mat-label>Cidade</mat-label>
+        <input matInput formControlName="city" placeholder="Ex: Brasília">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="state">
+          <mat-option [value]="''">Qualquer Estado</mat-option> 
+          @for (state of states; track state) {
+            <mat-option [value]="state">{{ state }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      
+      <mat-form-field appearance="outline">
+        <mat-label>Buscar por Endereço</mat-label>
+        <input matInput formControlName="address" placeholder="Ex: SQS 411 Bloco A">
+      </mat-form-field>
+
       <h4>Selecione Habilidade</h4>
       <mat-form-field appearance="outline">
         <mat-select formControlName="skills" multiple>
@@ -48,8 +69,8 @@
           <p class="budget" *ngIf="job.budget">
             Orçamento: {{ job.budget | currency:'BRL' }}
           </p>
-          <p *ngIf="job.skills?.length">Skills:
-            <ng-container *ngFor="let s of job.skills; let last = last">
+          <p *ngIf="job.requiredSkills?.length">Skills:
+            <ng-container *ngFor="let s of job.requiredSkills; let last = last">
               {{ s.name }}<span *ngIf="!last">, </span>
             </ng-container>
           </p>

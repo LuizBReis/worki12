@@ -21,6 +21,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 
 import { NotificationService } from '../../services/notification';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-profile',
@@ -28,7 +29,7 @@ import { NotificationService } from '../../services/notification';
   imports: [
     CommonModule, ReactiveFormsModule, DatePipe, TitleCasePipe,
     MatAutocompleteModule, MatButtonModule, MatCardModule, MatChipsModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressSpinnerModule
+    MatIconModule, MatInputModule, MatProgressSpinnerModule,MatSelectModule
   ],
   templateUrl: './profile.html',
   styleUrls: ['./profile.scss']
@@ -43,6 +44,13 @@ export class Profile implements OnInit {
 
   allSuggestedSkills: Skill[] = [];
   filteredSkills$: Observable<Skill[]>;
+
+  // ✅ ADICIONA A LISTA DE ESTADOS
+  states: string[] = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+    'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+    'SP', 'SE', 'TO'
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -59,7 +67,9 @@ export class Profile implements OnInit {
       lastName: [''],
       description: [''],
       companyName: [''],
-      location: [''],
+      city: [''],
+      state: [''],
+      address: [''],
     });
     this.filteredSkills$ = new Observable<Skill[]>();
   }
@@ -88,7 +98,9 @@ export class Profile implements OnInit {
             lastName: data.lastName,
             description: data.role === 'FREELANCER' ? data.freelancerProfile?.description : data.clientProfile?.description,
             companyName: data.clientProfile?.companyName,
-            location: data.clientProfile?.location
+            city: data.clientProfile?.city,       // ✅ Adicionado
+            state: data.clientProfile?.state,     // ✅ Adicionado
+            address: data.clientProfile?.address, // ✅ Adicionado
           });
           this.isLoading = false;
         },
