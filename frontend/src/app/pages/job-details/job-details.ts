@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 
 import { JobService, Job, JobApplication } from '../../services/job';
@@ -33,7 +33,6 @@ import { MatChipsModule } from '@angular/material/chips'; // ✅ Adicionar
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
-    TitleCasePipe,
     MatListModule,
     ReactiveFormsModule,
     MatFormFieldModule,

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common'; // Adicionei os Pipes
+import { CommonModule, DatePipe } from '@angular/common'; // Adicionei os Pipes
 import { RouterLink } from '@angular/router';
 
 // Imports dos nossos Serviços e Interfaces (CORRIGIDOS)
@@ -28,7 +28,6 @@ import { ReviewDialog } from '../../components/review-dialog/review-dialog';
     MatCardModule, 
     MatProgressSpinnerModule, 
     DatePipe,       // Adicionado para o pipe | date funcionar
-    TitleCasePipe,
     MatDividerModule,   // Adicionado para o pipe | titlecase funcionar
     MatButtonModule,
     MatIconModule
@@ -167,5 +166,19 @@ export class MyJobs implements OnInit {
       'CANCELLED': 'Cancelado'
     };
     return map[status] || status;
+  }
+
+  // Estado simplificado para exibir apenas "ativo" ou "concluido"
+  getSimpleJobState(status?: string): 'ativo' | 'concluido' {
+    if (!status) return 'ativo';
+    switch (status) {
+      case 'COMPLETED':
+      case 'CANCELLED':
+        return 'concluido';
+      case 'ACTIVE':
+      case 'PENDING_CLOSE':
+      default:
+        return 'ativo';
+    }
   }
 }

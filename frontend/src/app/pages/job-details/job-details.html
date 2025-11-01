@@ -112,12 +112,12 @@
                               Solicitar Encerramento
                             </button>
                           }
-                          @if (app.jobStatus === 'COMPLETED' && !app.clientReview) {
-                            <button mat-raised-button class="btn btn-warning btn-sm" (click)="openClientReview(app)">
-                              <mat-icon>star</mat-icon>
-                              Avaliar Freelancer
-                            </button>
-                          }
+@if (app.jobStatus === 'COMPLETED' && !app.clientReview) {
+  <button mat-raised-button class="evaluate-button" (click)="openClientReview(app)">
+    <mat-icon>star</mat-icon>
+    avaliar
+  </button>
+}
                           <span class="status-chip small" *ngIf="app.jobStatus">{{ translateJobStatus(app.jobStatus) }}</span>
                         }
                       }

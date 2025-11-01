@@ -24,40 +24,9 @@
 
     <span class="spacer"></span>
 
-    <button mat-icon-button class="notification-bell" [matMenuTriggerFor]="notificationMenu" (menuOpened)="onBellClick()">
-      <mat-icon
-        [matBadge]="(hasUnreadNotifications$ | async) ? '●' : null"
-        [matBadgeHidden]="!(hasUnreadNotifications$ | async)"
-        matBadgeColor="warn"
-        matBadgeSize="small"
-        matBadgePosition="above after" >notifications</mat-icon>
+    <button mat-icon-button class="notification-bell">
+      <mat-icon>notifications</mat-icon>
     </button>
-    <mat-menu #notificationMenu="matMenu" class="notification-dropdown">
-      <div class="notification-header">
-        <h3>Notificações</h3>
-      </div>
-      
-      <div class="notification-list">
-        
-        @if (notifications$ | async; as notifications) {
-          
-          @if (notifications.length > 0) {
-            
-            @for (notification of notifications; track notification.id) {
-              <button mat-menu-item (click)="onNotificationClick(notification)">
-                <span class="notification-message">{{ notification.message }}</span>
-                <span class="notification-time">{{ notification.createdAt | date:'shortTime' }}</span>
-              </button>
-            }
-          } @else {
-            <span class="no-notifications">Nenhuma notificação nova.</span>
-          }
-
-        } @else {
-           <span class="no-notifications">Nenhuma notificação nova.</span>
-        }
-      </div>
-      </mat-menu>
     <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-menu-button">
       <mat-icon>account_circle</mat-icon>
     </button>

@@ -52,7 +52,9 @@
                  <span class="application-status" [ngClass]="app.status.toLowerCase()">
                    {{ translateApplicationStatus(app.status) }}
                  </span>
-                 <span class="application-status small" *ngIf="app.jobStatus">{{ translateJobStatus(app.jobStatus) }}</span>
+                 <span class="job-state" [class.active]="getSimpleJobState(app.jobStatus) === 'ativo'" [class.completed]="getSimpleJobState(app.jobStatus) === 'concluido'">
+                   {{ getSimpleJobState(app.jobStatus) }}
+                 </span>
 
                  <!-- Ações do fluxo de encerramento e avaliação para freelancer -->
                  @if (app.status === 'SHORTLISTED') {
@@ -63,9 +65,9 @@
                      </button>
                    }
                    @if (app.jobStatus === 'COMPLETED' && !app.freelancerReview) {
-                    <button mat-raised-button class="btn btn-warning btn-sm" (click)="openFreelancerReview(app)">
+                    <button mat-raised-button class="evaluate-button" (click)="openFreelancerReview(app)">
                       <mat-icon>star</mat-icon>
-                      Avaliar Cliente
+                      avaliar
                     </button>
                    }
                  }

@@ -103,23 +103,4 @@
   box-sizing: border-box; // Garante que o padding não aumente a altura total
 }
 
-/* Adicione no final do main-layout.scss */
-
-// Estilo do botão do "sininho"
-.notification-bell {
-  // Ajusta o "sinalzinho" do sino
-  ::ng-deep .mat-badge-content {
-    background: #ff3b30; // Vermelho
-    border: 2px solid white;
-    width: 12px;
-    height: 12px;
-    right: 2px;
-    top: 2px;
-    // Remove o conteúdo '●'
-    color: transparent; 
-    font-size: 0;
-  }
-}
-
-// Estilo para o dropdown do "sininho"
-// Precisamos aplicar globalmente em styles.scss (ver próximo passo)
+/* Removido estilos específicos de badge do sino para simplificar o ícone */

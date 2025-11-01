@@ -127,14 +127,66 @@
   padding: 5px 12px;
   border-radius: 16px;
   font-size: 0.75rem;
-  font-weight: 700;
-  color: white;
+  font-weight: 600;
+  color: #1a1a1a;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 
-  &.pending { background-color: #ffc107; color: #212529;}
-  &.shortlisted { background-color: #28a745; }
-  &.rejected { background-color: #dc3545; }
+  &.pending { background-color: #fff3cd; border: 1px solid #ffe69c; }
+  &.shortlisted { background-color: #e8f5e9; border: 1px solid #cdeccd; }
+  &.rejected { background-color: #fde2e1; border: 1px solid #f5c2c7; }
+}
+
+/* Rótulo simplificado de estado da vaga (ativo/concluido) */
+.job-state {
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+
+  &.active {
+    color: #0c4a6e;
+    background-color: #e7f1ff;
+    border-color: #cfe5ff;
+  }
+
+  &.completed {
+    color: #1b5e20;
+    background-color: #e8f5e9;
+    border-color: #cdeccd;
+  }
+}
+
+/* Botão de Avaliar Cliente menor */
+.evaluate-button {
+  font-size: 0.74rem;
+  padding: 5px 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px; /* reduz espaço entre ícone e texto */
+  background-color: #fff3cd; /* amarelo suave */
+  color: #7a5c00; /* texto mais elegante */
+  border: 1px solid #ffe69c;
+  border-radius: 16px; /* pill mais sofisticado */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.evaluate-button mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.evaluate-button:hover {
+  background-color: #ffec99; /* hover sutil */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
 }
 
 /* Mensagem de "nenhum trabalho" */

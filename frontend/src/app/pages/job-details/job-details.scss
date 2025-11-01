@@ -238,3 +238,31 @@ mat-chip-listbox {
     color: #5e5e5e;
   }
 }
+
+/* Botão de Avaliar (Job Details) - amarelo e arredondado */
+.evaluate-button {
+  font-size: 0.74rem;
+  padding: 5px 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px; /* reduz espaço entre ícone e texto */
+  background-color: #fff3cd; /* amarelo suave */
+  color: #7a5c00; /* texto mais elegante */
+  border: 1px solid #ffe69c;
+  border-radius: 16px; /* pill mais sofisticado */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.evaluate-button mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.evaluate-button:hover {
+  background-color: #ffec99; /* hover sutil */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}

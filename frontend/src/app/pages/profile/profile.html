@@ -177,7 +177,7 @@
                 
                 @if (isOwnProfile || userRole === 'CLIENT') {
 
-                  @if (userProfile.freelancerProfile?.videoUrl) {
+                  @if (userProfile.freelancerProfile.videoUrl) {
                     <div class="video-container">
                       <video controls [src]="userProfile.freelancerProfile.videoUrl" width="100%"></video>
                     </div>
@@ -196,10 +196,10 @@
       (change)="onVideoFileSelected($event)"
       accept="video/mp4,video/quicktime,video/webm"
       [disabled]="isUploading"> <button mat-stroked-button color="primary" (click)="videoInput.click()" [disabled]="isUploading"> <mat-icon>videocam</mat-icon>
-      {{ userProfile.freelancerProfile?.videoUrl ? 'Trocar Vídeo' : 'Adicionar Vídeo' }}
+      {{ userProfile.freelancerProfile.videoUrl ? 'Trocar Vídeo' : 'Adicionar Vídeo' }}
     </button>
 
-    @if (userProfile.freelancerProfile?.videoUrl) {
+    @if (userProfile.freelancerProfile.videoUrl) {
       <button mat-stroked-button color="warn" (click)="onDeleteVideo()" [disabled]="isUploading"> <mat-icon>delete</mat-icon>
         Remover Vídeo
       </button>
