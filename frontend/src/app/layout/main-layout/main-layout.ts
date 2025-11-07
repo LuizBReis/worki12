@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, AsyncPipe } from '@angular/common'; // ✅ 1. Importe AsyncPipe
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
-import { NotificationService } from '../../services/notification';
-import { Observable } from 'rxjs';
+// ✅ 2. Importe a interface AppNotification
+import { NotificationService, AppNotification } from '../../services/notification'; 
+import { Observable, Subscription } from 'rxjs';
 
 // Imports do Material
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -24,39 +25,79 @@ import { MatBadgeModule } from '@angular/material/badge';
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatBadgeModule
+    MatBadgeModule,
+    AsyncPipe // ✅ 3. Adicione AsyncPipe aos imports
   ],
   templateUrl: './main-layout.html',
   styleUrls: ['./main-layout.scss']
 })
 export class MainLayout implements OnInit, OnDestroy {
   userId: string | null = null;
+  private authSubscription!: Subscription;
   hasUnreadMessages$: Observable<boolean>;
+  // --- ✅ 4. NOVAS PROPRIEDADES PARA O "SININHO" ---
+  hasUnreadNotifications$!: Observable<boolean>; // Badge do "Sininho"
+  notifications$!: Observable<AppNotification[]>; // Lista de Notificações
 
   constructor(
     private authService: AuthService,
     private notificationService: NotificationService,
     private router: Router
   ) {
-    // Observa o status de mensagens não lidas
+    // Observa o status do "sinalzinho" de chat
     this.hasUnreadMessages$ = this.notificationService.getUnreadMessagesStatus();
-  }
-
-  ngOnInit(): void {
-    // Pega o ID do usuário
-    this.userId = this.authService.getUserId();
     
-    // Autentica o usuário no socket de notificações
-    if (this.userId) {
-      this.notificationService.authenticate(this.userId);
+    // --- ✅ 5. PEGA OS OBSERVABLES DO "SININHO" ---
+    this.hasUnreadNotifications$ = this.notificationService.getHasUnreadNotifications();
+    this.notifications$ = this.notificationService.getNotifications();
+  }
+
+ngOnInit(): void {
+  // ✅ MUDANÇA CRÍTICA: Inscreve-se no Observable do ID
+  this.authSubscription = this.authService.currentUserId$.subscribe(userId => {
+   // Se o ID mudou e existe (seja no F5 ou após o login)
+   if (userId && userId !== this.userId) { 
+    this.userId = userId;
+    console.log('MainLayout detectou userId. Chamando Socket.authenticate...');
+    // Isso chamará a função do NotificationService com o ID garantido
+    this.notificationService.authenticate(userId);
+   } else if (!userId) {
+          // Opcional: Limpar o userId local no logout
+          this.userId = null;
+      }
+  });
+ }
+
+ngOnDestroy(): void {
+  // ✅ CRÍTICO: Desfaz a inscrição
+    if (this.authSubscription) {
+        this.authSubscription.unsubscribe();
     }
+  // Desconecta o socket quando o componente é destruído
+  this.notificationService.disconnect();
+ }
+  // --- ✅ 6. NOVA FUNÇÃO (para o "Sininho") ---
+  // Chamada quando o usuário clica no "sininho" para abrir o menu
+  onBellClick(): void {
+    this.notificationService.markBellAsRead();
   }
 
-  ngOnDestroy(): void {
-    // Desconecta o socket quando o componente é destruído
-    this.notificationService.disconnect();
+  // --- ✅ 7. NOVA FUNÇÃO (para o "Sininho") ---
+  // Chamada quando o usuário clica em um item da lista de notificação
+  onNotificationClick(notification: AppNotification): void {
+    if (notification.link) {
+      this.router.navigate([notification.link]);
+    }
+    // Opcional: marcar a notificação individual como lida
   }
 
+  // --- ✅ 8. FUNÇÃO QUE FALTAVA (para o "Sinalzinho" de Mensagens) ---
+  // Seu HTML (main-layout.html) chama esta função quando o link "Mensagens" é clicado
+  onMessagesClick(): void {
+    this.notificationService.clearNotifications();
+  }
+
+  // --- Funções existentes ---
   navigateToProfile(): void {
     if (this.userId) {
       this.router.navigate(['/profile', this.userId]);

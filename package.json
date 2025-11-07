@@ -3,6 +3,7 @@
     "@angular/fire": "^20.0.1",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "firebase": "^11.10.0",
+    "jwt-decode": "^4.0.0",
     "sweetalert2": "^11.26.2"
   }
 }

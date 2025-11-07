@@ -62,3 +62,54 @@ body {
                0 3px 14px 2px rgba(0, 0, 0, 0.12) !important;
    border-radius: 4px !important;
 }
+
+/* Adicione no src/styles.scss */
+
+// Estiliza o painel do dropdown de notificações
+.notification-dropdown {
+  .mat-mdc-menu-content {
+    padding: 0 !important; // Remove padding padrão
+    width: 360px; // Largura do dropdown
+  }
+
+  .notification-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e9eaee;
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+  }
+
+  .notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .mat-mdc-menu-item {
+    height: auto !important;
+    padding: 0.75rem 1rem !important;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start !important;
+    line-height: 1.4;
+    white-space: normal !important;
+  }
+
+  .notification-message {
+    font-size: 0.9rem;
+  }
+  .notification-time {
+    font-size: 0.75rem;
+    color: #5e5e5e;
+  }
+  
+  .no-notifications {
+    padding: 1.5rem;
+    text-align: center;
+    color: #777;
+    font-style: italic;
+    display: block;
+  }
+}
