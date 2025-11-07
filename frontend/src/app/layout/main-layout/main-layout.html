@@ -1,12 +1,26 @@
 <mat-toolbar class="app-header">
   <div class="container">
-    <a class="logo" routerLink="/dashboard"> <img src="assets/logo/worki.png" alt="Worki Logo">
+    <a class="logo" routerLink="/dashboard">
+      <img src="assets/logo/worki.png" alt="Worki Logo">
     </a>
 
     <div class="navigation-links">
       <a routerLink="/dashboard" routerLinkActive="active-link">Encontrar Vagas</a>
       <a routerLink="/my-jobs" routerLinkActive="active-link">Meus Trabalhos</a>
-      <a routerLink="/messages/inbox" routerLinkActive="active-link">Mensagens</a>
+      
+      <!-- Link de Mensagens com Badge de Notificação Mais Chamativo -->
+      <a 
+        routerLink="/messages/inbox" 
+        routerLinkActive="active-link"
+        [matBadge]="(hasUnreadMessages$ | async) ? '●' : null"
+        [matBadgeHidden]="!(hasUnreadMessages$ | async)"
+        matBadgeColor="warn"
+        matBadgeSize="medium"
+        matBadgePosition="above after"
+        class="messages-link"
+      >
+        Mensagens
+      </a>
     </div>
 
     <span class="spacer"></span>

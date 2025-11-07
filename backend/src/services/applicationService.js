@@ -1,8 +1,9 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, JobStatus } = require('@prisma/client');
 const prisma = new PrismaClient();
+const messageService = require('./messageService');
 
 const updateApplicationStatus = async (applicationId, newStatus, currentUserId) => {
-  // 1. Busca a candidatura e informações importantes em uma única query
+  // 1. Busca candidatura e dados
   const application = await prisma.jobApplication.findFirst({
     where: { id: applicationId, job: { author: { userId: currentUserId } } },
     include: {
@@ -10,43 +11,57 @@ const updateApplicationStatus = async (applicationId, newStatus, currentUserId) 
       applicant: { select: { id: true, firstName: true } }
     }
   });
-
-  // 2. Se não encontrar, nega o acesso
+  
   if (!application) {
     throw new Error('Acesso negado ou candidatura não encontrada.');
   }
 
-  // 3. Atualiza o status da candidatura
+  // 2. Atualiza o status
   await prisma.jobApplication.update({
     where: { id: applicationId },
     data: { status: newStatus },
   });
 
-  // 4. Lógica de Mensagens Automáticas
+  // 3. Busca ou cria conversa
   let conversation = await prisma.conversation.findUnique({
     where: { applicationId: applicationId },
   });
-
-  // Se a conversa não existe, cria
+  
   if (!conversation) {
     conversation = await prisma.conversation.create({
       data: { applicationId: applicationId },
     });
   }
 
-  // Se o status for SELECIONADO...
+  // 4. Envia mensagens automáticas usando messageService
   if (newStatus === 'SHORTLISTED') {
     const messageContent = `Olá ${application.applicant.firstName}, gostei do seu perfil para a vaga "${application.job.title}" e gostaria de conversar mais.`;
-    await prisma.message.create({
-      data: {
-        content: messageContent,
-        conversationId: conversation.id,
-        senderId: currentUserId, // O cliente é o remetente
-      },
+    
+    // Usa messageService.createMessage para disparar notificação
+    await messageService.createMessage(
+      conversation.id,
+      currentUserId,
+      messageContent,
+      true // isSystemMessage = true
+    );
+  }
+  else if (newStatus === 'REJECTED') {
+    const messageContent = `Olá ${application.applicant.firstName}. Agradecemos seu interesse na vaga "${application.job.title}", mas infelizmente decidimos seguir com outros candidatos. Desejamos sucesso na sua busca!`;
+    
+    // Usa messageService.createMessage para disparar notificação
+    await messageService.createMessage(
+      conversation.id,
+      currentUserId,
+      messageContent,
+      true // isSystemMessage = true
+    );
+    
+    // Trava a conversa
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { isLocked: true },
     });
   }
-
-  return { message: 'Status atualizado com sucesso.' };
 };
 
 const deleteApplication = async (applicationId, applicantId) => {
@@ -60,54 +75,57 @@ const deleteApplication = async (applicationId, applicantId) => {
   return result;
 };
 
-// Cliente solicita o encerramento do job
-const requestJobClosure = async (applicationId, currentUserId) => {
-  const app = await prisma.jobApplication.findUnique({
-    where: { id: applicationId },
-    include: {
-      job: { include: { author: true } },
+// Função para solicitar encerramento de trabalho
+const requestJobClosure = async (applicationId, requesterId) => {
+  const application = await prisma.jobApplication.findFirst({
+    where: {
+      id: applicationId,
+      OR: [
+        { applicantId: requesterId },
+        { job: { author: { userId: requesterId } } }
+      ]
     },
+    include: {
+      job: { 
+        select: { 
+          title: true,
+          author: { select: { userId: true } }
+        } 
+      },
+      applicant: { select: { id: true, firstName: true } }
+    }
   });
 
-  if (!app || app.job.author.userId !== currentUserId) {
-    throw new Error('Acesso negado.');
+  if (!application) {
+    throw new Error('Acesso negado ou candidatura não encontrada.');
   }
 
-  if (app.jobStatus === 'COMPLETED' || app.jobStatus === 'REVIEWED') {
-    throw new Error('A vaga já foi encerrada.');
-  }
-
-  return prisma.jobApplication.update({
-    where: { id: applicationId },
-    data: { jobStatus: 'PENDING_CLOSE' },
+  // Busca ou cria conversa
+  let conversation = await prisma.conversation.findUnique({
+    where: { applicationId: applicationId },
   });
-};
-
-// Freelancer confirma o encerramento
-const confirmJobClosure = async (applicationId, currentUserId) => {
-  const app = await prisma.jobApplication.findUnique({
-    where: { id: applicationId },
-    include: { conversation: true },
-  });
-
-  if (!app || app.applicantId !== currentUserId) {
-    throw new Error('Acesso negado.');
-  }
-
-  const updated = await prisma.jobApplication.update({
-    where: { id: applicationId },
-    data: { jobStatus: 'COMPLETED' },
-  });
-
-  // Opcional: trava a conversa após encerramento
-  if (app.conversation) {
-    await prisma.conversation.update({
-      where: { id: app.conversation.id },
-      data: { isLocked: true },
+  
+  if (!conversation) {
+    conversation = await prisma.conversation.create({
+      data: { applicationId: applicationId },
     });
   }
 
-  return updated;
+  // Determina quem está solicitando
+  const isClient = requesterId === application.job.author.userId;
+  const requesterName = isClient ? 'O cliente' : application.applicant.firstName;
+  
+  const messageContent = `${requesterName} solicitou o encerramento deste trabalho. Aguardando confirmação da outra parte.`;
+
+  // Envia mensagem automática com notificação
+  await messageService.createMessage(
+    conversation.id,
+    requesterId,
+    messageContent,
+    true // isSystemMessage = true
+  );
+
+  return { success: true, message: 'Solicitação de encerramento enviada.' };
 };
 
 // Freelancer avalia o Cliente
@@ -201,6 +219,57 @@ const submitFreelancerReview = async (applicationId, clientId, { rating, comment
   });
 
   return review;
+};
+
+// Função para confirmar encerramento
+const confirmJobClosure = async (applicationId, confirmerId) => {
+  const application = await prisma.jobApplication.findFirst({
+    where: {
+      id: applicationId,
+      OR: [
+        { applicantId: confirmerId },
+        { job: { author: { userId: confirmerId } } }
+      ]
+    },
+    include: {
+      job: { select: { title: true } }
+    }
+  });
+
+  if (!application) {
+    throw new Error('Acesso negado ou candidatura não encontrada.');
+  }
+
+  // Atualiza o status para COMPLETED
+  await prisma.jobApplication.update({
+    where: { id: applicationId },
+    data: { status: 'COMPLETED' }
+  });
+
+  // Busca conversa
+  const conversation = await prisma.conversation.findUnique({
+    where: { applicationId: applicationId },
+  });
+
+  if (conversation) {
+    const messageContent = `Trabalho "${application.job.title}" foi marcado como concluído. Obrigado!`;
+    
+    // Envia mensagem de confirmação
+    await messageService.createMessage(
+      conversation.id,
+      confirmerId,
+      messageContent,
+      true // isSystemMessage = true
+    );
+
+    // Trava a conversa
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { isLocked: true },
+    });
+  }
+
+  return { success: true, message: 'Trabalho marcado como concluído.' };
 };
 
 module.exports = {

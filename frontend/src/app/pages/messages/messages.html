@@ -14,7 +14,7 @@
             <div class="conversation-details">
               <span class="conversation-name">
                 @if (currentUserId === conv.application.applicant.id) {
-                  {{ conv.application.job.author.user.firstName }} {{ conv.application.job.author.user.lastName }}
+                  {{ conv.application.job.author.companyName || (conv.application.job.author.user?.firstName + ' ' + conv.application.job.author.user?.lastName) }}
                 } @else {
                   {{ conv.application.applicant.firstName }} {{ conv.application.applicant.lastName }}
                 }
@@ -30,15 +30,15 @@
   <main class="chat-window">
     @if (activeConversation$ | async; as activeConv) {
       <div class="chat-header">
-        <h3>
-          @if (currentUserId === activeConv.application.applicant.id) {
-            {{ activeConv.application.job.author.user.firstName }} {{ activeConv.application.job.author.user.lastName }}
-          } @else {
-            {{ activeConv.application.applicant.firstName }} {{ activeConv.application.applicant.lastName }}
-          }
-        </h3>
-        <span class="job-context">Assunto: {{ activeConv.application.job.title }}</span>
-      </div>
+    <h3>
+     @if (currentUserId === activeConv.application.applicant.id) {
+                  {{ activeConv.application.job.author.companyName || (activeConv.application.job.author.user?.firstName + ' ' + activeConv.application.job.author.user?.lastName) }}
+     } @else {
+                  {{ activeConv.application.applicant.firstName }} {{ activeConv.application.applicant.lastName }}
+     }
+    </h3>
+    <span class="job-context">Assunto: {{ activeConv.application.job.title }}</span>
+   </div>
 
       <div class="message-list" #messageListContainer>
         @if (messages$ | async; as messages) {

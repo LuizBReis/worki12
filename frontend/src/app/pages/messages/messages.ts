@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable, of, switchMap, map, BehaviorSubject } from 'rxjs';
@@ -7,6 +7,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 // Serviços e Interfaces
 import { MessageService, Conversation, Message } from '../../services/message';
 import { AuthService } from '../../auth/auth.service';
+import { NotificationService } from '../../services/notification';
 
 // Imports do Material
 import { MatListModule } from '@angular/material/list';
@@ -28,7 +29,7 @@ import { TextFieldModule } from '@angular/cdk/text-field';
   templateUrl: './messages.html',
   styleUrls: ['./messages.scss']
 })
-export class Messages implements OnInit, AfterViewChecked {
+export class Messages implements OnInit, OnDestroy, AfterViewChecked {
 
   @ViewChild('messageListContainer') private messageListContainer!: ElementRef;
 
@@ -42,6 +43,7 @@ export class Messages implements OnInit, AfterViewChecked {
 
   constructor(
     private messageService: MessageService,
+    private notificationService: NotificationService,
     private route: ActivatedRoute,
     private authService: AuthService
   ) {
@@ -52,6 +54,7 @@ export class Messages implements OnInit, AfterViewChecked {
 
   ngOnInit(): void {
     // 1. Busca a lista de conversas
+    this.notificationService.setInMessagesPage(true);
     this.conversations$ = this.messageService.getMyConversations();
 
     // 2. Ouve a URL para saber qual conversa está ativa
@@ -67,7 +70,7 @@ export class Messages implements OnInit, AfterViewChecked {
       })
     );
 
-    // 3. Ouve a URL e busca as mensagens da conversa ativa
+    // Busca mensagens e entra na sala
     this.route.paramMap.pipe(
       switchMap(params => {
         const conversationId = params.get('id');
@@ -81,12 +84,8 @@ export class Messages implements OnInit, AfterViewChecked {
       this.messages$.next(messages);
     });
 
-    // ==========================================================
-    // ✅ CORREÇÃO APLICADA AQUI
-    // ==========================================================
+// Ouve por novas mensagens (só funciona quando este componente está ativo)
     this.messageService.onNewMessage().subscribe(newMessage => {
-      // Apenas adiciona a mensagem via socket se o remetente (senderId)
-      // for DIFERENTE do usuário que está vendo a tela (currentUserId).
       if (newMessage.senderId !== this.currentUserId) {
         const currentMessages = this.messages$.getValue();
         this.messages$.next([...currentMessages, newMessage]);
@@ -94,31 +93,44 @@ export class Messages implements OnInit, AfterViewChecked {
     });
   }
 
-  ngAfterViewChecked() {
+ngOnDestroy(): void {
+    // Informa que saiu da página de mensagens
+    this.notificationService.setInMessagesPage(false);
+  }
+
+  ngAfterViewChecked(): void {
     this.scrollToBottom();
   }
 
-  scrollToBottom(): void {
+  private scrollToBottom(): void {
     try {
-      this.messageListContainer.nativeElement.scrollTop = this.messageListContainer.nativeElement.scrollHeight;
-    } catch(err) { }
+      if (this.messageListContainer) {
+        this.messageListContainer.nativeElement.scrollTop = 
+          this.messageListContainer.nativeElement.scrollHeight;
+      }
+    } catch (err) {
+      console.error('Erro ao fazer scroll:', err);
+    }
   }
 
   onSendMessage(): void {
-    if (this.messageControl.invalid) return;
+      if (this.messageControl.invalid) return;
 
-    const conversationId = this.route.snapshot.paramMap.get('id');
-    if (conversationId) {
-      const content = this.messageControl.value;
+      const conversationId = this.route.snapshot.paramMap.get('id');
+      if (!conversationId || conversationId === 'inbox') return;
+
+      const content = this.messageControl.value.trim();
+      if (!content) return;
+
       this.messageService.sendMessage(conversationId, content).subscribe({
         next: (newMessage) => {
-          // Adição "otimista": adiciona a SUA PRÓPRIA mensagem imediatamente
           const currentMessages = this.messages$.getValue();
           this.messages$.next([...currentMessages, newMessage]);
           this.messageControl.reset();
         },
-        error: (err) => console.error("Erro ao enviar mensagem:", err)
+        error: (error) => {
+          console.error('Erro ao enviar mensagem:', error);
+        }
       });
     }
   }
-}

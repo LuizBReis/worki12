@@ -2,90 +2,129 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getIO } = require('../socket');
 
-const findOrCreateConversation = async (applicationId, currentUserId) => {
-  // 1. Busca a candidatura para garantir que o usuário logado (cliente) é o dono da vaga
-  const application = await prisma.jobApplication.findFirst({
-    where: {
-      id: applicationId,
-      job: {
-        author: {
-          userId: currentUserId,
-        },
-      },
-    },
+// Função auxiliar para determinar o destinatário de uma mensagem
+const getRecipientId = async (conversationId, senderId) => {
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    include: {
+      application: {
+        include: {
+          applicant: { select: { id: true } },
+          job: { 
+            include: { 
+              author: { select: { userId: true } } 
+            } 
+          }
+        }
+      }
+    }
   });
 
-  // 2. Se não encontrar (ou se o usuário não for o dono), nega o acesso
-  if (!application) {
-    throw new Error('Acesso negado ou candidatura não encontrada.');
-  }
+  if (!conversation) return null;
 
-  // 3. Tenta encontrar uma conversa que já exista para esta candidatura
+  const applicantId = conversation.application.applicant.id;
+  const employerId = conversation.application.job.author.userId;
+
+  // Retorna o ID do outro usuário (não o remetente)
+  return senderId === applicantId ? employerId : applicantId;
+};
+
+// Funções existentes (mantidas como estão)
+const findOrCreateConversation = async (applicationId) => {
   let conversation = await prisma.conversation.findUnique({
-    where: { applicationId: applicationId },
+    where: { applicationId },
+    include: {
+      application: {
+        include: {
+          job: { 
+            include: { 
+              author: true 
+            } 
+          },
+          applicant: true
+        }
+      }
+    }
   });
 
-  // 4. Se não encontrar, cria uma nova
   if (!conversation) {
     conversation = await prisma.conversation.create({
-      data: {
-        applicationId: applicationId,
-      },
+      data: { applicationId },
+      include: {
+        application: {
+          include: {
+            job: { 
+              include: { 
+                author: true 
+              } 
+            },
+            applicant: true
+          }
+        }
+      }
     });
   }
 
   return conversation;
 };
 
-// --- NOVA FUNÇÃO: BUSCAR TODAS AS CONVERSAS DE UM USUÁRIO ---
 const getConversationsForUser = async (userId) => {
-  return prisma.conversation.findMany({
+  return await prisma.conversation.findMany({
     where: {
-      // A condição OR busca conversas onde o usuário logado é
-      // ou o candidato (applicant) ou o dono da vaga (cliente).
       application: {
         OR: [
-          { applicantId: userId }, // Onde eu sou o candidato
-          { job: { author: { userId: userId } } } // Onde eu sou o dono da vaga
+          { applicantId: userId },
+          { job: { author: { userId } } }
         ]
       }
     },
     include: {
-      // Incluímos os dados necessários para exibir na lista
       application: {
         include: {
-          applicant: true, // O freelancer
-          job: { include: { author: { include: { user: true } } } } // A vaga e o cliente
+          job: { 
+            include: { 
+              author: true 
+            } 
+          },
+          applicant: true
+        }
+      },
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        include: {
+          sender: {
+            select: { id: true, firstName: true }
+          }
         }
       }
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: {
+      createdAt: 'desc'
+    }
   });
 };
 
-// --- NOVA FUNÇÃO: BUSCAR MENSAGENS DE UMA CONVERSA ---
-const getMessagesForConversation = async (conversationId, currentUserId) => {
-  // 1. Garante que o usuário logado pertence a esta conversa
+const getMessagesForConversation = async (conversationId, userId) => {
   const conversation = await prisma.conversation.findFirst({
     where: {
       id: conversationId,
       application: {
         OR: [
-          { applicantId: currentUserId },
-          { job: { author: { userId: currentUserId } } }
+          { applicantId: userId },
+          { job: { author: { userId } } }
         ]
       }
     }
   });
 
   if (!conversation) {
-    throw new Error('Acesso negado.');
+    throw new Error('Acesso negado para visualizar esta conversa.');
   }
 
-  // 2. Se a permissão estiver ok, busca as mensagens
-  return prisma.message.findMany({
-    where: { conversationId: conversationId },
-    orderBy: { createdAt: 'asc' }, // Mensagens da mais antiga para a mais nova
+  return await prisma.message.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: 'asc' },
     include: {
       sender: {
         select: { id: true, firstName: true }
@@ -94,8 +133,8 @@ const getMessagesForConversation = async (conversationId, currentUserId) => {
   });
 };
 
-const createMessage = async (conversationId, senderId, content) => {
-  // 1. Verificação de segurança (seu código original, está perfeito)
+const createMessage = async (conversationId, senderId, content, isSystemMessage = false) => {
+  // 1. Verificação de segurança (com o include)
   const conversation = await prisma.conversation.findFirst({
     where: {
       id: conversationId,
@@ -105,6 +144,19 @@ const createMessage = async (conversationId, senderId, content) => {
           { job: { author: { userId: senderId } } }
         ]
       }
+    },
+    // (O include aqui é para o 'getRecipientId' abaixo)
+    include: {
+      application: {
+        include: {
+          applicant: { select: { id: true } },
+          job: {
+            include: {
+              author: { select: { userId: true } }
+            }
+          }
+        }
+      }
     }
   });
 
@@ -112,7 +164,7 @@ const createMessage = async (conversationId, senderId, content) => {
     throw new Error('Acesso negado para enviar mensagem nesta conversa.');
   }
 
-  // 2. Cria a nova mensagem (seu código original)
+  // 2. Cria a nova mensagem
   const newMessage = await prisma.message.create({
     data: {
       content: content,
@@ -126,9 +178,33 @@ const createMessage = async (conversationId, senderId, content) => {
     }
   });
 
-  // 🚀 -> NOVO: Emite a nova mensagem para todos os clientes na "sala" da conversa
-const io = getIO();
+  // 3. Determina o destinatário
+  // (Usando os dados que já buscamos, em vez de chamar getRecipientId de novo)
+  const applicantId = conversation.application.applicant.id;
+  const clientId = conversation.application.job.author.userId;
+  const recipientId = (senderId === applicantId) ? clientId : applicantId;
+
+  // 4. Emissão via Socket.IO
+  const io = getIO();
+
+  // 4a. Emite para a sala da conversa (chat ao vivo)
   io.to(conversationId).emit('receive_message', newMessage);
+
+  // 4b. Emite notificação para a sala pessoal do destinatário
+  if (recipientId) {
+    
+    // --- ✅ A CORREÇÃO ESTÁ AQUI ---
+    // Adiciona o prefixo "user:" para bater com a sala do socket.js
+    const recipientRoom = `user:${recipientId}`;
+    
+    io.to(recipientRoom).emit('new_message_notification', {
+      conversationId: conversationId,
+      message: newMessage,
+      isSystemMessage: isSystemMessage
+    });
+
+    console.log(`Notificação enviada para ${recipientRoom}`);
+  }
 
   return newMessage;
 };
