@@ -24,7 +24,8 @@
           }
         </mat-form-field>
 
-        <button mat-raised-button color="primary" type="submit" [disabled]="changePasswordForm.invalid">
+<button mat-raised-button class="btn btn-primary" type="submit" [disabled]="changePasswordForm.invalid" [ngClass]="{ 'active-glow': changePasswordForm.valid }">
+          <mat-icon fontIcon="save"></mat-icon>
           Salvar Alterações de Senha
         </button>
       </form>
@@ -46,7 +47,8 @@
           <mat-label>Novo E-mail</mat-label>
           <input matInput formControlName="newEmail" type="email">
         </mat-form-field>
-        <button mat-raised-button color="primary" type="submit" [disabled]="changeEmailForm.invalid">
+<button mat-raised-button class="btn btn-primary" type="submit" [disabled]="changeEmailForm.invalid" [ngClass]="{ 'active-glow': changeEmailForm.valid }">
+          <mat-icon>save</mat-icon>
           Salvar Novo E-mail
         </button>
       </form>
@@ -54,7 +56,10 @@
   </mat-card>
 
   <div class="danger-zone">
-    <button mat-stroked-button color="warn" (click)="onDeleteAccount()">Excluir Conta</button>
+    <button mat-stroked-button class="btn btn-outline btn-danger" (click)="onDeleteAccount()">
+      <mat-icon>delete</mat-icon>
+      Excluir Conta
+    </button>
   </div>
 
 </div>

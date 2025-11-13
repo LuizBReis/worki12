@@ -1,31 +1,31 @@
 <div class="page-layout">
 
   <aside class="filters-sidebar">
-    <h3>Filtrar Por</h3>
+    <h3> Filtrar Por</h3>
     <form [formGroup]="filterForm" class="filter-form">
       <mat-form-field appearance="outline">
-        <input matInput formControlName="search" placeholder="Buscar por título">
+        <input matInput formControlName="search" placeholder=" Buscar por título">
       </mat-form-field>
 
-      <h4>Orçamento (BRL)</h4>
+      <h4> Orçamento (BRL)</h4>
       <!-- Wrapper removido -->
       <mat-form-field appearance="outline">
-        <input matInput formControlName="minBudget" type="number" placeholder="Mín">
+        <input matInput formControlName="minBudget" type="number" placeholder=" Mín">
       </mat-form-field>
       <mat-form-field appearance="outline">
-        <input matInput formControlName="maxBudget" type="number" placeholder="Máx">
+        <input matInput formControlName="maxBudget" type="number" placeholder=" Máx">
       </mat-form-field>
 
-      <h4>Localização</h4>
+      <h4> Localização</h4>
       <mat-form-field appearance="outline">
         <mat-label>Cidade</mat-label>
         <input matInput formControlName="city" placeholder="Ex: Brasília">
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Estado</mat-label>
+        <mat-label> Estado</mat-label>
         <mat-select formControlName="state">
-          <mat-option [value]="''">Qualquer Estado</mat-option> 
+          <mat-option [value]="''"> Qualquer estado</mat-option> 
           @for (state of states; track state) {
             <mat-option [value]="state">{{ state }}</mat-option>
           }
@@ -43,16 +43,20 @@
           <mat-option *ngFor="let s of skills" [value]="s.name">{{ s.name }}</mat-option>
         </mat-select>
       </mat-form-field>
-      <button type="button" mat-stroked-button (click)="clearFilters()">Limpar filtros</button>
+      <button type="button" mat-stroked-button class="btn btn-outline btn-danger" (click)="clearFilters()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpar filtros
+      </button>
     </form>
   </aside>
 
   <main class="feed-container">
     <div class="feed-header">
       <h1 class="feed-title">Encontre Seu Próximo Projeto</h1>
-      <a *ngIf="userRole === 'CLIENT'" mat-raised-button color="primary" routerLink="/jobs/new">
-        Publicar uma Vaga
-      </a>
+    <a *ngIf="userRole === 'CLIENT'" mat-raised-button class="btn btn-primary" routerLink="/jobs/new">
+      <mat-icon>add_box</mat-icon>
+      Publicar uma Vaga
+    </a>
     </div>
 
     <div *ngIf="jobs.length > 0; else noJobs" class="jobs-grid">

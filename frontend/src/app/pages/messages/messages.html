@@ -18,6 +18,7 @@
                 } @else {
                   {{ conv.application.applicant.firstName }} {{ conv.application.applicant.lastName }}
                 }
+                @if (isUnread(conv.id)) { <span class="unread-dot" aria-label="Nova mensagem"></span> }
               </span>
               <span class="last-message">{{ conv.application.job.title }}</span>
             </div>

@@ -1,5 +1,8 @@
 <div class="details-container">
-  <a routerLink="/dashboard" mat-stroked-button>&#8592; Voltar para todas as vagas</a>
+<a routerLink="/dashboard" mat-stroked-button class="btn btn-outline">
+  <mat-icon>arrow_back</mat-icon>
+  Voltar para todas as vagas
+</a>
 
   @if (isLoading) {
     <mat-spinner></mat-spinner>
@@ -100,7 +103,7 @@
                           <mat-icon>thumb_down</mat-icon>
                         </button>
                       } @else {
-                        <span class="status-chip" [ngClass]="app.status.toLowerCase()">{{ app.status | titlecase }}</span>
+                        <span class="status-chip" [ngClass]="app.status.toLowerCase()">{{ translateApplicationStatus(app.status) }}</span>
 
                         @if (app.status === 'SHORTLISTED') {
                           @if (!app.jobStatus || app.jobStatus === 'ACTIVE') {
@@ -110,12 +113,12 @@
                             </button>
                           }
                           @if (app.jobStatus === 'COMPLETED' && !app.clientReview) {
-                            <button mat-stroked-button color="accent" (click)="openClientReview(app)">
-                              <mat-icon>rate_review</mat-icon>
+                            <button mat-raised-button class="btn btn-warning btn-sm" (click)="openClientReview(app)">
+                              <mat-icon>star</mat-icon>
                               Avaliar Freelancer
                             </button>
                           }
-                          <span class="status-chip small" *ngIf="app.jobStatus">{{ app.jobStatus | titlecase }}</span>
+                          <span class="status-chip small" *ngIf="app.jobStatus">{{ translateJobStatus(app.jobStatus) }}</span>
                         }
                       }
                     </div>

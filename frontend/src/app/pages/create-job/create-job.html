@@ -63,7 +63,8 @@
       </mat-autocomplete>
     </mat-form-field>
   </div> 
-  <button mat-raised-button color="primary" type="submit" [disabled]="createJobForm.invalid || selectedSkills.length === 0">
+<button mat-raised-button class="btn btn-primary" type="submit" [disabled]="createJobForm.invalid || selectedSkills.length === 0">
+    <mat-icon>add_box</mat-icon>
     Publicar Vaga
   </button>
 

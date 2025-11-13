@@ -69,7 +69,7 @@ const findOrCreateConversation = async (applicationId) => {
 };
 
 const getConversationsForUser = async (userId) => {
-  return await prisma.conversation.findMany({
+  const conversations = await prisma.conversation.findMany({
     where: {
       application: {
         OR: [
@@ -103,6 +103,15 @@ const getConversationsForUser = async (userId) => {
       createdAt: 'desc'
     }
   });
+
+  // Reordena pelo horário da última mensagem (ou criação da conversa)
+  conversations.sort((a, b) => {
+    const aTs = (a.messages && a.messages[0] ? new Date(a.messages[0].createdAt).getTime() : new Date(a.createdAt).getTime());
+    const bTs = (b.messages && b.messages[0] ? new Date(b.messages[0].createdAt).getTime() : new Date(b.createdAt).getTime());
+    return bTs - aTs;
+  });
+
+  return conversations;
 };
 
 const getMessagesForConversation = async (conversationId, userId) => {

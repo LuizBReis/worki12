@@ -45,5 +45,5 @@
       </mat-form-field>
     </div> </form> </mat-dialog-content> <mat-dialog-actions align="end">
   <button mat-button (click)="onCancel()">Cancelar</button>
-  <button mat-raised-button color="primary" (click)="onSave()" [disabled]="jobForm.invalid || selectedSkills.length === 0">Salvar Alterações</button> 
+<button mat-raised-button class="btn btn-primary" (click)="onSave()" [disabled]="jobForm.invalid || selectedSkills.length === 0">Salvar Alterações</button>
 </mat-dialog-actions>

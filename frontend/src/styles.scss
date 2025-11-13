@@ -13,9 +13,7 @@ html, body {
 
 // Centraliza o conteúdo principal (nossos formulários) na tela
 body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: block;
 }
 
 .mat-mdc-autocomplete-panel,
@@ -112,4 +110,178 @@ body {
     font-style: italic;
     display: block;
   }
+}
+
+// =============================================================
+// Botões globais (referência visual da app publicada)
+// =============================================================
+
+// Base comum
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease;
+  white-space: nowrap; /* evita quebra de linha no texto do botão */
+}
+
+// Primário: pill com gradiente e glow
+.btn-primary {
+  @extend .btn;
+  background: linear-gradient(180deg, #34C759 0%, #22B24C 100%);
+  color: #fff;
+  padding: 12px 22px;
+  box-shadow: 0 10px 22px rgba(34, 178, 76, 0.35);
+}
+.btn-primary.active-glow {
+  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.55), 0 10px 22px rgba(34, 178, 76, 0.35);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #34C759 0%, #22B24C 100%) !important;
+  color: #fff !important;
+}
+.btn-primary .mat-icon {
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+// Suporte a Angular Material (raised)
+.mat-mdc-raised-button.btn-primary {
+  --mdc-filled-button-container-color: transparent; /* usa nosso gradiente */
+  --mdc-filled-button-label-text-color: #fff;
+  --mdc-filled-button-state-layer-color: transparent; /* remove overlay branco */
+  --mdc-filled-button-hover-state-layer-opacity: 0;
+  --mdc-filled-button-focus-state-layer-opacity: 0;
+  --mdc-filled-button-pressed-state-layer-opacity: 0;
+  border-radius: 999px;
+}
+
+// Outline: branco com contorno verde
+.btn-outline {
+  @extend .btn;
+  background: #fff;
+  color: #22B24C;
+  border: 2px solid #22B24C;
+  padding: 10px 20px;
+}
+.btn-outline:hover { background: #f0fff5; }
+.btn-outline .mat-icon { color: #22B24C; font-size: 20px; }
+
+// Suporte a Angular Material (stroked/outlined)
+.mat-mdc-stroked-button.btn-outline,
+.mat-mdc-outlined-button.btn-outline {
+  --mdc-outlined-button-outline-color: #22B24C;
+  --mdc-outlined-button-label-text-color: #22B24C;
+  border-radius: 999px;
+}
+
+// Variantes perigosas (vermelho) para ações como "Limpar filtros"
+.btn-danger { color: #fff; }
+
+// Primário perigoso (se for necessário em alguma ação)
+.btn-danger.btn-primary {
+  background: linear-gradient(180deg, #FF5252 0%, #E53935 100%);
+  box-shadow: 0 10px 22px rgba(229, 57, 53, 0.35);
+}
+.btn-danger.btn-primary .mat-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+// Outline perigoso (vermelho)
+.btn-outline.btn-danger {
+  color: #E53935;
+  border-color: #E53935;
+}
+.btn-outline.btn-danger:hover {
+  background: linear-gradient(180deg, #FF5252 0%, #E53935 100%);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(229, 57, 53, 0.35);
+}
+.btn-outline.btn-danger .mat-icon { color: #E53935; }
+.btn-outline.btn-danger:hover .mat-icon { color: #fff; }
+
+// Suporte a Angular Material para outline perigoso
+.mat-mdc-stroked-button.btn-outline.btn-danger,
+.mat-mdc-outlined-button.btn-outline.btn-danger {
+  --mdc-outlined-button-outline-color: #E53935;
+  --mdc-outlined-button-label-text-color: #E53935;
+  --mdc-outlined-button-state-layer-color: transparent; /* remove overlay branco */
+  --mdc-outlined-button-hover-state-layer-opacity: 0;
+  --mdc-outlined-button-focus-state-layer-opacity: 0;
+  --mdc-outlined-button-pressed-state-layer-opacity: 0;
+}
+/* Preencher no hover para stroked/outlined danger */
+.mat-mdc-stroked-button.btn-outline.btn-danger:hover,
+.mat-mdc-outlined-button.btn-outline.btn-danger:hover {
+  background: linear-gradient(180deg, #FF5252 0%, #E53935 100%);
+  --mdc-outlined-button-label-text-color: #fff;
+  color: #fff;
+}
+
+// Garantir estilo do label interno de botões Material
+.mdc-button.btn .mdc-button__label,
+.mat-mdc-raised-button.btn .mdc-button__label,
+.mat-mdc-stroked-button.btn .mdc-button__label,
+.mat-mdc-outlined-button.btn .mdc-button__label,
+.btn .mdc-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  white-space: nowrap !important;
+  color: inherit;
+}
+
+/* Refinar ícone e label dentro do botão primário */
+
+// Botão amarelo (warning) e utilitário de tamanho pequeno
+.btn-warning {
+  @extend .btn;
+  background: linear-gradient(180deg, #FFD54F 0%, #FFB300 100%);
+  color: #212529; /* texto escuro para contraste */
+  padding: 10px 18px;
+  box-shadow: 0 8px 18px rgba(255, 179, 0, 0.35);
+}
+.btn-warning:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #FFD54F 0%, #FFB300 100%) !important;
+  color: #212529 !important;
+}
+.btn-warning .mat-icon { color: #212529; font-size: 18px; line-height: 1; }
+
+// Suporte a Angular Material (raised) para warning
+.mat-mdc-raised-button.btn-warning {
+  --mdc-filled-button-container-color: transparent;
+  --mdc-filled-button-label-text-color: #212529;
+  --mdc-filled-button-state-layer-color: transparent;
+  --mdc-filled-button-hover-state-layer-opacity: 0;
+  --mdc-filled-button-focus-state-layer-opacity: 0;
+  --mdc-filled-button-pressed-state-layer-opacity: 0;
+  border-radius: 999px;
+}
+
+// Utilitário de tamanho pequeno para botões
+.btn-sm {
+  padding: 6px 12px !important;
+  font-size: 0.9rem !important;
+  line-height: 1 !important;
+}
+.btn-sm .mat-icon { font-size: 18px !important; }
+.btn-primary .mdc-button__label .mat-icon {
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 6px;
+  border-radius: 10px;
 }

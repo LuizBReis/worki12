@@ -82,8 +82,9 @@
 
 .feed-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-
+  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
@@ -93,6 +94,8 @@
   color: var(--text-primary);
   margin: 0; // Remove margens extras
 }
+
+/* Botões usam estilos globais definidos em styles.scss */
 
 /* Grade que segura os cards */
 .jobs-grid {

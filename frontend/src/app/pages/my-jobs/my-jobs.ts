@@ -143,4 +143,29 @@ export class MyJobs implements OnInit {
       }
     });
   }
+
+  // Tradução de status de candidatura para PT-BR
+  translateApplicationStatus(status: string): string {
+    const map: Record<string, string> = {
+      'PENDING': 'Pendente',
+      'APPLIED': 'Candidatado',
+      'SHORTLISTED': 'Aceito',
+      'REJECTED': 'Rejeitado',
+      'HIRED': 'Contratado',
+      'WITHDRAWN': 'Retirada'
+    };
+    return map[status] || status;
+  }
+
+  // Tradução de status da vaga/processo para PT-BR
+  translateJobStatus(status?: string): string {
+    if (!status) return '';
+    const map: Record<string, string> = {
+      'ACTIVE': 'Ativa',
+      'PENDING_CLOSE': 'Encerramento pendente',
+      'COMPLETED': 'Concluído',
+      'CANCELLED': 'Cancelado'
+    };
+    return map[status] || status;
+  }
 }

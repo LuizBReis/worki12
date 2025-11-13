@@ -23,12 +23,15 @@
       #fileInput 
       (change)="onFileSelected($event)"
       accept="image/png, image/jpeg, image/jpg"
-      [disabled]="isUploading"> <button mat-stroked-button color="primary" (click)="fileInput.click()" [disabled]="isUploading"> <mat-icon>upload</mat-icon>
+      [disabled]="isUploading"> 
+    <button mat-raised-button class="btn btn-primary" (click)="fileInput.click()" [disabled]="isUploading">
+      <mat-icon>upload</mat-icon>
       Trocar Foto
     </button>
 
     @if (userProfile.avatarUrl) {
-      <button mat-stroked-button color="warn" (click)="onDeleteAvatar()" [disabled]="isUploading"> <mat-icon>delete</mat-icon>
+      <button mat-stroked-button class="btn btn-outline btn-danger" (click)="onDeleteAvatar()" [disabled]="isUploading">
+        <mat-icon>delete</mat-icon>
         Remover Foto
       </button>
     }
@@ -309,8 +312,8 @@
             </div> @if (isEditing) {
               <hr>
               <div class="edit-actions">
-                <button mat-stroked-button type="button" (click)="toggleEditMode()">Cancelar</button>
-                <button mat-raised-button color="primary" type="button" (click)="onSave()">Salvar Alterações</button>
+                <button mat-stroked-button class="btn btn-outline" type="button" (click)="toggleEditMode()">Cancelar</button>
+                <button mat-raised-button class="btn btn-primary" type="button" (click)="onSave()">Salvar Alterações</button>
               </div>
             }
           </mat-card-content>

@@ -50,9 +50,9 @@
                  <p class="applied-date">Candidatura enviada em: {{ app.createdAt | date:'dd/MM/yyyy' }}</p>
 
                  <span class="application-status" [ngClass]="app.status.toLowerCase()">
-                   {{ app.status | titlecase }}
+                   {{ translateApplicationStatus(app.status) }}
                  </span>
-                 <span class="application-status small" *ngIf="app.jobStatus">{{ app.jobStatus | titlecase }}</span>
+                 <span class="application-status small" *ngIf="app.jobStatus">{{ translateJobStatus(app.jobStatus) }}</span>
 
                  <!-- Ações do fluxo de encerramento e avaliação para freelancer -->
                  @if (app.status === 'SHORTLISTED') {
@@ -63,10 +63,10 @@
                      </button>
                    }
                    @if (app.jobStatus === 'COMPLETED' && !app.freelancerReview) {
-                     <button mat-stroked-button color="accent" (click)="openFreelancerReview(app)">
-                       <mat-icon>rate_review</mat-icon>
-                       Avaliar Cliente
-                     </button>
+                    <button mat-raised-button class="btn btn-warning btn-sm" (click)="openFreelancerReview(app)">
+                      <mat-icon>star</mat-icon>
+                      Avaliar Cliente
+                    </button>
                    }
                  }
                </div>

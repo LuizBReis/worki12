@@ -34,9 +34,13 @@ export class Messages implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('messageListContainer') private messageListContainer!: ElementRef;
 
   conversations$: Observable<Conversation[]>;
+  private conversationsSubject = new BehaviorSubject<Conversation[]>([]);
   activeConversation$: Observable<Conversation | undefined>;
   messages$ = new BehaviorSubject<Message[]>([]);
   currentUserId: string | null;
+  // Unread tracking
+  private unreadSet = new Set<string>();
+  unreadConversations$: Observable<Set<string>>;
 
   // FormControl para a caixa de texto
   messageControl = new FormControl('', { nonNullable: true, validators: [Validators.required] });
@@ -48,14 +52,23 @@ export class Messages implements OnInit, OnDestroy, AfterViewChecked {
     private authService: AuthService
   ) {
     this.currentUserId = this.authService.getUserId();
-    this.conversations$ = of([]);
+    this.conversations$ = this.conversationsSubject.asObservable();
     this.activeConversation$ = of(undefined);
+    this.unreadConversations$ = this.notificationService.getUnreadConversations();
   }
 
   ngOnInit(): void {
+    // Garante autenticação no socket de notificações se o layout ainda não tiver autenticado
+    if (this.currentUserId) {
+      this.notificationService.authenticate(this.currentUserId);
+    }
     // 1. Busca a lista de conversas
     this.notificationService.setInMessagesPage(true);
-    this.conversations$ = this.messageService.getMyConversations();
+    this.messageService.getMyConversations().subscribe(convs => {
+      this.conversationsSubject.next(this.sortByLastActivity(convs));
+      // Reconcilia estado de não lidas baseado nos timestamps
+      this.notificationService.reconcileUnreadFromConversations(convs, this.currentUserId);
+    });
 
     // 2. Ouve a URL para saber qual conversa está ativa
     this.activeConversation$ = this.route.paramMap.pipe(
@@ -77,6 +90,8 @@ export class Messages implements OnInit, OnDestroy, AfterViewChecked {
         if (!conversationId || conversationId === 'inbox') {
           return of([]);
         }
+        // Ao entrar numa conversa específica, marcá-la como lida
+        this.notificationService.markConversationRead(conversationId);
         this.messageService.joinConversation(conversationId);
         return this.messageService.getMessages(conversationId);
       })
@@ -86,10 +101,22 @@ export class Messages implements OnInit, OnDestroy, AfterViewChecked {
 
 // Ouve por novas mensagens (só funciona quando este componente está ativo)
     this.messageService.onNewMessage().subscribe(newMessage => {
+      // Atualiza a janela da conversa apenas para mensagens recebidas
       if (newMessage.senderId !== this.currentUserId) {
         const currentMessages = this.messages$.getValue();
         this.messages$.next([...currentMessages, newMessage]);
       }
+      // Sempre reordena a lista de conversas pelo último activity
+      this.updateConversationActivity(newMessage.conversationId, newMessage);
+      // Atualiza o estado local de não lidas
+      this.unreadConversations$.subscribe(set => {
+        this.unreadSet = new Set(set);
+      });
+    });
+
+    // Mantém espelhado o set de não lidas
+    this.unreadConversations$.subscribe(set => {
+      this.unreadSet = new Set(set);
     });
   }
 
@@ -127,10 +154,55 @@ ngOnDestroy(): void {
           const currentMessages = this.messages$.getValue();
           this.messages$.next([...currentMessages, newMessage]);
           this.messageControl.reset();
+          // Reordena a conversa ativa para o topo
+          this.updateConversationActivity(conversationId, newMessage);
+          // Mensagem enviada pelo usuário marca como lida
+          this.notificationService.markConversationRead(conversationId);
         },
         error: (error) => {
           console.error('Erro ao enviar mensagem:', error);
         }
       });
+  }
+
+  // --- Helpers de ordenação por última atividade ---
+  private sortByLastActivity(conversations: Conversation[]): Conversation[] {
+    return [...conversations].sort((a, b) => {
+      const aTs = this.getConversationLastTimestamp(a);
+      const bTs = this.getConversationLastTimestamp(b);
+      return bTs - aTs;
+    });
+  }
+
+  private getConversationLastTimestamp(conv: Conversation): number {
+    const lastMsgDate = conv.messages && conv.messages.length > 0
+      ? new Date(conv.messages[0].createdAt).getTime()
+      : new Date(conv.createdAt).getTime();
+    return lastMsgDate;
+  }
+
+  private updateConversationActivity(conversationId: string, lastMessage?: Message): void {
+    const list = this.conversationsSubject.getValue();
+    const idx = list.findIndex(c => c.id === conversationId);
+    if (idx >= 0) {
+      const conv = list[idx];
+      const updated: Conversation = {
+        ...conv,
+        messages: lastMessage ? [lastMessage] : conv.messages
+      };
+      const newList = [...list];
+      newList[idx] = updated;
+      this.conversationsSubject.next(this.sortByLastActivity(newList));
+    } else {
+      // Se não estiver na lista (caso raro), refetch garantido
+      this.messageService.getMyConversations().subscribe(convs => {
+        this.conversationsSubject.next(this.sortByLastActivity(convs));
+      });
     }
   }
+
+  // --- Helpers de UI ---
+  isUnread(conversationId: string): boolean {
+    return this.unreadSet.has(conversationId);
+  }
+}

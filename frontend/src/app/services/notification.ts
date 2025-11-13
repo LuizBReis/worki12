@@ -1,5 +1,6 @@
 import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { Conversation } from './message';
 import { io, Socket } from 'socket.io-client';
 import Swal from 'sweetalert2';
 
@@ -40,6 +41,7 @@ export class NotificationService {
  private isInMessagesPage = false;
  private readonly STORAGE_KEY = 'worki_unread_messages';
  private readonly UNREAD_CONVERSATIONS_KEY = 'worki_unread_conversations';
+ private readonly LAST_READ_TS_KEY = 'worki_conversation_last_read';
  private currentUserId: string | null = null;
 
  // --- ✅ NOVOS OBSERVABLES PARA O "SININHO" ---
@@ -52,8 +54,21 @@ export class NotificationService {
   if (savedState === 'true') {
    this.hasUnreadMessages$.next(true);
   }
+  // Restaura conversas não lidas do localStorage
+  const savedUnread = localStorage.getItem(this.UNREAD_CONVERSATIONS_KEY);
+  if (savedUnread) {
+    try {
+      const arr: string[] = JSON.parse(savedUnread);
+      this.unreadConversations$.next(new Set(arr));
+      if (arr.length > 0) {
+        this.hasUnreadMessages$.next(true);
+      }
+    } catch (_) {
+      // ignore parsing error
+    }
+  }
   // O socket não é inicializado aqui.
- }
+}
 
 // ====== MÉTODOS DE SWEETALERT2 (MANTIDOS) ======
  
@@ -179,6 +194,19 @@ export class NotificationService {
       if (!this.isInMessagesPage) {
        this.setUnreadStatus(true);
       }
+      // Marca a conversa como não lida
+      this.markConversationUnread(notification.conversationId);
+      // Adiciona uma entrada no "sininho" de notificações
+      const newNotification: AppNotification = {
+        id: Math.random().toString(36).substring(2),
+        message: `Nova mensagem de ${notification.message.sender.firstName}`,
+        link: `/messages/${notification.conversationId}`,
+        read: false,
+        createdAt: new Date()
+      };
+      const currentNotifications = this.notifications$.getValue();
+      this.notifications$.next([newNotification, ...currentNotifications]);
+      this.hasUnreadNotifications$.next(true);
      });
    }); 
 
@@ -231,15 +259,15 @@ export class NotificationService {
  /**
   * ✅ CORREÇÃO: Verifica se o socket está conectado antes de emitir.
   */
- clearNotifications(): void {
-  this.setUnreadStatus(false);
-  // 🛑 CHECAGEM DE NULO: Garante que o socket existe e está conectado
-  if (this.socket && this.socket.connected) { 
-      this.socket.emit('mark_notifications_read');
-  } else {
-      console.log('Tentativa de limpar notificações, mas o socket não está conectado.');
+  clearNotifications(): void {
+    this.setUnreadStatus(false);
+    // 🛑 CHECAGEM DE NULO: Garante que o socket existe e está conectado
+    if (this.socket && this.socket.connected) { 
+        this.socket.emit('mark_notifications_read');
+    } else {
+        console.log('Tentativa de limpar notificações, mas o socket não está conectado.');
+    }
   }
- }
 
  // --- ✅ NOVOS MÉTODOS DO "SININHO" ---
  
@@ -265,6 +293,76 @@ export class NotificationService {
    this.socket = null; // Zera o socket para forçar a inicialização no próximo login
   }
   localStorage.removeItem(this.STORAGE_KEY);
+  localStorage.removeItem(this.UNREAD_CONVERSATIONS_KEY);
   this.currentUserId = null;
+ }
+
+ // ====== MÉTODOS DE CONVERSAS NÃO LIDAS ======
+ getUnreadConversations(): Observable<Set<string>> {
+  return this.unreadConversations$.asObservable();
+ }
+
+ markConversationUnread(conversationId: string): void {
+  const set = new Set(this.unreadConversations$.getValue());
+  set.add(conversationId);
+  this.unreadConversations$.next(set);
+  this.setUnreadStatus(true);
+  localStorage.setItem(this.UNREAD_CONVERSATIONS_KEY, JSON.stringify(Array.from(set)));
+ }
+
+ markConversationRead(conversationId: string): void {
+  const set = new Set(this.unreadConversations$.getValue());
+  if (set.delete(conversationId)) {
+    this.unreadConversations$.next(set);
+    localStorage.setItem(this.UNREAD_CONVERSATIONS_KEY, JSON.stringify(Array.from(set)));
+  }
+  if (set.size === 0) {
+    this.setUnreadStatus(false);
+  }
+  // Atualiza o timestamp de leitura
+  this.setLastReadTimestamp(conversationId, Date.now());
+ }
+
+ // ====== SUPORTE A CÁLCULO INICIAL DE NÃO LIDAS ======
+ private getLastReadMap(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(this.LAST_READ_TS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+ }
+
+ private setLastReadMap(map: Record<string, number>): void {
+  localStorage.setItem(this.LAST_READ_TS_KEY, JSON.stringify(map));
+ }
+
+ private getLastReadTimestamp(conversationId: string): number | null {
+  const map = this.getLastReadMap();
+  return map[conversationId] ?? null;
+ }
+
+ private setLastReadTimestamp(conversationId: string, ts: number): void {
+  const map = this.getLastReadMap();
+  map[conversationId] = ts;
+  this.setLastReadMap(map);
+ }
+
+ // Reconciliar não lidas com base na lista de conversas e último timestamp lido
+ reconcileUnreadFromConversations(conversations: Conversation[], currentUserId: string | null): void {
+  const nextSet = new Set<string>();
+  conversations.forEach(conv => {
+    const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[0] : null;
+    if (!lastMsg) { return; }
+    const lastTs = new Date(lastMsg.createdAt).getTime();
+    const lastRead = this.getLastReadTimestamp(conv.id) || 0;
+    const isFromOther = currentUserId ? (lastMsg.senderId !== currentUserId) : true;
+    if (isFromOther && lastTs > lastRead) {
+      nextSet.add(conv.id);
+    }
+  });
+  this.unreadConversations$.next(nextSet);
+  localStorage.setItem(this.UNREAD_CONVERSATIONS_KEY, JSON.stringify(Array.from(nextSet)));
+  this.setUnreadStatus(nextSet.size > 0);
  }
 }
