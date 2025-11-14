@@ -13,7 +13,9 @@ html, body {
 
 // Centraliza o conteúdo principal (nossos formulários) na tela
 body {
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .mat-mdc-autocomplete-panel,

@@ -6,62 +6,98 @@ const messageService = require('./messageService');
 const { getIO } = require('../socket'); // ✅ Importado o getIO
 
 const updateApplicationStatus = async (applicationId, newStatus, currentUserId) => {
- // 1. Busca candidatura e dados
- const application = await prisma.jobApplication.findFirst({
-  where: { id: applicationId, job: { author: { userId: currentUserId } } },
-  include: {
-   job: { select: { title: true } },
-   applicant: { select: { id: true, firstName: true } }
+  // 1. Busca candidatura e dados
+  // ✅ MODIFICAÇÃO: Incluído 'author' (com companyName e user) para a notificação
+  const application = await prisma.jobApplication.findFirst({
+    where: { id: applicationId, job: { author: { userId: currentUserId } } },
+    include: {
+      job: { 
+        select: { 
+          title: true,
+          author: { // Precisamos do nome da empresa para a notificação
+            select: { 
+              companyName: true,
+              user: { select: { firstName: true, lastName: true } }
+            }
+          }
+        } 
+      },
+      applicant: { select: { id: true, firstName: true } }
+    }
+  });
+  
+  if (!application) {
+    throw new Error('Acesso negado ou candidatura não encontrada.');
   }
- });
- 
- if (!application) {
-  throw new Error('Acesso negado ou candidatura não encontrada.');
- }
 
- // 2. Atualiza o status
- await prisma.jobApplication.update({
-  where: { id: applicationId },
-  data: { status: newStatus },
- });
-
- // 3. Busca ou cria conversa
- let conversation = await prisma.conversation.findUnique({
-  where: { applicationId: applicationId },
- });
- 
- if (!conversation) {
-  conversation = await prisma.conversation.create({
-   data: { applicationId: applicationId },
+  // 2. Atualiza o status (sem mudanças)
+  await prisma.jobApplication.update({
+    where: { id: applicationId },
+    data: { status: newStatus },
   });
- }
 
- // 4. Envia mensagens automáticas usando messageService
- if (newStatus === 'SHORTLISTED') {
-  const messageContent = `Olá ${application.applicant.firstName}, gostei do seu perfil para a vaga "${application.job.title}" e gostaria de conversar mais.`;
-  
-  await messageService.createMessage(
-   conversation.id,
-   currentUserId,
-   messageContent,
-   true // isSystemMessage = true
-  );
- }
- else if (newStatus === 'REJECTED') {
-  const messageContent = `Olá ${application.applicant.firstName}. Agradecemos seu interesse na vaga "${application.job.title}", mas infelizmente decidimos seguir com outros candidatos. Desejamos sucesso na sua busca!`;
-  
-  await messageService.createMessage(
-   conversation.id,
-   currentUserId,
-   messageContent,
-   true // isSystemMessage = true
-  );
-  
-  await prisma.conversation.update({
-   where: { id: conversation.id },
-   data: { isLocked: true },
+  // 3. Busca ou cria conversa (sem mudanças)
+  let conversation = await prisma.conversation.findUnique({
+    where: { applicationId: applicationId },
   });
- }
+  if (!conversation) {
+    conversation = await prisma.conversation.create({
+      data: { applicationId: applicationId },
+    });
+  }
+
+  // 4. Envia mensagens automáticas E notificações
+  
+  // ✅ Pega o 'io' e o 'recipientId' (o freelancer)
+  const io = getIO();
+  const recipientId = application.applicantId; 
+  const companyName = application.job.author.companyName || 
+                      `${application.job.author.user.firstName} ${application.job.author.user.lastName}` || 
+                      'Uma empresa';
+
+  if (newStatus === 'SHORTLISTED') {
+    const messageContent = `Olá ${application.applicant.firstName}, gostei do seu perfil para a vaga "${application.job.title}" e gostaria de conversar mais.`;
+    
+    // 4a. Envia a mensagem no CHAT (seu código original)
+    await messageService.createMessage(
+      conversation.id,
+      currentUserId,
+      messageContent,
+      true // isSystemMessage = true
+    );
+    
+    // 4b. ✅ Envia a notificação para o "SININHO"
+    const notificationMessage = `Opa! ${companyName} gostou de você para a vaga "${application.job.title}"! Entre nas mensagens para conversar.`;
+    io.to(`user:${recipientId}`).emit('new_notification', {
+      message: notificationMessage,
+      link: `/messages/${conversation.id}` // Link direto para a conversa
+    });
+
+  } 
+  else if (newStatus === 'REJECTED') {
+    const messageContent = `Olá ${application.applicant.firstName}. Agradecemos seu interesse na vaga "${application.job.title}", mas infelizmente decidimos seguir com outros candidatos. Desejamos sucesso na sua busca!`;
+    
+    // 4a. Envia a mensagem no CHAT (seu código original)
+    await messageService.createMessage(
+      conversation.id,
+      currentUserId,
+      messageContent,
+      true // isSystemMessage = true
+    );
+    
+    // 4b. ✅ Envia a notificação para o "SININHO"
+    const notificationMessage = `Houve uma atualização na sua candidatura para a vaga "${application.job.title}".`;
+    io.to(`user:${recipientId}`).emit('new_notification', {
+      message: notificationMessage,
+      link: `/messages/${conversation.id}`
+    });
+    
+    // Trava a conversa (seu código original)
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { isLocked: true },
+    });
+  }
 };
 
 const deleteApplication = async (applicationId, applicantId) => {

@@ -194,19 +194,6 @@ export class NotificationService {
       if (!this.isInMessagesPage) {
        this.setUnreadStatus(true);
       }
-      // Marca a conversa como não lida
-      this.markConversationUnread(notification.conversationId);
-      // Adiciona uma entrada no "sininho" de notificações
-      const newNotification: AppNotification = {
-        id: Math.random().toString(36).substring(2),
-        message: `Nova mensagem de ${notification.message.sender.firstName}`,
-        link: `/messages/${notification.conversationId}`,
-        read: false,
-        createdAt: new Date()
-      };
-      const currentNotifications = this.notifications$.getValue();
-      this.notifications$.next([newNotification, ...currentNotifications]);
-      this.hasUnreadNotifications$.next(true);
      });
    }); 
 
