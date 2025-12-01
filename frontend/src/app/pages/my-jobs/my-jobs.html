@@ -57,6 +57,12 @@
                  </span>
 
                  <!-- Ações do fluxo de encerramento e avaliação para freelancer -->
+                 @if (app.status === 'PENDING') {
+                   <button mat-stroked-button class="btn btn-outline btn-danger" (click)="onCancelApplication(app.id)">
+                     <mat-icon>cancel</mat-icon>
+                     Cancelar Candidatura
+                   </button>
+                 }
                  @if (app.status === 'SHORTLISTED') {
                    @if (app.jobStatus === 'PENDING_CLOSE') {
                      <button mat-button color="primary" (click)="onConfirmClosure(app.id)">

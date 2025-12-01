@@ -110,6 +110,65 @@ const deleteApplication = async (applicationId, applicantId) => {
  return result;
 };
 
+// Cancelar candidatura (apenas enquanto estiver pendente)
+const cancelApplication = async (applicationId, applicantId) => {
+  // Busca a candidatura e valida posse e status
+  const application = await prisma.jobApplication.findFirst({
+    where: { id: applicationId, applicantId },
+    include: {
+      job: {
+        select: {
+          title: true,
+          author: { select: { userId: true, user: { select: { firstName: true } } } }
+        }
+      },
+      conversation: { select: { id: true, isLocked: true } }
+    }
+  });
+
+  if (!application) {
+    throw new Error('Acesso negado ou candidatura não encontrada.');
+  }
+
+  // Apenas status PENDING pode ser cancelado (não permitir após avaliação do cliente)
+  if (application.status !== 'PENDING') {
+    throw new Error('Candidatura já foi avaliada pelo cliente e não pode ser cancelada.');
+  }
+
+  // Se conversa estiver travada, não permitir cancelamento
+  if (application.conversation?.isLocked) {
+    throw new Error('A conversa está bloqueada; não é possível cancelar a candidatura.');
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Remove conversa vinculada, se existir
+    if (application.conversation?.id) {
+      await tx.conversation.delete({ where: { id: application.conversation.id } });
+    } else {
+      await tx.conversation.deleteMany({ where: { applicationId } });
+    }
+
+    // Remove a candidatura
+    await tx.jobApplication.delete({ where: { id: applicationId } });
+  });
+
+  // Notifica o cliente autor da vaga
+  try {
+    const io = getIO();
+    const recipientId = application.job.author.userId;
+    const notificationMessage = `O candidato cancelou a candidatura na vaga "${application.job.title}".`;
+    io.to(`user:${recipientId}`).emit('new_notification', {
+      message: notificationMessage,
+      link: `/my-jobs`
+    });
+  } catch (e) {
+    // Falha de notificação não deve impedir o cancelamento
+    console.warn('Falha ao notificar cliente sobre cancelamento de candidatura:', e);
+  }
+
+  return { success: true, message: 'Candidatura cancelada com sucesso.' };
+};
+
 
 // Função para solicitar encerramento de trabalho
 const requestJobClosure = async (applicationId, requesterId) => {
@@ -382,4 +441,5 @@ module.exports = {
  confirmJobClosure,
  submitClientReview,
  submitFreelancerReview,
+  cancelApplication,
 };

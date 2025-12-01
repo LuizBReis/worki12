@@ -135,7 +135,7 @@ export class Register implements OnInit {
           this.router.navigate(['/login']);
         },
         error: (err) => {
-          this.notification.error('Erro!', err.error.message || 'Ocorreu um erro no registro.');
+          this.notification.error('Erro!', (err?.error?.message || err?.message || 'Ocorreu um erro no registro.'));
         }
       });
     } else {

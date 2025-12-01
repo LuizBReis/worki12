@@ -26,6 +26,15 @@ export const routes: Routes = [
   { path: 'register', component: Register },
   { path: 'forgot-password', component: ForgotPasswordComponent }, // ✅ Rota adicionada
   { path: 'reset-password/:token', component: ResetPasswordComponent }, // ✅ Rota adicionada
+  // --- GRUPO 2A: Rota "Pai" pública que usa o MainLayout (sem guard) ---
+  // Permite visualizar perfil público mesmo deslogado
+  {
+    path: '',
+    component: MainLayout,
+    children: [
+      { path: 'profile/:id', component: Profile },
+    ]
+  },
   // --- GRUPO 2: Rota "Pai" que carrega o layout principal ---
   {
     path: '',
@@ -36,7 +45,6 @@ export const routes: Routes = [
       { path: 'dashboard', component: JobsFeed },
       { path: 'jobs/new', component: CreateJob },
       { path: 'jobs/:id', component: JobDetails },
-      { path: 'profile/:id', component: Profile },
       { path: 'my-jobs', component: MyJobs },
       { path: 'settings', component: Settings },
       { path: 'messages/inbox', component: Messages},

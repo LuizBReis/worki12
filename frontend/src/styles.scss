@@ -287,3 +287,26 @@ body {
   padding: 6px;
   border-radius: 10px;
 }
+
+/* ---------------------------------------------------------
+   Espaço visual antes de qualquer palavra nos campos de texto
+   Aplica-se globalmente a inputs e textareas (Material MDC)
+   --------------------------------------------------------- */
+input[matinput],
+textarea[matinput],
+input.mat-mdc-input-element,
+textarea.mat-mdc-input-element {
+  text-indent: 0.5rem; /* desloca o conteúdo e o placeholder */
+}
+
+input[matinput]::placeholder,
+textarea[matinput]::placeholder,
+input.mat-mdc-input-element::placeholder,
+textarea.mat-mdc-input-element::placeholder {
+  text-indent: 0.5rem;
+}
+
+/* Espaço visual nos selects (Angular Material MDC) */
+.mat-mdc-select-value {
+  padding-left: 0.5rem; /* aplica espaço antes do texto do select */
+}

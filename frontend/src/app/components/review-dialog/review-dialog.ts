@@ -12,6 +12,7 @@ import { NotificationService } from '../../services/notification';
 interface ReviewDialogData {
   applicationId: string;
   mode: 'client' | 'freelancer';
+  jobStatus?: 'ACTIVE' | 'PENDING_CLOSE' | 'COMPLETED' | 'REVIEWED' | string;
 }
 
 @Component({
@@ -32,6 +33,8 @@ export class ReviewDialog {
 
   title = '';
   subTitle = '';
+  canReview = true;
+  closureHint = '';
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: ReviewDialogData,
@@ -55,10 +58,21 @@ export class ReviewDialog {
       this.subTitle = 'Compartilhe sua experiência com este cliente.';
       // comentário opcional para freelancer
     }
+
+    // Bloqueia envio se o trabalho não foi encerrado
+    const status = (data.jobStatus || '').toUpperCase();
+    this.canReview = status === 'COMPLETED' || status === 'REVIEWED';
+    if (!this.canReview) {
+      this.closureHint = 'Para avaliar, é preciso encerrar o trabalho: o cliente solicita encerramento e o freelancer confirma.';
+    }
   }
 
   submit(): void {
     if (this.form.invalid) {
+      return;
+    }
+    if (!this.canReview) {
+      this.notification.info('Encerramento não confirmado', this.closureHint || 'Encerramento não confirmado. Solicite e confirme o encerramento antes de avaliar.');
       return;
     }
     // Garante que rating seja um número entre 1 e 5

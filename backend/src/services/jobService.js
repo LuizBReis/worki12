@@ -202,13 +202,37 @@ const updateJob = async (jobId, clientProfileId, jobData) => {
 
 
 const deleteJob = async (jobId, clientProfileId) => {
- const result = await prisma.job.deleteMany({
-  where: {
-   id: jobId,
-   authorId: clientProfileId,
-  },
- });
-  if (result.count === 0) throw new Error('Vaga não encontrada ou acesso negado.');
+  // Confirma que a vaga pertence ao perfil do cliente
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, authorId: clientProfileId },
+    select: { id: true },
+  });
+  if (!job) {
+    throw new Error('Vaga não encontrada ou acesso negado.');
+  }
+
+  // Busca candidaturas da vaga para remover conversas vinculadas antes
+  const applications = await prisma.jobApplication.findMany({
+    where: { jobId: jobId },
+    select: { id: true },
+  });
+  const applicationIds = applications.map(a => a.id);
+
+  await prisma.$transaction(async (tx) => {
+    // Remove conversas vinculadas às candidaturas desta vaga
+    if (applicationIds.length > 0) {
+      await tx.conversation.deleteMany({
+        where: { applicationId: { in: applicationIds } },
+      });
+    }
+
+    // Remove candidaturas da vaga (reviews e mensagens são cascata pelos FKs existentes)
+    await tx.jobApplication.deleteMany({ where: { jobId: jobId } });
+
+    // Remove a vaga
+    await tx.job.delete({ where: { id: jobId } });
+  });
+
   return { message: 'Vaga removida com sucesso.' };
 };
 

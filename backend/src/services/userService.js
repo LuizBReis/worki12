@@ -55,6 +55,63 @@ const getUserById = async (userId) => {
   return user;
 };
 
+// Versão pública do perfil do usuário (sem e-mails e sem necessidade de token)
+const getPublicUserById = async (userId) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      freelancerProfile: {
+        include: {
+          skills: true,
+          workExperiences: { orderBy: { startDate: 'desc' } },
+        },
+      },
+      clientProfile: true,
+    },
+  });
+  if (!user) return null;
+  if (user) delete user.password;
+
+  // Agregados de avaliações do freelancer (média)
+  const freelancerAgg = await prisma.freelancerReview.aggregate({
+    where: { recipientId: userId },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  user.averageFreelancerRating = freelancerAgg._avg.rating ?? null;
+
+  // Lista pública de avaliações recebidas pelo freelancer (sem e-mail)
+  user.freelancerReviewsReceived = await prisma.freelancerReview.findMany({
+    where: { recipientId: userId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true, rating: true, comment: true, createdAt: true,
+      author: { select: { id: true, firstName: true, lastName: true, clientProfile: { select: { companyName: true } } } },
+    },
+  });
+
+  if (user.clientProfile) {
+    const clientAgg = await prisma.clientReview.aggregate({
+      where: { recipientId: userId },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    user.clientProfile.averageRating = clientAgg._avg.rating ?? null;
+
+    // Lista pública de avaliações de cliente (sem e-mail)
+    user.clientProfile.receivedReviews = await prisma.clientReview.findMany({
+      where: { recipientId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, rating: true, comment: true, createdAt: true,
+        author: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+  }
+
+  return user;
+};
+
 // --- ✅ FUNÇÃO updateUserProfile CORRIGIDA ---
 const updateUserProfile = async (userId, profileData) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -150,7 +207,20 @@ const deleteWorkExperience = async (userId, experienceId) => {
 };
 
 const deleteUser = async (userId) => {
-  // Exclui usuário e cascata cuida do resto
+  // Remover conversas vinculadas às candidaturas do usuário (como freelancer ou cliente)
+  // Isso evita falhas de constraint ao excluir JobApplication em cascata.
+  await prisma.conversation.deleteMany({
+    where: {
+      OR: [
+        // Conversas de candidaturas onde o usuário é o freelancer
+        { application: { applicantId: userId } },
+        // Conversas de candidaturas de vagas criadas pelo usuário (cliente)
+        { application: { job: { author: { userId } } } },
+      ],
+    },
+  });
+
+  // Exclui usuário; relações com onDelete: Cascade cuidarão do restante
   await prisma.user.delete({ where: { id: userId } });
 };
 
@@ -256,6 +326,7 @@ const deleteUserVideo = async (userId) => {
 
 module.exports = {
   getUserById,
+  getPublicUserById,
   updateUserProfile,
   addSkillToUser,
   removeSkillFromUser,

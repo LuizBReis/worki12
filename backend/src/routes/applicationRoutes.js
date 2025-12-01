@@ -11,6 +11,9 @@ router.patch('/:id/status', authMiddleware, applicationController.updateStatus);
 // --- NOVA ROTA PARA DELETAR UMA CANDIDATURA ---
 router.delete('/:id', authMiddleware, applicationController.deleteMyApplication);
 
+// --- NOVA ROTA PARA CANCELAR UMA CANDIDATURA (apenas Freelancer) ---
+router.patch('/:id/cancel', authMiddleware, checkRole(['FREELANCER']), applicationController.cancelApplication);
+
 // Cliente solicita o encerramento
 router.patch('/:id/request-closure', authMiddleware, applicationController.requestClosure);
 

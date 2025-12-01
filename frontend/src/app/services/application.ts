@@ -38,4 +38,9 @@ export class ApplicationService {
   reviewFreelancer(applicationId: string, payload: { rating: number; comment?: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/${applicationId}/review-freelancer`, payload);
   }
+
+  // --- Cancelar candidatura (apenas FREELANCER, status PENDING) ---
+  cancelApplication(applicationId: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${applicationId}/cancel`, {});
+  }
 }

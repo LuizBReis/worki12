@@ -87,6 +87,11 @@ export class UserService {
     return this.http.get<UserProfile>(`${this.apiUrl}/${id}`);
   }
 
+  // Obtém perfil público (sem necessidade de token)
+  getPublicUserProfile(id: string): Observable<UserProfile> {
+    return this.http.get<UserProfile>(`/api/public/users/${id}`);
+  }
+
   updateMyProfile(profileData: any): Observable<UserProfile> {
     return this.http.patch<UserProfile>(`${this.profileApiUrl}/me`, profileData);
   }

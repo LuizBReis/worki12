@@ -1,14 +1,33 @@
-import { Component, AfterViewInit } from '@angular/core';
+import { Component, AfterViewInit, OnInit } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../components/header/header';
+import { Job, JobService } from '../../services/job';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [HeaderComponent],
+  imports: [HeaderComponent, RouterModule, CommonModule],
   templateUrl: './home.html',
   styleUrls: ['./home.scss']
 })
-export class Home implements AfterViewInit {
+export class Home implements AfterViewInit, OnInit {
+
+  jobs: Job[] = [];
+
+  constructor(private jobService: JobService) {}
+
+  ngOnInit(): void {
+    // Busca vagas cadastradas e exibe as mais recentes
+    this.jobService.getJobs({}).subscribe({
+      next: (data: Job[]) => {
+        this.jobs = Array.isArray(data) ? data : [];
+      },
+      error: (err: any) => {
+        console.error('Erro ao carregar vagas do momento:', err);
+      }
+    });
+  }
 
   ngAfterViewInit(): void {
     const items = document.querySelectorAll('.carousel-item');

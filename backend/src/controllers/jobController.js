@@ -2,6 +2,7 @@
 const jobService = require('../services/jobService');
 const { PrismaClient } = require('@prisma/client'); // Importe o PrismaClient
 const prisma = new PrismaClient(); // Crie uma instância
+const { getIO } = require('../socket'); // ✅ Para emitir notificações via Socket.io
 const listAllJobs = async (req, res) => {
   try {
     // req.query contém os parâmetros da URL (ex: ?search=valor&minBudget=outro_valor)
@@ -30,8 +31,21 @@ const createNewJob = async (req, res) => {
       return res.status(403).json({ message: 'Apenas clientes podem postar vagas.' });
     }
 
-    // 3. Se encontrou, usa o ID do perfil para criar a vaga
+  // 3. Se encontrou, usa o ID do perfil para criar a vaga
     const job = await jobService.createJob(req.body, clientProfile.id);
+
+    // ✅ Emite uma notificação para o próprio cliente confirmando a criação
+    try {
+      const io = getIO();
+      const message = `Sua vaga "${job.title}" foi criada com sucesso.`;
+      io.to(`user:${userId}`).emit('new_notification', {
+        message,
+        link: '/my-jobs'
+      });
+    } catch (e) {
+      console.error('Falha ao emitir notificação de criação de vaga:', e);
+    }
+
     res.status(201).json(job);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao criar vaga.', error: error.message });
@@ -62,7 +76,27 @@ const applyToJob = async (req, res) => {
     const { id: jobId } = req.params; // Pega o ID da vaga da URL
     const { userId: applicantId } = req.user; // Pega o ID do usuário do token (via middleware)
 
-    const application = await jobService.applyForJob(jobId, applicantId);
+  const application = await jobService.applyForJob(jobId, applicantId);
+    // ✅ Notifica o autor da vaga (cliente) sobre a nova candidatura
+    try {
+      const io = getIO();
+      const job = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: {
+          title: true,
+          author: { select: { userId: true, user: { select: { firstName: true } } } }
+        }
+      });
+      if (job?.author?.userId) {
+        const message = `Nova candidatura recebida na vaga "${job.title}".`;
+        io.to(`user:${job.author.userId}`).emit('new_notification', {
+          message,
+          link: '/my-jobs'
+        });
+      }
+    } catch (e) {
+      console.error('Falha ao emitir notificação de nova candidatura:', e);
+    }
 
     res.status(201).json({ message: 'Candidatura enviada com sucesso!', application });
   } catch (error) {
@@ -86,12 +120,17 @@ const updateJob = async (req, res) => {
       return res.status(403).json({ message: 'Acesso negado.' });
     }
     // Passa o ID do perfil para o serviço
-    const result = await jobService.updateJob(jobId, clientProfile.id, req.body);
-    if (result.count === 0) {
-      return res.status(404).json({ message: 'Vaga não encontrada.' });
-    }
+    await jobService.updateJob(jobId, clientProfile.id, req.body);
     res.status(200).json({ message: 'Vaga atualizada com sucesso.' });
   } catch (error) {
+    console.error('ERRO DETALHADO AO ATUALIZAR VAGA:', error);
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('acesso negado')) {
+      return res.status(403).json({ message: 'Acesso negado.' });
+    }
+    if (msg.includes('não encontrada')) {
+      return res.status(404).json({ message: 'Vaga não encontrada.' });
+    }
     res.status(500).json({ message: 'Erro ao atualizar vaga.', error: error.message });
   }
 };
@@ -107,11 +146,16 @@ const deleteJob = async (req, res) => {
     }
     // Passa o ID do perfil para o serviço
     const result = await jobService.deleteJob(jobId, clientProfile.id);
-    if (result.count === 0) {
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('ERRO DETALHADO AO REMOVER VAGA:', error);
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('acesso negado')) {
+      return res.status(403).json({ message: 'Acesso negado.' });
+    }
+    if (msg.includes('não encontrada')) {
       return res.status(404).json({ message: 'Vaga não encontrada.' });
     }
-    res.status(200).json({ message: 'Vaga removida com sucesso.' });
-  } catch (error) {
     res.status(500).json({ message: 'Erro ao remover vaga.', error: error.message });
   }
 };

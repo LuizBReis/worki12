@@ -206,8 +206,12 @@ const updateMyAvatar = async (req, res) => {
       return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
     }
 
-    // 2. O `req.file.path` contém a URL segura do Cloudinary (não é o caminho do arquivo local)
-    const newAvatarUrl = req.file.path;
+    // 2. Construir URL pública: Cloudinary (http) ou fallback local
+    const isCloudUrl = typeof req.file.path === 'string' && /^https?:\/\//.test(req.file.path);
+    const baseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 8080}`;
+    const newAvatarUrl = isCloudUrl
+      ? req.file.path
+      : `${baseUrl}/uploads/avatars/${req.file.filename}`;
 
     // 3. Chama o service para salvar a URL no banco
     const updatedUser = await userService.updateUserAvatar(userId, newAvatarUrl);
@@ -240,7 +244,12 @@ const updateMyVideo = async (req, res) => {
       return res.status(400).json({ message: 'Nenhum arquivo de vídeo enviado.' });
     }
     // O service agora atualiza o FreelancerProfile
-    const updatedUser = await userService.updateUserVideo(userId, req.file.path);
+    const isCloudUrl = typeof req.file.path === 'string' && /^https?:\/\//.test(req.file.path);
+    const baseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 8080}`;
+    const newVideoUrl = isCloudUrl
+      ? req.file.path
+      : `${baseUrl}/uploads/videos/${req.file.filename}`;
+    const updatedUser = await userService.updateUserVideo(userId, newVideoUrl);
     delete updatedUser.password;
     res.status(200).json(updatedUser);
   } catch (error) {

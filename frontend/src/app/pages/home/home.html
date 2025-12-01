@@ -9,7 +9,7 @@
         <div class="overlay">
           <h1>Junte-se ao nosso time de freelas!</h1>
           <p>Encontre oportunidades rápidas e do seu jeito</p>
-          <a href="/register" class="btn-hero">Quero me cadastrar</a>
+          <a routerLink="/register" class="btn btn-primary">Quero me cadastrar</a>
         </div>
       </div>
       <div class="carousel-item">
@@ -17,7 +17,7 @@
         <div class="overlay">
           <h1>Trabalhos rápidos e flexíveis</h1>
           <p>Ganhe dinheiro no seu tempo</p>
-          <a href="/register" class="btn-hero">Quero me cadastrar</a>
+          <a routerLink="/register" class="btn btn-primary">Quero me cadastrar</a>
         </div>
       </div>
       <div class="carousel-item">
@@ -25,7 +25,7 @@
         <div class="overlay">
           <h1>Mais oportunidades para você</h1>
           <p>Trabalhos operacionais e de curta duração</p>
-          <a href="/register" class="btn-hero">Quero me cadastrar</a>
+          <a routerLink="/register" class="btn btn-primary">Quero me cadastrar</a>
         </div>
       </div>
     </div>
@@ -62,29 +62,19 @@
 
   <section class="vagas">
     <h2>Vagas do Momento</h2>
-    <div class="cards">
-      <div class="card">
-        <img src="assets/vagas/vaga1.jpg" alt="Garçom/Ajuda" />
-        <h3>Garçom/Ajuda</h3>
-        <p>Vaga para ajudar no bar mais movimentado da região!!</p>
-        <!-- BOTÃO ALTERADO PARA LINK -->
-        <a href="/register" class="btn-vaga">Quero me candidatar!</a>
-      </div>
-      <div class="card">
-        <img src="assets/vagas/vaga2.jpg" alt="Vendedor" />
-        <h3>Vendedor/Freelancer</h3>
-        <p>Vaga para vendedor na melhor doceria da cidade.</p>
-        <!-- BOTÃO ALTERADO PARA LINK -->
-        <a href="/register" class="btn-vaga">Quero me candidatar!</a>
-      </div>
-      <div class="card">
-        <img src="assets/vagas/vaga3.jpg" alt="Barman" />
-        <h3>Barman</h3>
-        <p>Vaga para barman no bar do festival...</p>
-        <!-- BOTÃO ALTERADO PARA LINK -->
-        <a href="/register" class="btn-vaga">Quero me candidatar!</a>
+    <div class="cards" *ngIf="jobs && jobs.length; else noJobs">
+      <div class="card" *ngFor="let job of jobs | slice:0:3">
+        <h3>{{ job.title }}</h3>
+        <p class="company" *ngIf="job.author?.companyName as company">{{ company }}</p>
+        <p class="budget" *ngIf="job.budget">Orçamento: {{ job.budget | currency:'BRL':'symbol':'1.0-0' }}</p>
+        <p>{{ job.description }}</p>
+        <a [routerLink]="['/jobs', job.id]" class="btn btn-primary btn-sm">Ver detalhes</a>
       </div>
     </div>
+    <ng-template #noJobs>
+      <p>Não há vagas disponíveis no momento.</p>
+      <a routerLink="/dashboard" class="btn btn-outline">Ver vagas</a>
+    </ng-template>
   </section>
 
 </div>

@@ -5,7 +5,7 @@
   /* HERO */
   .hero {
     position: relative;
-    margin-top: 750px; // espaço para o header fixo
+    margin-top: 0; // header já aplica padding-top global
 
     /* RESPONSIVO: Ajusta a margem para o topo em telas menores */
     @media (max-width: 992px) {
@@ -18,12 +18,10 @@
     .carousel {
       position: relative;
       overflow: hidden;
-      height: 450px;
+      /* Altura adaptativa para diferentes dispositivos */
+      height: clamp(320px, 50vh, 520px);
 
-      /* RESPONSIVO: Reduz a altura do carrossel em celulares */
-      @media (max-width: 768px) {
-        height: 400px;
-      }
+      /* Remove necessidade de media extra para altura */
 
       .carousel-item {
         position: absolute;
@@ -56,39 +54,19 @@
           width: 90%; /* Evita que o texto encoste nas bordas */
 
           h1 {
-            font-size: 2.5rem;
+            /* Tipografia responsiva com clamp */
+            font-size: clamp(1.8rem, 2.2vw + 1rem, 2.6rem);
             font-weight: 700;
             margin-bottom: 10px;
-
-            /* RESPONSIVO: Reduz o tamanho da fonte do título */
-            @media (max-width: 768px) {
-              font-size: 1.8rem;
-            }
           }
 
           p {
-            font-size: 1.2rem;
+            font-size: clamp(1rem, 1.2vw + 0.6rem, 1.2rem);
             margin-bottom: 20px;
-
-            /* RESPONSIVO: Reduz o tamanho da fonte do parágrafo */
-            @media (max-width: 768px) {
-              font-size: 1rem;
-            }
           }
 
-          .btn-hero {
-            background: #00cc66;
-            color: #fff;
-            padding: 12px 25px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: 0.3s;
-
-            &:hover {
-              background: #00994d;
-            }
+          .btn {
+            margin-top: 8px;
           }
         }
       }
@@ -130,12 +108,13 @@
   /* DIFERENCIAIS */
   .diferenciais {
     text-align: center;
-    padding: 80px 20px;
+    /* Removemos o padding lateral para permitir full bleed da box */
+    padding: 80px 0;
     background: #f9fbfd;
 
     /* RESPONSIVO: Reduz espaçamento vertical */
     @media (max-width: 768px) {
-      padding: 60px 20px;
+      padding: 60px 0;
     }
 
     h2 {
@@ -150,35 +129,35 @@
     }
 
     .diferenciais-box {
-      display: flex;
-      flex-wrap: nowrap; /* Será alterado na media query */
-      justify-content: center;
-      gap: 40px;
+      /* Full bleed e layout 3 em cima + 2 centralizados abaixo */
+      width: 100%;
+      max-width: none;
+      margin: 0;
       background: #fff;
-      padding: 40px 20px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      max-width: 1200px;
-      margin: 0 auto;
+      padding: 40px 5vw; /* respiro interno proporcional à viewport */
+      border-radius: 0;
+      box-shadow: none;
 
-      /* RESPONSIVO: Permite que os itens quebrem a linha */
-      @media (max-width: 992px) {
-        flex-wrap: wrap;
-        gap: 30px;
-      }
+      /* Grade de 6 colunas: cada item span 2 colunas para compor 3+2 */
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: clamp(20px, 3vw, 40px);
 
       .item {
-        width: 180px;
+        /* Sem largura fixa; deixa o grid controlar */
         text-align: center;
+        /* Posição padrão (sobrescreveremos abaixo por nth-child) */
+        grid-column: auto;
+        grid-row: auto;
 
         img {
-          width: 60px;
-          height: 60px;
+          width: clamp(40px, 6vw, 64px);
+          height: clamp(40px, 6vw, 64px);
           margin-bottom: 15px;
         }
 
         p {
-          font-size: 0.95rem;
+          font-size: clamp(0.9rem, 1vw + 0.6rem, 1rem);
         }
       }
 
@@ -196,6 +175,23 @@
         p {
           margin-bottom: 0;
         }
+      }
+
+      /* --- Posicionamento para 3 itens na primeira linha e 2 centralizados na segunda --- */
+      .item:nth-child(1) { grid-column: 1 / span 2; grid-row: 1; }
+      .item:nth-child(2) { grid-column: 3 / span 2; grid-row: 1; }
+      .item:nth-child(3) { grid-column: 5 / span 2; grid-row: 1; }
+      .item:nth-child(4) { grid-column: 2 / span 2; grid-row: 2; }
+      .item:nth-child(5) { grid-column: 4 / span 2; grid-row: 2; }
+
+      /* Responsivo: abaixo de 992px, usar grid automático sem posicionamento manual */
+      @media (max-width: 992px) {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        .item { grid-column: auto !important; grid-row: auto !important; }
+      }
+      /* Em celulares, espaçamento e dimensões mais amigáveis */
+      @media (max-width: 600px) {
+        padding: 32px 4vw;
       }
     }
   }
@@ -223,10 +219,10 @@
 
     .cards {
       display: grid;
-      /* Este grid já é responsivo por natureza */
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 25px;
-      max-width: 1000px;
+      /* Grid mais flexível para diferentes larguras */
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: clamp(16px, 2.5vw, 25px);
+      max-width: 1200px;
       margin: 0 auto;
 
       .card {
@@ -245,37 +241,22 @@
           width: 100%;
           border-radius: 8px;
           margin-bottom: 15px;
-          height: 160px;
+          height: clamp(140px, 24vw, 180px);
           object-fit: cover;
         }
 
         h3 {
-          font-size: 1.2rem;
+          font-size: clamp(1.05rem, 1.2vw + 0.6rem, 1.2rem);
           margin-bottom: 10px;
         }
 
         p {
-          font-size: 0.9rem;
+          font-size: clamp(0.85rem, 1vw + 0.5rem, 0.95rem);
           color: #555;
           margin-bottom: 15px;
         }
 
-        /* TRECHO ALTERADO */
-        .btn-vaga {
-          display: inline-block;
-          background: #00cc66;
-          color: #fff;
-          border: none;
-          padding: 10px 15px;
-          border-radius: 6px;
-          cursor: pointer;
-          text-decoration: none;
-          transition: 0.3s;
-
-          &:hover {
-            background: #00994d;
-          }
-        }
+        .btn { margin-top: 6px; }
       }
     }
   }

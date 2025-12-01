@@ -90,8 +90,10 @@ export class Messages implements OnInit, OnDestroy, AfterViewChecked {
         if (!conversationId || conversationId === 'inbox') {
           return of([]);
         }
-        // Ao entrar numa conversa específica, marcá-la como lida
-        this.notificationService.markConversationRead(conversationId);
+        // Adia a marcação como lida para o próximo tick para evitar NG0100
+        setTimeout(() => {
+          this.notificationService.markConversationRead(conversationId);
+        }, 0);
         this.messageService.joinConversation(conversationId);
         return this.messageService.getMessages(conversationId);
       })

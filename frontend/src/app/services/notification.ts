@@ -239,7 +239,8 @@ export class NotificationService {
  setInMessagesPage(isInPage: boolean): void {
   this.isInMessagesPage = isInPage;
   if (isInPage) {
-   this.clearNotifications();
+   // Defer para o próximo tick para evitar NG0100 em layouts que exibem badge
+   setTimeout(() => this.clearNotifications(), 0);
   }
  }
 
@@ -283,6 +284,22 @@ export class NotificationService {
   localStorage.removeItem(this.UNREAD_CONVERSATIONS_KEY);
   this.currentUserId = null;
  }
+
+  // --- Método de teste: injeta uma notificação para validação de UI ---
+  injectTestNotification(message: string = 'Notificação de teste', link?: string): void {
+    this.zone.run(() => {
+      const newNotification: AppNotification = {
+        id: Math.random().toString(36).substring(2),
+        message,
+        link,
+        read: false,
+        createdAt: new Date()
+      };
+      const current = this.notifications$.getValue();
+      this.notifications$.next([newNotification, ...current]);
+      this.hasUnreadNotifications$.next(true);
+    });
+  }
 
  // ====== MÉTODOS DE CONVERSAS NÃO LIDAS ======
  getUnreadConversations(): Observable<Set<string>> {

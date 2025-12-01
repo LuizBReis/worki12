@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, isDevMode, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, AsyncPipe } from '@angular/common'; // ✅ 1. Importe AsyncPipe
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
@@ -32,6 +32,7 @@ import { MatBadgeModule } from '@angular/material/badge';
   styleUrls: ['./main-layout.scss']
 })
 export class MainLayout implements OnInit, OnDestroy {
+  devMode = isDevMode();
   userId: string | null = null;
   private authSubscription!: Subscription;
   hasUnreadMessages$: Observable<boolean>;
@@ -42,7 +43,8 @@ export class MainLayout implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private notificationService: NotificationService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     // Observa o status do "sinalzinho" de chat
     this.hasUnreadMessages$ = this.notificationService.getUnreadMessagesStatus();
@@ -79,7 +81,11 @@ ngOnDestroy(): void {
   // --- ✅ 6. NOVA FUNÇÃO (para o "Sininho") ---
   // Chamada quando o usuário clica no "sininho" para abrir o menu
   onBellClick(): void {
-    this.notificationService.markBellAsRead();
+    // Agenda atualização para o próximo tick, evitando NG0100
+    setTimeout(() => {
+      this.notificationService.markBellAsRead();
+      this.cdr.markForCheck();
+    }, 0);
   }
 
   // --- ✅ 7. NOVA FUNÇÃO (para o "Sininho") ---
@@ -90,6 +96,9 @@ ngOnDestroy(): void {
     }
     // Opcional: marcar a notificação individual como lida
   }
+
+  // Botão de teste (apenas em modo dev) para validar a UI do sino
+  // Removido para produção
 
   // --- ✅ 8. FUNÇÃO QUE FALTAVA (para o "Sinalzinho" de Mensagens) ---
   // Seu HTML (main-layout.html) chama esta função quando o link "Mensagens" é clicado

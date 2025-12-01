@@ -3,7 +3,7 @@ import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { startWith, map } from 'rxjs/operators';
+import { startWith, map, catchError } from 'rxjs/operators';
 
 import { UserService, UserProfile, WorkExperience } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
@@ -96,7 +96,23 @@ export class Profile implements OnInit {
     const userId = this.route.snapshot.paramMap.get('id');
     if (userId) {
       this.isOwnProfile = this.authService.getUserId() === userId;
-      this.userService.getUserProfile(userId).subscribe({
+      const isLoggedIn = !!this.authService.getUserId();
+      const source$ = isLoggedIn
+        ? this.userService.getUserProfile(userId)
+        : this.userService.getPublicUserProfile(userId);
+
+      source$.pipe(
+        // Fallback automático: se 401/403 na rota privada, tenta a pública
+        // Mantém a pública sem alteração
+        // Nota: err.status pode não existir em erros de rede, então protegemos.
+        catchError((err) => {
+          const status = (err && err.status) || 0;
+          if (isLoggedIn && (status === 401 || status === 403)) {
+            return this.userService.getPublicUserProfile(userId);
+          }
+          throw err;
+        })
+      ).subscribe({
         next: (data) => {
           this.userProfile = data;
           this.profileForm.patchValue({

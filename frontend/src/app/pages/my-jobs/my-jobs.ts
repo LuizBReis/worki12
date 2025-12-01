@@ -85,7 +85,7 @@ export class MyJobs implements OnInit {
       text: 'Deseja cancelar sua candidatura?'
     });
     if (ok) {
-      this.applicationService.deleteApplication(applicationId).subscribe({
+      this.applicationService.cancelApplication(applicationId).subscribe({
         next: () => {
           this.applications = this.applications.filter(app => app.id !== applicationId);
           this.notification.success('Candidatura cancelada!', 'Candidatura cancelada com sucesso.');
@@ -115,7 +115,7 @@ export class MyJobs implements OnInit {
   openFreelancerReview(application: JobApplication): void {
     const dialogRef = this.dialog.open(ReviewDialog, {
       width: '520px',
-      data: { applicationId: application.id, mode: 'freelancer' }
+      data: { applicationId: application.id, mode: 'freelancer', jobStatus: application.jobStatus }
     });
     dialogRef.afterClosed().subscribe((ok) => {
       if (ok) {
@@ -131,7 +131,7 @@ export class MyJobs implements OnInit {
   openClientReview(application: JobApplication): void {
     const dialogRef = this.dialog.open(ReviewDialog, {
       width: '520px',
-      data: { applicationId: application.id, mode: 'client' }
+      data: { applicationId: application.id, mode: 'client', jobStatus: application.jobStatus }
     });
     dialogRef.afterClosed().subscribe((ok) => {
       if (ok) {

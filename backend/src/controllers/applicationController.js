@@ -48,6 +48,28 @@ const deleteMyApplication = async (req, res) => {
   }
 };
 
+const cancelApplication = async (req, res) => {
+  try {
+    const { id: applicationId } = req.params;
+    const { userId } = req.user;
+
+    const result = await applicationService.cancelApplication(applicationId, userId);
+    return res.status(200).json(result);
+  } catch (error) {
+    const msg = String(error.message || '');
+    if (msg.includes('Acesso negado') || msg.includes('não encontrada')) {
+      return res.status(403).json({ message: 'Acesso negado ou candidatura não encontrada.' });
+    }
+    if (msg.includes('não pode ser cancelada')) {
+      return res.status(409).json({ message: error.message });
+    }
+    if (msg.includes('conversa está bloqueada')) {
+      return res.status(409).json({ message: error.message });
+    }
+    return res.status(500).json({ message: 'Erro ao cancelar candidatura.', error: error.message });
+  }
+};
+
 const requestClosure = async (req, res) => {
   try {
     const { id: applicationId } = req.params;
@@ -163,4 +185,5 @@ module.exports = {
   confirmClosure,
   reviewClient,
   reviewFreelancer,
+  cancelApplication,
 };

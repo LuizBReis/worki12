@@ -54,7 +54,7 @@ export class Login {
           this.router.navigate(['/dashboard']);
         },
         error: (err) => {
-          this.notification.error('Erro!', err.error.message || 'Ocorreu um erro no login.');
+          this.notification.error('Erro!', (err?.error?.message || err?.message || 'Ocorreu um erro no login.'));
         }
       });
     }

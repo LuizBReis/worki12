@@ -6,10 +6,16 @@
   top: 20px;
   left: 30px;
   z-index: 1000;
+
+  /* Em telas pequenas, centraliza o logo no topo */
+  @media (max-width: 600px) {
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 .fixed-logo {
-  width: 200px;
+  width: clamp(140px, 20vw, 200px);
   height: auto;
   object-fit: contain;
   cursor: pointer;
@@ -27,18 +33,23 @@ $primary-color: #34c759;
 .login-container {
   max-width: 450px;
   width: 100%;
-  padding: 3rem;
+  padding: clamp(1.25rem, 3vw, 3rem);
   background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   text-align: center;
-  margin: 2rem auto; // centraliza horizontalmente
+  margin: clamp(2rem, 8vh, 4rem) auto 2rem; // centraliza e dá respiro do logo fixo
+
+  @media (max-width: 600px) {
+    margin: 4.5rem 1rem 2rem; // mais espaço quando o logo está centralizado
+  }
 }
 
 h2 {
   color: #333;
-  font-weight: 500;
-  margin-bottom: 2rem;
+  font-weight: 600;
+  margin-bottom: clamp(1rem, 3vw, 2rem);
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
 }
 
 .login-form {
@@ -48,15 +59,16 @@ h2 {
 
 mat-form-field {
   width: 100%;
+  margin-bottom: 1rem;
 }
 
 // Botão principal
 .submit-button {
   background-color: green;
   color: rgb(128, 255, 96);
-  padding: 1.5rem 0;
+  padding: clamp(0.9rem, 2.4vw, 1.5rem) 0;
   width: 100%;
-  font-size: 1rem;
+  font-size: clamp(0.95rem, 1.6vw, 1rem);
   margin-top: 1rem;
   border: 2px solid transparent;
   border-radius: 10px; // ✅ arredondamento suave
@@ -76,7 +88,7 @@ mat-form-field {
 
 
 p {
-  margin-top: 2rem;
+  margin-top: clamp(1rem, 3vw, 2rem);
   color: #777;
 
   a {
@@ -89,6 +101,16 @@ p {
 
   // Link específico do "Esqueci minha senha"
   .forgot-password-link {
-    font-size: 0.9rem;
+    font-size: clamp(0.85rem, 1.4vw, 0.95rem);
     color: #555; // Uma cor um pouco mais sutil
   }
+
+/* Ajustes extras em telas muito pequenas */
+@media (max-width: 360px) {
+  .login-container {
+    padding: 1rem;
+  }
+  .submit-button {
+    border-radius: 8px;
+  }
+}

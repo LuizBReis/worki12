@@ -39,13 +39,15 @@ router.post('/forgot-password', async (req, res) => {
       }
     });
 
-    // 3. Montar URL de Reset (usando variável de ambiente)
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    // 3. Montar URL de Reset (usando variável de ambiente, com default)
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4302';
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     // 4. Configurar Email
+    const fromAddress = process.env.MAIL_USER || process.env.EMAIL_USER || 'no-reply@worki.local';
     const mailOptions = {
       to: user.email,
-      from: process.env.MAIL_USER, // Remetente
+      from: fromAddress, // Remetente
       subject: 'Redefinição de Senha para WORKI',
       html: `
         <p>Você solicitou a redefinição de senha para sua conta WORKI.</p>
@@ -57,22 +59,28 @@ router.post('/forgot-password', async (req, res) => {
       `
     };
 
-    // 5. Enviar Email
-    try {
+    // 5. Enviar Email em background para reduzir latência de resposta
+    // Responder IMEDIATAMENTE ao cliente
+    res.status(200).json({ message: 'Se um usuário com este email existir, um link de redefinição foi enviado.' });
+
+    // Disparar envio assíncrono sem bloquear a requisição
+    setImmediate(async () => {
+      try {
         await transporter.sendMail(mailOptions);
         console.log(`Email de reset enviado para: ${email}`);
-        res.status(200).json({ message: 'Se um usuário com este email existir, um link de redefinição foi enviado.' });
-    } catch (mailError) {
+      } catch (mailError) {
         console.error('Erro ao ENVIAR email de redefinição:', mailError);
-        // Mesmo se o email falhar, não informe o usuário (por segurança)
-        // Mas reverta o token no banco para evitar tokens inválidos acumulados
-         await prisma.user.update({
-             where: { email: email },
-             data: { passwordResetToken: null, passwordResetExpires: null }
-         });
-        // Retorna a mesma mensagem genérica de sucesso para o usuário
-        res.status(200).json({ message: 'Se um usuário com este email existir, um link de redefinição foi enviado.' });
-    }
+        // Reverta o token no banco em caso de falha para evitar tokens inválidos
+        try {
+          await prisma.user.update({
+            where: { email: email },
+            data: { passwordResetToken: null, passwordResetExpires: null }
+          });
+        } catch (revertError) {
+          console.error('Erro ao reverter token após falha de email:', revertError);
+        }
+      }
+    });
 
   } catch (error) {
     console.error('Erro GERAL ao solicitar redefinição:', error);

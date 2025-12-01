@@ -2,6 +2,11 @@
 <p class="dialog-subtitle">{{ subTitle }}</p>
 
 <form [formGroup]="form" (ngSubmit)="submit()" class="review-form">
+  <div *ngIf="!canReview" class="info-banner">
+    <p>
+      {{ closureHint || 'Encerramento não confirmado. Solicite e confirme o encerramento antes de enviar a avaliação.' }}
+    </p>
+  </div>
   <mat-form-field appearance="outline" class="full-width">
     <mat-label>Nota (1 a 5)</mat-label>
     <input matInput type="number" formControlName="rating" min="1" max="5" />
@@ -18,6 +23,6 @@
 
   <div class="actions">
 <button mat-stroked-button class="btn btn-outline" type="button" (click)="close()">Cancelar</button>
-<button mat-raised-button class="btn btn-primary" type="submit" [disabled]="form.invalid">Enviar Avaliação</button>
+<button mat-raised-button class="btn btn-primary" type="submit" [disabled]="form.invalid || !canReview">Enviar Avaliação</button>
   </div>
 </form>

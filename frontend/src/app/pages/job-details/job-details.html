@@ -61,6 +61,12 @@
             <mat-icon>check_circle</mat-icon>
             Candidatura Enviada
           </button>
+          @if (myApplication?.status === 'PENDING') {
+            <button mat-stroked-button class="btn btn-outline btn-danger" (click)="onCancelMyApplication()">
+              <mat-icon>cancel</mat-icon>
+              Cancelar Candidatura
+            </button>
+          }
         }
         
       </mat-card-actions>

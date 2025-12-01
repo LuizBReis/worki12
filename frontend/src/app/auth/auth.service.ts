@@ -2,13 +2,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap } from 'rxjs'; // ✅ Adicionado BehaviorSubject e tap
+import { environment } from '../../environments/environment';
 
 @Injectable({
  providedIn: 'root'
 })
 export class AuthService {
- private apiUrl = '/api/auth';
- private profileApiUrl = '/api/profile';
+ private base = environment.apiBaseUrl || '';
+ private apiUrl = `${this.base}/api/auth`;
+ private profileApiUrl = `${this.base}/api/profile`;
 
  // ✅ NOVO: Fonte de verdade para o User ID (inicializa com o valor atual do token)
  private currentUserIdSubject = new BehaviorSubject<string | null>(this.getUserIdFromToken());

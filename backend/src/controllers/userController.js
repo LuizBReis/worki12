@@ -16,6 +16,23 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// Perfil público: sem exigir autenticação e sem dados sensíveis
+const getPublicUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await userService.getPublicUserById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar perfil público do usuário.', error: error.message });
+  }
+};
+
 module.exports = {
   getUserProfile,
+  getPublicUserProfile,
 };

@@ -21,6 +21,7 @@ import { MatInputModule } from '@angular/material/input';
 import Swal from 'sweetalert2';
 import { ReviewDialog } from '../../components/review-dialog/review-dialog';
 import { NotificationService } from '../../services/notification';
+import { UserService } from '../../services/user';
 import { MatChipsModule } from '@angular/material/chips'; // ✅ Adicionar
 
 @Component({
@@ -49,6 +50,7 @@ export class JobDetails implements OnInit {
   userRole: string | null = null;
   applicantFilterControl = new FormControl('');
   applicants$: Observable<JobApplication[]> = of([]);
+  myApplication: JobApplication | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -58,6 +60,7 @@ export class JobDetails implements OnInit {
     private router: Router,
     private applicationService: ApplicationService,
     private messageService: MessageService,
+    private userService: UserService,
     private notification: NotificationService
   ) {}
 
@@ -80,6 +83,19 @@ export class JobDetails implements OnInit {
                 this.jobService.getJobApplicants(this.job!.id, { skill: skill || '' })
               )
             );
+          }
+
+          // Se for FREELANCER e já tiver se candidatado, busque a minha candidatura para habilitar cancelamento
+          if (this.userRole === 'FREELANCER' && this.job?.hasApplied) {
+            this.userService.getMyApplications().subscribe({
+              next: (apps) => {
+                const found = apps.find(a => a.job.id === this.job!.id);
+                if (found) this.myApplication = found;
+              },
+              error: (err) => {
+                console.error('Erro ao buscar minhas candidaturas:', err);
+              }
+            });
           }
         },
         error: (err) => {
@@ -107,7 +123,39 @@ export class JobDetails implements OnInit {
         Swal.fire({
           icon: 'error',
           title: 'Erro!',
-          text: err.error.message || 'Ocorreu um erro ao enviar sua candidatura.',
+          text: (err?.error?.message || err?.message || 'Ocorreu um erro ao enviar sua candidatura.'),
+          confirmButtonColor: '#d33'
+        });
+      }
+    });
+  }
+
+  // --- Cancelar minha candidatura (FREELANCER) ---
+  async onCancelMyApplication(): Promise<void> {
+    if (!this.myApplication) return;
+    const ok = await this.notification.confirm({
+      title: 'Cancelar candidatura?',
+      text: 'Confirma que deseja cancelar sua candidatura?'
+    });
+    if (!ok) return;
+
+    this.applicationService.cancelApplication(this.myApplication.id).subscribe({
+      next: () => {
+        this.job!.hasApplied = false;
+        this.myApplication = null;
+        Swal.fire({
+          icon: 'success',
+          title: 'Candidatura cancelada!',
+          text: 'Você cancelou sua candidatura com sucesso.',
+          confirmButtonColor: '#34c759'
+        });
+      },
+      error: (err) => {
+        console.error('Erro ao cancelar candidatura:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro!',
+          text: (err?.error?.message || err?.message || 'Não foi possível cancelar sua candidatura.'),
           confirmButtonColor: '#d33'
         });
       }
@@ -228,7 +276,7 @@ export class JobDetails implements OnInit {
   openClientReview(application: JobApplication): void {
     const dialogRef = this.dialog.open(ReviewDialog, {
       width: '520px',
-      data: { applicationId: application.id, mode: 'client' }
+      data: { applicationId: application.id, mode: 'client', jobStatus: application.jobStatus }
     });
     dialogRef.afterClosed().subscribe((ok) => {
       if (ok) {
