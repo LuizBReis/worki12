@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    background-color: #F5F7F5;
+    /* Gentle professional background */
+    background-image:
+      radial-gradient(at 0% 0%, rgba(0, 166, 81, 0.03) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(33, 150, 243, 0.03) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* Glassmorphism Utilities if needed globally */
+.glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}

@@ -1,0 +1,56 @@
+<div class="app-shell">
+  <!-- Desktop Sidebar (Hidden on Mobile) -->
+  <app-sidebar class="sidebar"></app-sidebar>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- Mobile Header (Visible only on Mobile) -->
+    <header class="mobile-header">
+      <img src="assets/logo/worki.png" alt="Worki" class="mobile-logo">
+      <div class="mobile-actions">
+        <!-- Re-using existing Bell Logic for Mobile Header -->
+        <button mat-icon-button class="notification-bell" [matMenuTriggerFor]="notificationMenu"
+          (click)="onBellClick()">
+          <mat-icon [matBadge]="(hasUnreadNotifications$ | async) ? '●' : null" matBadgeColor="warn"
+            matBadgeSize="small" matBadgePosition="above after">notifications</mat-icon>
+        </button>
+        <button mat-icon-button (click)="logout()">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    <div class="content-scrollable">
+      <router-outlet></router-outlet>
+    </div>
+
+  </main>
+
+  <!-- Mobile Bottom Nav (Hidden on Desktop) -->
+  <app-bottom-nav class="bottom-nav"></app-bottom-nav>
+
+  <!-- Notification Menu (Reused) -->
+  <mat-menu #notificationMenu="matMenu" class="notification-dropdown">
+    <div class="notification-header">
+      <h3>Notificações</h3>
+    </div>
+    <div class="notification-list">
+      @if (notifications$ | async; as notifications) {
+      @if (notifications.length > 0) {
+      @for (notification of notifications; track notification.id) {
+      <button mat-menu-item (click)="onNotificationClick(notification)">
+        <span class="notification-message">{{ notification.message }}</span>
+        <span class="notification-time">{{ notification.createdAt | date:'shortTime' }}</span>
+      </button>
+      }
+      } @else {
+      <span class="no-notifications">Nenhuma notificação nova.</span>
+      }
+      } @else {
+      <span class="no-notifications">Nenhuma notificação nova.</span>
+      }
+    </div>
+  </mat-menu>
+
+</div>

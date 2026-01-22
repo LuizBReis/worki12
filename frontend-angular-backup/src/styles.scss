@@ -1,0 +1,166 @@
+/* src/styles.scss - PROFESSIONAL GLASS/BRUTALIST SYSTEM */
+
+/* 1. Typography: Inter (Professional, Clean, Modern) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* --- PALETTE (Eco-Professional) --- */
+  --app-primary: #00A651;
+  /* Stronger, more corporate Green */
+  --app-primary-dark: #008a42;
+  --app-primary-light: #e6f6ec;
+
+  --app-accent: #111111;
+  /* Brutalist Black for contrast */
+
+  --app-bg: #F4F6F4;
+  /* Subtle Sage/Grey Background */
+
+  /* --- GLASSMORPHISM --- */
+  --app-glass-surface: rgba(255, 255, 255, 0.75);
+  --app-glass-border: 1px solid rgba(255, 255, 255, 0.6);
+  --app-glass-blur: blur(16px);
+
+  --app-text-main: #1A1A1A;
+  --app-text-muted: #666666;
+
+  --app-border-subtle: #E0E0E0;
+
+  /* --- GEOMETRY (Standardized) --- */
+  --app-radius-sm: 8px;
+  --app-radius-md: 16px;
+  --app-radius-lg: 24px;
+  --app-radius-pill: 999px;
+
+  /* --- SHADOWS (Flat/Brutalist or Soft Glass? User asked for Flat/Glass mix) --- */
+  /* We use very subtle shadows for lift, but rely on borders for definition (Brutalist trait) */
+  --app-shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.03);
+  --app-shadow-hover: 0 10px 30px rgba(0, 166, 81, 0.15);
+}
+
+/* RESET & BASE */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  /* Setup Inter */
+  background-color: var(--app-bg);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(0, 166, 81, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(33, 150, 243, 0.05) 0px, transparent 50%);
+  /* Subtle professional gradient mesh */
+  background-attachment: fixed;
+  color: var(--app-text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- BUTTONS (Brutalist-Pill Hybrid) --- */
+/* Solid, high contrast, no shadow by default = Flat */
+.mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-flat-button {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: var(--app-radius-pill) !important;
+  letter-spacing: 0.1px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  height: 44px !important;
+  padding: 0 28px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Primary: Green & Flat */
+.mat-mdc-flat-button.mat-primary,
+.mat-mdc-raised-button.mat-primary {
+  background: var(--app-primary) !important;
+  color: white !important;
+  box-shadow: none !important;
+  /* FLAT */
+}
+
+.mat-mdc-flat-button.mat-primary:hover,
+.mat-mdc-raised-button.mat-primary:hover {
+  background: var(--app-primary-dark) !important;
+  transform: translateY(-1px);
+}
+
+/* Outline: Thin Border */
+.mat-mdc-outlined-button {
+  border-color: var(--app-border-subtle) !important;
+}
+
+/* --- CARDS (Glassmorphism) --- */
+.mat-mdc-card {
+  border-radius: var(--app-radius-lg) !important;
+
+  /* Glass Effect */
+  background: var(--app-glass-surface) !important;
+  backdrop-filter: var(--app-glass-blur) !important;
+  -webkit-backdrop-filter: var(--app-glass-blur) !important;
+  border: var(--app-glass-border) !important;
+
+  box-shadow: var(--app-shadow-glass) !important;
+  padding: 24px !important;
+}
+
+/* --- INPUTS (Clean Professional) --- */
+.mat-mdc-form-field-flex {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  /* Semi-transparent input bg */
+  border-radius: var(--app-radius-md) !important;
+  padding: 0 12px !important;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.mat-mdc-form-field.mat-focused .mat-mdc-form-field-flex {
+  background-color: #fff !important;
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 3px var(--app-primary-light);
+  /* Focus Ring */
+}
+
+/* Remove underline */
+.mdc-line-ripple {
+  display: none !important;
+}
+
+/* --- DIALOGS (Glass) --- */
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: var(--app-radius-lg) !important;
+  --mdc-dialog-container-color: rgba(255, 255, 255, 0.95) !important;
+  /* Less transp for readability */
+}
+
+/* --- UTILS --- */
+.text-h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.text-h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.5rem;
+}
+
+/* Animation: Smooth Float */
+.fade-in {
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

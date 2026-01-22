@@ -1,0 +1,479 @@
+/* =============================================================== */
+/* VARIÁVEIS E ESTILOS GLOBAIS
+/* =============================================================== */
+:host {
+  background-color: #f8f9fa;
+  display: block;
+
+  /* --- ADICIONE ESTA LINHA --- */
+  // "Quebra" a centralização vertical da página pai
+  align-self: flex-start;
+}
+
+/* =============================================================== */
+/* CONTAINER PRINCIPAL E LAYOUT GRID
+/* =============================================================== */
+/* =============================================================== */
+/* CONTAINER PRINCIPAL E LAYOUT GRID
+/* =============================================================== */
+.profile-container {
+  position: relative;
+  width: 95%;
+  max-width: 1200px;
+  margin: clamp(16px, 5vw, 48px) auto 0;
+  padding: 0 clamp(12px, 2.5vw, 24px);
+}
+
+// .my-jobs-container {
+//   /* --- O SEGREDO PARA IGNORAR O STYLES.SCSS --- */
+//   position: absolute;
+//   top: 180px; // << Distância EXATA do topo da PÁGINA
+//   left: 50%;
+//   transform: translateX(-50%);
+
+//   // Como o container agora "flutua", precisamos definir sua largura
+//   width: 95%;
+//   max-width: 1440px;
+// }
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr; // Sidebar um pouco mais larga
+  gap: clamp(16px, 3vw, 40px);
+}
+
+// Estilo base para os cards
+mat-card {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-card);
+}
+
+/* =============================================================== */
+/* SIDEBAR (PERFIL ESQUERDA)
+/* =============================================================== */
+.profile-sidebar {
+  position: sticky;
+  top: clamp(24px, 6vh, 96px);
+  height: fit-content;
+}
+
+.profile-sidebar .user-info {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.profile-avatar {
+  width: clamp(96px, 12vw, 140px);
+  height: clamp(96px, 12vw, 140px);
+  border-radius: 50%;
+  margin-bottom: 1.5rem;
+  border: 4px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); // Sombra para destacar o avatar
+}
+
+.user-info h2 {
+  font-size: clamp(1.125rem, 3.5vw, 1.5rem);
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.user-info p {
+  font-size: clamp(0.9rem, 2.8vw, 1rem);
+  color: #6c757d; // Cor secundária para o nome
+  margin-top: 0.25rem;
+}
+
+.user-role {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.25rem 0.75rem;
+  background-color: #e9ecef; // Fundo de "tag"
+  color: #495057;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.edit-name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+/* =============================================================== */
+/* CONTEÚDO PRINCIPAL (DIREITA)
+/* =============================================================== */
+.profile-main mat-card {
+  padding: clamp(12px, 2.5vw, 20px) clamp(16px, 3vw, 32px) clamp(16px, 3vw, 32px);
+}
+
+.card-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.card-title-container span {
+  font-size: clamp(1.125rem, 3.5vw, 1.5rem);
+  font-weight: 600;
+}
+
+// Títulos de seção (About me, Skills, etc.)
+h3 {
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 1rem;
+}
+
+// Divisórias
+hr {
+  border: none;
+  border-top: 1px solid #e9ecef; // Cor mais sutil
+  margin: 2rem 0;
+}
+
+/* --- Seção de Skills --- */
+.skills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+// Estilo dos botões/tags de skill
+.skill-button,
+.skill-button-editing {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+  }
+}
+
+.skill-button-editing {
+  display: flex;
+  align-items: center;
+
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    margin-left: 8px;
+    cursor: pointer;
+    color: #6c757d;
+
+    &:hover {
+      color: #212529;
+    }
+  }
+}
+
+.skill-form {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(10px, 2.5vw, 16px);
+  margin-top: 1.5rem;
+}
+
+/* --- Seção de Work Experience --- */
+.experience-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.experience-item {
+  position: relative;
+  padding-left: 1.5rem; // Espaço para a linha do tempo
+  border-left: 2px solid #e9ecef; // Linha do tempo
+  padding-bottom: 1rem;
+
+  &:last-child {
+    border-left: 2px solid transparent;
+  }
+
+  // Círculo na linha do tempo
+  &::before {
+    content: '';
+    position: absolute;
+    left: -7px; // Metade da largura para centralizar
+    top: 5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #adb5bd;
+    border: 2px solid #f8f9fa;
+  }
+}
+
+.experience-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h4 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+}
+
+.experience-company,
+.experience-period {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0.25rem 0;
+}
+
+.experience-description {
+  font-size: 0.95rem;
+  color: #495057;
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+/* --- Ações de Edição --- */
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: clamp(10px, 2.5vw, 16px);
+  margin-top: 1rem;
+}
+
+/* Para o botão de adicionar (+) ficar alinhado ao título h3 */
+.section-header-add-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  // Este seletor garante que o h3 e o botão fiquem na mesma linha
+  h3 {
+    margin-bottom: 0;
+  }
+}
+
+.rating-stars mat-icon {
+  color: #FFD700; // dourado
+}
+
+.reviews-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.review-item {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e5e7eb; // cinza claro
+  background: #f9fafb; // fundo sutil
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.20); // verde material
+  overflow: hidden;
+
+  // Barra de destaque à esquerda
+  border-left: 4px solid #3f51b5; // primária do Angular Material
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  mat-icon {
+    font-size: 22px;
+    height: 22px;
+    width: 22px;
+    color: #f59e0b; // amber
+  }
+}
+
+.review-comment {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #111827; // quase preto
+}
+
+.review-meta {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #6b7280; // cinza
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Responsivo
+@media (min-width: 768px) {
+  .reviews-list {
+    grid-template-columns: 1fr 1fr; // duas colunas em telas médias
+  }
+}
+
+// Centralizar bloco de média (estrelas + texto) no sidebar
+.profile-sidebar .user-info .average-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+// Centralizar as estrelas dentro do bloco
+.profile-sidebar .user-info .average-rating .rating-stars {
+  justify-content: center;
+}
+
+// Bordas verdes para os cards de avaliações recebidas
+.reviews-list .review-item {
+  border: 1px solid #4CAF50; // verde material 500
+  border-left: 4px solid #4CAF50; // acento esquerdo também verde
+}
+
+// Bordas verdes para o bloco de média de avaliação no sidebar
+.profile-sidebar .user-info .average-rating {
+  border: 1px solid #4CAF50;
+  border-radius: 8px;
+}
+
+// Remover sombreado dos cards de avaliações recebidas
+.reviews-list .review-item {
+  box-shadow: none;
+}
+
+// Remover sombreado do bloco de média de avaliação no sidebar
+.profile-sidebar .user-info .average-rating {
+  box-shadow: none;
+}
+
+// Remover bordas dos cards de avaliações recebidas
+.reviews-list .review-item {
+  border: none;
+  border-left: none;
+}
+
+// Remover bordas do bloco de média de avaliação no sidebar
+.profile-sidebar .user-info .average-rating {
+  border: none;
+}
+
+/* Campo de formulário de largura total (reutilizável) */
+.full-width {
+  width: 100%;
+}
+
+/* Grid para Cidade/Estado */
+.location-fields-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; // Cidade (2/3), Estado (1/3)
+  gap: clamp(10px, 2.5vw, 16px);
+  width: 100%;
+}
+
+/* --- Breakpoints para responsividade --- */
+@media (max-width: 992px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+    row-gap: clamp(16px, 3vw, 32px);
+  }
+
+  .profile-sidebar {
+    position: relative;
+    top: 0;
+  }
+
+  .card-title-container {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .skill-form {
+    flex-direction: column;
+  }
+
+  .edit-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .edit-actions .btn {
+    width: 100%;
+  }
+
+  .location-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-main mat-card {
+    padding: clamp(12px, 4vw, 20px);
+  }
+}
+
+/* Adicione no final do seu profile.scss */
+
+/* --- Estilo da Seção de Edição de Avatar --- */
+.avatar-edit-section {
+  // Centraliza o botão
+  display: flex;
+  justify-content: center;
+
+  // Espaçamento
+  margin-top: 1rem; // Espaço acima do botão
+  margin-bottom: 0.5rem; // Espaço abaixo, antes do nome
+}
+
+/* Adicione no final do seu profile.scss */
+
+/* --- Estilo da Seção de Vídeo --- */
+.video-container {
+  width: 100%;
+  max-width: 640px; // Limita o tamanho do player
+  margin-bottom: 1rem;
+  border-radius: 8px; // Borda suave no player
+  overflow: hidden; // Garante que o vídeo respeite a borda
+
+  video {
+    width: 100%;
+    display: block;
+  }
+}
+
+.video-edit-section {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Adicione no final do seu profile.scss */
+
+/* Estilo para o spinner de upload */
+.upload-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+/* Opcional: faz os botões desabilitados parecerem "carregando" */
+.avatar-edit-section button:disabled,
+.video-edit-section button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

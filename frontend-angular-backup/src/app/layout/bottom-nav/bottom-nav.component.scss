@@ -1,0 +1,59 @@
+:host {
+    display: none; // Hidden on Desktop by default
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+
+    /* Glassmorphism */
+    background: rgba(255, 255, 255, 0.85); // Slightly more opaque for nav
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: var(--app-glass-border);
+
+    padding-bottom: env(safe-area-inset-bottom); // iOS safe area
+
+    @media (max-width: 900px) {
+        display: block; // Visible on Mobile
+    }
+}
+
+.bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 60px;
+    position: relative;
+}
+
+.nav-item {
+    color: var(--app-text-secondary);
+    padding: 10px;
+    transition: color 0.2s;
+
+    mat-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+    }
+
+    &.active {
+        color: var(--app-primary);
+
+        mat-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    }
+}
+
+.fab-container {
+    position: relative;
+    top: -20px; // Pops out
+}
+
+.fab-btn {
+    background-color: var(--app-primary) !important;
+    color: white !important;
+    box-shadow: 0 4px 10px rgba(52, 199, 89, 0.4);
+}

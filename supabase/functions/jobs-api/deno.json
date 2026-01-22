@@ -1,0 +1,10 @@
+// Setup for Deno environment
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "lib": [
+            "deno.window"
+        ],
+        "strict": true
+    }
+}

@@ -1,0 +1,141 @@
+:host {
+  display: block;
+  padding-bottom: 80px;
+}
+
+.details-container {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 32px;
+  grid-template-areas:
+    "header header"
+    "main sidebar";
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main"
+      "sidebar";
+  }
+}
+
+/* Header Area (Back button + maybe Title later) */
+.back-btn-area {
+  grid-area: header;
+  margin-bottom: 16px;
+}
+
+.job-details-card {
+  grid-area: main;
+  /* Styles inherited from global .mat-mdc-card override in styles.scss */
+  /* Just adding specific spacing if needed */
+}
+
+.applicants-card {
+  grid-area: sidebar;
+  height: fit-content;
+  position: sticky;
+  top: 24px;
+}
+
+/* Typography Overrides for Details */
+.job-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+
+  span {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+}
+
+.description {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--app-text-muted);
+  margin: 24px 0;
+  white-space: pre-line;
+}
+
+.budget {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--app-primary);
+  margin: 16px 0;
+
+  &::before {
+    content: "Orçamento: ";
+    font-size: 1rem;
+    color: var(--app-text-secondary);
+    font-weight: 500;
+  }
+}
+
+/* Applicants List */
+.applicant-item {
+  border-bottom: 1px solid var(--app-border);
+  padding: 16px 0 !important;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.applicant-item-content {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.applicant-link {
+  font-weight: 600;
+  color: var(--app-text-main);
+  text-decoration: none;
+  font-size: 1rem;
+
+  &:hover {
+    color: var(--app-primary);
+  }
+}
+
+.applicant-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.status-chip {
+  padding: 6px 12px;
+  border-radius: var(--app-radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--app-border);
+  color: var(--app-text-secondary);
+
+  &.shortlisted {
+    background: var(--app-primary-light);
+    color: var(--app-primary-dark);
+  }
+
+  &.rejected {
+    background: #ffebee;
+    color: #ef5350;
+  }
+
+  &.pending {
+    background: #fff3e0;
+    color: #ff9800;
+  }
+}
+
+.filters-sidebar-mobile {
+  display: none; // TODO: Implement if needed
+}

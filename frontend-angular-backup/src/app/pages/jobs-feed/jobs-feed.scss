@@ -1,0 +1,127 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.page-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  height: 100%;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filters-sidebar {
+  background: var(--app-surface);
+  padding: 24px;
+  border-radius: var(--app-radius-lg);
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  /* No shadow for sidebar to keep it subtle */
+
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h4 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--app-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  @media (max-width: 900px) {
+    display: none; // TODO: Move to Drawer/Sheet for mobile
+  }
+}
+
+.filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .feed-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--app-text-main);
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+.jobs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 80px; // Space for bottom nav
+}
+
+/* Override specific card styles for flat professional look */
+.job-card {
+  /* Reset material shadow */
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.85);
+  /* Slightly translucent */
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md) !important;
+  transition: all 0.2s ease-out;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--app-primary);
+    background: white;
+    /* Subtle lift */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+  }
+
+  mat-card-header {
+    border-bottom: 1px solid var(--app-border-subtle);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  mat-card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .budget {
+    background: var(--app-primary-light);
+    color: var(--app-primary-dark);
+    border: 1px solid rgba(0, 166, 81, 0.2);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border-radius: 6px;
+    /* Slightly sharper */
+  }
+}

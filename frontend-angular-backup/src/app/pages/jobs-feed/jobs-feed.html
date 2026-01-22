@@ -1,0 +1,92 @@
+<div class="page-layout">
+
+  <aside class="filters-sidebar">
+    <h3> Filtrar Por</h3>
+    <form [formGroup]="filterForm" class="filter-form">
+      <mat-form-field appearance="outline">
+        <input matInput formControlName="search" placeholder=" Buscar por título">
+      </mat-form-field>
+
+      <h4> Orçamento (BRL)</h4>
+      <!-- Wrapper removido -->
+      <mat-form-field appearance="outline">
+        <input matInput formControlName="minBudget" type="number" placeholder=" Mín">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <input matInput formControlName="maxBudget" type="number" placeholder=" Máx">
+      </mat-form-field>
+
+      <h4> Localização</h4>
+      <mat-form-field appearance="outline">
+        <mat-label>Cidade</mat-label>
+        <input matInput formControlName="city" placeholder="Ex: Brasília">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label> Estado</mat-label>
+        <mat-select formControlName="state">
+          <mat-option [value]="''"> Qualquer estado</mat-option>
+          @for (state of states; track state) {
+          <mat-option [value]="state">{{ state }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Buscar por Endereço</mat-label>
+        <input matInput formControlName="address" placeholder="Ex: SQS 411 Bloco A">
+      </mat-form-field>
+
+      <h4>Selecione Habilidade</h4>
+      <mat-form-field appearance="outline">
+        <mat-select formControlName="skills" multiple>
+          <mat-option *ngFor="let s of skills" [value]="s.name">{{ s.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button type="button" mat-stroked-button class="btn btn-outline btn-danger" (click)="clearFilters()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Limpar filtros
+      </button>
+    </form>
+  </aside>
+
+  <main class="feed-container">
+    <div class="feed-header">
+      <h1 class="feed-title">Vagas Recentes</h1>
+      <a *ngIf="userRole === 'CLIENT'" mat-flat-button color="primary" routerLink="/jobs/new">
+        <mat-icon>add</mat-icon>
+        Publicar Vaga
+      </a>
+    </div>
+
+    <div *ngIf="jobs.length > 0; else noJobs" class="jobs-grid">
+
+      <mat-card *ngFor="let job of jobs" class="job-card" [routerLink]="['/jobs', job.id]">
+        <mat-card-header>
+          <mat-card-title>{{ job.title }}</mat-card-title>
+          <mat-card-subtitle>Publicado por {{ job.author.companyName || job.author.user.firstName }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="description">
+            {{ job.description.substring(0, 140) }}...
+          </p>
+
+          <div class="tags-container">
+            <span class="budget-tag" *ngIf="job.budget">
+              {{ job.budget | currency:'BRL' }}
+            </span>
+            <span class="skill-tag" *ngFor="let s of job.requiredSkills | slice:0:3">
+              {{ s.name }}
+            </span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <ng-template #noJobs>
+      <p>Nenhuma vaga encontrada com os filtros atuais.</p>
+    </ng-template>
+  </main>
+
+</div>
