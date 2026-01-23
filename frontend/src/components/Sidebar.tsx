@@ -1,52 +1,82 @@
-
-import { Home, Briefcase, PlusCircle, MessageSquare, User } from 'lucide-react';
+import { Home, Briefcase, User, BarChart2, Wallet, FileText, Zap, PlusCircle, Building2 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-export default function Sidebar() {
-    const navItems = [
-        { icon: Home, label: 'Início', path: '/' },
-        { icon: Briefcase, label: 'Vagas', path: '/jobs' },
-        { icon: PlusCircle, label: 'Publicar', path: '/create' },
-        { icon: MessageSquare, label: 'Mensagens', path: '/messages' },
-        { icon: User, label: 'Perfil', path: '/profile' },
+interface SidebarProps {
+    type?: 'worker' | 'company';
+}
+
+export default function Sidebar({ type = 'worker' }: SidebarProps) {
+    const workerNavItems = [
+        { icon: Home, label: 'Início', path: '/dashboard' },
+        { icon: Briefcase, label: 'Buscar Vagas', path: '/jobs' },
+        { icon: FileText, label: 'Meus Jobs', path: '/my-jobs' },
+        { icon: BarChart2, label: 'Analytics', path: '/analytics' },
+        { icon: Wallet, label: 'Carteira', path: '/wallet' },
+        { icon: User, label: 'Meu Perfil', path: '/profile' },
     ];
 
+    const companyNavItems = [
+        { icon: Home, label: 'Dashboard', path: '/company/dashboard' },
+        { icon: PlusCircle, label: 'Criar Vaga', path: '/company/create' },
+        { icon: Briefcase, label: 'Minhas Vagas', path: '/company/jobs' },
+        { icon: BarChart2, label: 'Analytics', path: '/company/analytics' },
+        // { icon: Users, label: 'Candidatos', path: '/company/candidates' }, // Future
+        { icon: User, label: 'Perfil Empresa', path: '/company/profile' },
+    ];
+
+    const navItems = type === 'company' ? companyNavItems : workerNavItems;
+    const isCompany = type === 'company';
+
     return (
-        <aside className="hidden md:flex flex-col w-64 h-[calc(100vh-32px)] m-4 sticky top-4 
-                      bg-glass-surface backdrop-blur-md border border-glass-border 
-                      rounded-2xl shadow-glass overflow-hidden z-50">
+        <aside className="hidden md:flex flex-col w-72 h-[calc(100vh-32px)] m-4 sticky top-4 
+                      bg-white border-2 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] 
+                      overflow-hidden z-50 transition-all hover:translate-y-[-2px] hover:shadow-[10px_10px_0px_0px_rgba(0,166,81,1)]">
 
             {/* Logo */}
-            <div className="p-6 border-b border-border/10">
-                <h1 className="text-2xl font-black text-primary tracking-tighter">Worki.</h1>
+            <div className={`p-8 border-b-2 border-black ${isCompany ? 'bg-white' : 'bg-black'} ${isCompany ? 'text-black' : 'text-white'}`}>
+                <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full border-2 border-black flex items-center justify-center ${isCompany ? 'bg-black text-white' : 'bg-primary text-black border-white'}`}>
+                        <span className="font-black text-sm">W.</span>
+                    </div>
+                    <h1 className="text-3xl font-black tracking-tighter">Worki.</h1>
+                    {isCompany && <span className="text-[10px] font-bold uppercase bg-gray-200 px-1.5 py-0.5 rounded border border-black ml-auto">Empresa</span>}
+                </div>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 py-6 flex flex-col gap-2">
+            <nav className="flex-1 px-4 py-8 flex flex-col gap-3 overflow-y-auto">
                 {navItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium
+              flex items-center gap-4 px-6 py-4 rounded-xl transition-all duration-200 font-bold uppercase text-sm border-2
               ${isActive
-                                ? 'bg-primary/10 text-primary-dark font-bold shadow-sm'
-                                : 'text-gray-600 hover:bg-white/50 hover:text-accent'}
+                                ? (isCompany ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,166,81,1)] translate-x-1' : 'bg-primary text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-1')
+                                : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100 hover:border-black hover:text-black'}
             `}
                     >
-                        <item.icon size={22} strokeWidth={2} />
+                        <item.icon size={20} strokeWidth={3} />
                         {item.label}
                     </NavLink>
                 ))}
             </nav>
 
-            {/* User Summary */}
-            <div className="p-4 mt-auto">
-                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/50 cursor-pointer transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm" />
+            {/* User Details (Hooked Investment) */}
+            <div className="p-6 border-t-2 border-black bg-gray-50">
+                <div className={`flex items-center gap-4 p-4 rounded-xl border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] cursor-pointer transition-all ${isCompany ? 'hover:shadow-[4px_4px_0px_0px_rgba(33,150,243,1)]' : 'hover:shadow-[4px_4px_0px_0px_rgba(0,166,81,1)]'}`}>
+                    <div className="w-12 h-12 rounded-xl bg-gray-200 border-2 border-black flex items-center justify-center relative">
+                        {isCompany ? <Building2 size={24} /> : <User size={24} />}
+                        <div className={`absolute -top-2 -right-2 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black ${isCompany ? 'bg-blue-500' : 'bg-primary'}`}>
+                            {isCompany ? 'PRO' : 'LVL 3'}
+                        </div>
+                    </div>
                     <div className="flex flex-col">
-                        <span className="text-sm font-bold text-accent">Usuário</span>
-                        <span className="text-xs text-gray-500">Freelancer</span>
+                        <span className="text-sm font-black uppercase text-accent truncate max-w-[100px]">{isCompany ? 'Tech Corp' : 'Pedro S.'}</span>
+                        <div className="flex items-center gap-1 text-xs font-bold text-gray-500">
+                            <Zap size={10} className={`${isCompany ? 'text-blue-500 fill-blue-500' : 'text-primary fill-primary'}`} />
+                            {isCompany ? 'Verificado' : '1.2k XP'}
+                        </div>
                     </div>
                 </div>
             </div>

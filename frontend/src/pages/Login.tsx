@@ -51,8 +51,12 @@ export default function Login() {
                 if (signInError) throw signInError;
 
                 if (data.user) {
-                    // Redirect to dashboard on successful login
-                    navigate('/dashboard');
+                    // Redirect based on type (this is valid for now, ideally check user metadata in real app)
+                    if (isHire) {
+                        navigate('/company/dashboard');
+                    } else {
+                        navigate('/dashboard');
+                    }
                 }
             }
         } catch (err: any) {
