@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import CompanyOnboarding from './pages/company/CompanyOnboarding';
+import WorkerOnboarding from './pages/worker/WorkerOnboarding';
 import WorkerDashboard from './pages/worker/WorkerDashboard';
 import CompanyDashboard from './pages/company/CompanyDashboard';
 import Jobs from './pages/Jobs';
@@ -60,6 +61,8 @@ function App() {
           <Route path="analytics" element={<CompanyAnalytics />} />
           {/* Add more company routes here later */}
         </Route>
+
+        <Route path="/worker/onboarding" element={<WorkerOnboarding />} />
       </Routes>
     </BrowserRouter>
   );

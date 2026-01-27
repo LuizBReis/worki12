@@ -57,7 +57,7 @@ export default function Login() {
                     if (userType === 'hire') {
                         navigate('/company/dashboard');
                     } else {
-                        navigate('/dashboard'); // Default to worker dashboard
+                        navigate('/worker/onboarding'); // Redirect to onboarding first
                     }
                 }
             }
