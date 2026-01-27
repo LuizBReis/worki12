@@ -4,6 +4,7 @@ import CompanyLayout from './layouts/CompanyLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
+import CompanyOnboarding from './pages/company/CompanyOnboarding';
 import WorkerDashboard from './pages/worker/WorkerDashboard';
 import CompanyDashboard from './pages/company/CompanyDashboard';
 import Jobs from './pages/Jobs';
@@ -17,6 +18,9 @@ import CompanyCreateJob from './pages/company/CompanyCreateJob';
 import CompanyJobs from './pages/company/CompanyJobs';
 import CompanyProfile from './pages/company/CompanyProfile';
 import CompanyAnalytics from './pages/company/CompanyAnalytics';
+import CompanyJobDetails from './pages/company/CompanyJobDetails';
+import CompanyJobCandidates from './pages/company/CompanyJobCandidates';
+import WorkerPublicProfile from './pages/company/WorkerPublicProfile';
 
 function App() {
   return (
@@ -24,6 +28,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/company/onboarding" element={<CompanyOnboarding />} />
 
         <Route path="/" element={<MainLayout />}>
           {/* Main Worker Routes */}
@@ -47,6 +52,10 @@ function App() {
           <Route path="dashboard" element={<CompanyDashboard />} />
           <Route path="create" element={<CompanyCreateJob />} />
           <Route path="jobs" element={<CompanyJobs />} />
+          <Route path="jobs/:id" element={<CompanyJobDetails />} />
+          <Route path="jobs/:id/edit" element={<CompanyCreateJob />} />
+          <Route path="jobs/:id/candidates" element={<CompanyJobCandidates />} />
+          <Route path="worker/:id" element={<WorkerPublicProfile />} />
           <Route path="profile" element={<CompanyProfile />} />
           <Route path="analytics" element={<CompanyAnalytics />} />
           {/* Add more company routes here later */}

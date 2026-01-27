@@ -1,10 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap, Calendar, Clock, Globe } from 'lucide-react';
 
 export default function CompanyCreateJob() {
     const navigate = useNavigate();
+    const { id } = useParams(); // Add useParams
+    const isEditing = !!id;
+
     const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [categories, setCategories] = useState<{ name: string, slug: string }[]>([]);
+
     const [formData, setFormData] = useState({
         title: '',
         category: '',
@@ -13,11 +20,92 @@ export default function CompanyCreateJob() {
         requirements: '',
         location: '',
         budget: '',
+        budget_type: 'hourly', // hourly, daily, project
+        start_date: '',
+        scope: 'on-site', // on-site, remote, hybrid
+        work_start_time: '',
+        work_end_time: '',
+        has_lunch: false
     });
 
-    const [predictedCandidates, setPredictedCandidates] = useState(12); // Hooked: Variable Reward (Mock)
+    const [predictedCandidates, setPredictedCandidates] = useState(12);
 
-    // Mock effect to simulate dynamic prediction updates
+    useEffect(() => {
+        // Fetch Categories
+        async function loadCategories() {
+            const { data } = await supabase.from('job_categories').select('name, slug');
+            if (data && data.length > 0) {
+                setCategories(data);
+            } else {
+                setCategories([
+                    { name: 'Tecnologia', slug: 'tech' },
+                    { name: 'Varejo', slug: 'retail' },
+                    { name: 'Bares e Restaurantes', slug: 'hospitality' },
+                    { name: 'Eventos', slug: 'events' },
+                    { name: 'Construção Civil', slug: 'construction' },
+                    { name: 'Logística', slug: 'logistics' },
+                    { name: 'Saúde', slug: 'health' },
+                    { name: 'Outro', slug: 'other' }
+                ]);
+            }
+        }
+        loadCategories();
+    }, []);
+
+    // Fetch Job Data if Editing
+    useEffect(() => {
+        if (isEditing) {
+            fetchJobData();
+        }
+    }, [id]);
+
+    const fetchJobData = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('jobs')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (data) {
+                setFormData({
+                    title: data.title,
+                    category: data.category,
+                    type: data.type,
+                    description: data.description,
+                    requirements: data.requirements,
+                    location: data.location || '',
+                    budget: data.budget?.toString() || '',
+                    budget_type: data.budget_type,
+                    start_date: data.start_date ? data.start_date.split('T')[0] : '',
+                    scope: data.scope,
+                    work_start_time: data.work_start_time || '',
+                    work_end_time: data.work_end_time || '',
+                    has_lunch: data.has_lunch || false
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching job:', error);
+            navigate('/company/jobs');
+        }
+    };
+
+    const calculateHours = (start: string, end: string, lunch: boolean = false) => {
+        if (!start || !end) return { total: 0, work: 0 };
+        const [startH, startM] = start.split(':').map(Number);
+        const [endH, endM] = end.split(':').map(Number);
+
+        let total = (endH + endM / 60) - (startH + startM / 60);
+        if (total < 0) total += 24; // Handle overnight
+
+        const work = lunch ? Math.max(0, total - 1) : total;
+        return {
+            total: total.toFixed(1).replace('.0', ''),
+            work: work.toFixed(1).replace('.0', '')
+        };
+    };
+
     const updatePrediction = () => {
         setPredictedCandidates(prev => prev + Math.floor(Math.random() * 3));
     };
@@ -25,15 +113,56 @@ export default function CompanyCreateJob() {
     const handleNext = () => setStep(step + 1);
     const handleBack = () => setStep(step - 1);
 
+    const handleSubmit = async () => {
+        setLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Usuário não autenticado");
+
+            const payload = {
+                company_id: user.id,
+                title: formData.title,
+                category: formData.category,
+                type: formData.type,
+                description: formData.description,
+                requirements: formData.requirements,
+                location: formData.location,
+                budget: parseFloat(formData.budget),
+                budget_type: formData.budget_type,
+                start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
+                scope: formData.scope,
+                work_start_time: formData.work_start_time,
+                work_end_time: formData.work_end_time,
+                has_lunch: formData.has_lunch,
+                status: 'open'
+            };
+
+            if (isEditing) {
+                const { error } = await supabase.from('jobs').update(payload).eq('id', id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('jobs').insert(payload);
+                if (error) throw error;
+            }
+
+            navigate('/company/dashboard');
+        } catch (error) {
+            console.error('Error saving job:', error);
+            alert('Erro ao salvar vaga. Verifique os dados.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 pb-20">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 font-bold hover:text-black transition-colors mb-2">
                         <ArrowLeft size={16} strokeWidth={3} /> Voltar
                     </button>
-                    <h1 className="text-3xl font-black uppercase tracking-tighter">Criar Nova Vaga</h1>
+                    <h1 className="text-3xl font-black uppercase tracking-tighter">{isEditing ? 'Editar Vaga' : 'Criar Nova Vaga'}</h1>
                 </div>
                 {/* Progress Indicator */}
                 <div className="flex items-center gap-2">
@@ -74,9 +203,9 @@ export default function CompanyCreateJob() {
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                     >
                                         <option value="">Selecione...</option>
-                                        <option value="design">Design</option>
-                                        <option value="dev">Desenvolvimento</option>
-                                        <option value="marketing">Marketing</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -97,6 +226,26 @@ export default function CompanyCreateJob() {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wide">Formato de Trabalho</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'on-site', label: 'Presencial', icon: MapPin },
+                                        { id: 'remote', label: 'Remoto', icon: Globe },
+                                        { id: 'hybrid', label: 'Híbrido', icon: Briefcase }
+                                    ].map(sc => (
+                                        <button
+                                            key={sc.id}
+                                            onClick={() => setFormData({ ...formData, scope: sc.id })}
+                                            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${formData.scope === sc.id ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-gray-100 text-gray-400 hover:border-black'}`}
+                                        >
+                                            <sc.icon size={20} />
+                                            <span className="text-[10px] font-black uppercase mt-1">{sc.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -115,15 +264,10 @@ export default function CompanyCreateJob() {
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 />
-                                <div className="flex justify-end">
-                                    <button className="text-[10px] font-bold uppercase text-blue-600 flex items-center gap-1 hover:underline">
-                                        <Wand2 size={10} /> Melhorar com IA
-                                    </button>
-                                </div>
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wide">Requisitos (Lista)</label>
+                                <label className="text-xs font-bold uppercase tracking-wide">Requisitos</label>
                                 <textarea
                                     className="w-full h-24 bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-medium text-sm placeholder:text-gray-300 transition-all resize-none"
                                     placeholder="- React Native&#10;- TypeScript&#10;- Figma"
@@ -141,31 +285,108 @@ export default function CompanyCreateJob() {
                     {step === 3 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                             <h2 className="text-xl font-black uppercase flex items-center gap-2">
-                                <DollarSign size={20} /> Orçamento & Local
+                                <DollarSign size={20} /> Orçamento & Cronograma
                             </h2>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wide">Orçamento / Salário</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-3.5 font-black text-gray-400">R$</span>
-                                    <input
-                                        type="number"
-                                        className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold text-lg placeholder:text-gray-300 transition-all"
-                                        placeholder="5.000,00"
-                                        value={formData.budget}
-                                        onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                                    />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wide">Tipo de Pagamento</label>
+                                    <select
+                                        className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold appearance-none"
+                                        value={formData.budget_type}
+                                        onChange={(e) => setFormData({ ...formData, budget_type: e.target.value })}
+                                    >
+                                        <option value="hourly">Por Hora</option>
+                                        <option value="daily">Por Dia</option>
+                                        <option value="project">Projeto Fixo</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wide">Valor ({formData.budget_type === 'hourly' ? '/h' : formData.budget_type === 'daily' ? '/dia' : 'Total'})</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-3.5 font-black text-gray-400">R$</span>
+                                        <input
+                                            type="number"
+                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold text-lg placeholder:text-gray-300 transition-all"
+                                            placeholder="0,00"
+                                            value={formData.budget}
+                                            onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wide">Início</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-3 top-3.5 text-gray-400" size={20} />
+                                        <input
+                                            type="date"
+                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all"
+                                            value={formData.start_date}
+                                            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detailed Schedule */}
+                            <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-4 space-y-4">
+                                <h3 className="text-sm font-black uppercase flex items-center gap-2 text-gray-500">
+                                    <Clock size={16} /> Horário de Trabalho
+                                </h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide">Entrada</label>
+                                        <input
+                                            type="time"
+                                            className="w-full bg-white border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold transition-all"
+                                            value={formData.work_start_time}
+                                            onChange={(e) => setFormData({ ...formData, work_start_time: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide">Saída</label>
+                                        <input
+                                            type="time"
+                                            className="w-full bg-white border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold transition-all"
+                                            value={formData.work_end_time}
+                                            onChange={(e) => setFormData({ ...formData, work_end_time: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="lunch"
+                                        className="w-5 h-5 accent-black rounded"
+                                        checked={formData.has_lunch}
+                                        onChange={(e) => setFormData({ ...formData, has_lunch: e.target.checked })}
+                                    />
+                                    <label htmlFor="lunch" className="text-sm font-bold cursor-pointer select-none">
+                                        Intervalo de Almoço (1h)
+                                    </label>
+                                </div>
+
+                                {/* Calculation Display */}
+                                {(formData.work_start_time && formData.work_end_time) && (
+                                    <div className="bg-gray-200 rounded-lg p-3 text-xs font-bold uppercase text-gray-600 flex justify-between">
+                                        <span>Total: {calculateHours(formData.work_start_time, formData.work_end_time).total}h</span>
+                                        <span>Trabalho: {calculateHours(formData.work_start_time, formData.work_end_time, formData.has_lunch).work}h</span>
+                                        <span className={formData.has_lunch ? 'text-black' : 'text-gray-400'}>Almoço: {formData.has_lunch ? '1h' : '0h'}</span>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wide">Localização</label>
+                                <label className="text-xs font-bold uppercase tracking-wide">Localização Específica</label>
                                 <div className="relative">
                                     <MapPin className="absolute left-3 top-3.5 text-gray-400" size={20} />
                                     <input
                                         type="text"
                                         className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold placeholder:text-gray-300 transition-all"
-                                        placeholder="Remoto, São Paulo..."
+                                        placeholder="Ex: São Paulo, SP (ou deixe vazio se remoto)"
                                         value={formData.location}
                                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                                     />
@@ -186,18 +407,19 @@ export default function CompanyCreateJob() {
                         ) : <div></div>}
 
                         <button
-                            onClick={step === 3 ? () => navigate('/company/jobs') : handleNext}
-                            className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-green-600 hover:scale-[1.02] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]"
+                            onClick={step === 3 ? handleSubmit : handleNext}
+                            disabled={loading}
+                            className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-green-600 hover:scale-[1.02] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] disabled:opacity-50"
                         >
-                            {step === 3 ? 'Publicar Vaga' : 'Próximo'}
-                            {step < 3 && <ChevronRight size={20} />}
-                            {step === 3 && <Check size={20} />}
+                            {loading ? 'Salvando...' : step === 3 ? (isEditing ? 'Salvar Alterações' : 'Publicar Vaga') : 'Próximo'}
+                            {!loading && step < 3 && <ChevronRight size={20} />}
+                            {!loading && step === 3 && <Check size={20} />}
                         </button>
                     </div>
 
                 </div>
 
-                {/* Side Panel: Prediction (Hooked Model - Variable Reward) */}
+                {/* Side Panel: Prediction */}
                 <div className="hidden lg:block w-72 space-y-4">
                     <div className="bg-blue-600 text-white p-6 rounded-2xl border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sticky top-8">
                         <div className="flex items-start justify-between mb-4">

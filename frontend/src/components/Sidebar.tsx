@@ -1,11 +1,33 @@
 import { Home, Briefcase, User, BarChart2, Wallet, FileText, Zap, PlusCircle, Building2 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react';
 
 interface SidebarProps {
     type?: 'worker' | 'company';
 }
 
 export default function Sidebar({ type = 'worker' }: SidebarProps) {
+    const [name, setName] = useState('');
+    const [isVerified, setIsVerified] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            if (type === 'company') {
+                const { data } = await supabase.from('companies').select('name').eq('id', user.id).single();
+                if (data) setName(data.name);
+                setIsVerified(!!user.email_confirmed_at); // Check if email is confirmed
+            } else {
+                // Future: Fetch worker name if needed, currently hardcoded for worker as requested focused on company
+                setName('Pedro S.');
+            }
+        };
+        fetchData();
+    }, [type]);
+
     const workerNavItems = [
         { icon: Home, label: 'Início', path: '/dashboard' },
         { icon: Briefcase, label: 'Buscar Vagas', path: '/jobs' },
@@ -72,10 +94,10 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
                         </div>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm font-black uppercase text-accent truncate max-w-[100px]">{isCompany ? 'Tech Corp' : 'Pedro S.'}</span>
+                        <span className="text-sm font-black uppercase text-accent truncate max-w-[100px]">{name || (isCompany ? 'Carregando...' : 'Carregando...')}</span>
                         <div className="flex items-center gap-1 text-xs font-bold text-gray-500">
-                            <Zap size={10} className={`${isCompany ? 'text-blue-500 fill-blue-500' : 'text-primary fill-primary'}`} />
-                            {isCompany ? 'Verificado' : '1.2k XP'}
+                            <Zap size={10} className={`${isCompany ? (isVerified ? 'text-blue-500 fill-blue-500' : 'text-gray-300 fill-gray-300') : 'text-primary fill-primary'}`} />
+                            {isCompany ? (isVerified ? 'Verificado' : 'Não Verificado') : '1.2k XP'}
                         </div>
                     </div>
                 </div>

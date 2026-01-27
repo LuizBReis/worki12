@@ -51,11 +51,13 @@ export default function Login() {
                 if (signInError) throw signInError;
 
                 if (data.user) {
-                    // Redirect based on type (this is valid for now, ideally check user metadata in real app)
-                    if (isHire) {
+                    // Check user metadata for correct redirection
+                    const userType = data.user.user_metadata?.user_type;
+
+                    if (userType === 'hire') {
                         navigate('/company/dashboard');
                     } else {
-                        navigate('/dashboard');
+                        navigate('/dashboard'); // Default to worker dashboard
                     }
                 }
             }
