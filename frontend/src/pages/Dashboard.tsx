@@ -4,14 +4,16 @@ import { supabase } from '../lib/supabase';
 import {
     Briefcase, Clock, Star, TrendingUp, Award, Zap,
     ChevronRight, CheckCircle2, AlertCircle, Search, Filter,
-    Loader2, MapPin
+    Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import JobCard from '../components/JobCard';
+import { useJobApplication } from '../hooks/useJobApplication';
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+
     const [worker, setWorker] = useState<any>(null);
 
     // Real Data States
@@ -19,15 +21,19 @@ export default function Dashboard() {
     const [history, setHistory] = useState<any[]>([]);
     const [openJobs, setOpenJobs] = useState<any[]>([]);
     const [quests, setQuests] = useState<any[]>([]);
+    const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
+
+    // Use the hook
+    const { applyingId, applyForJob } = useJobApplication();
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return navigate('/login');
-            setUser(user);
+
 
             // 1. Fetch Worker Profile &Stats
-            const { data: workerData, error } = await supabase
+            const { data: workerData } = await supabase
                 .from('workers')
                 .select('*')
                 .eq('id', user.id)
@@ -51,9 +57,9 @@ export default function Dashboard() {
                 .select('status, job:jobs(*, company:companies(name))')
                 .eq('worker_id', user.id)
                 .in('status', ['approved', 'scheduled'])
-                .order('job(date)', { ascending: true })
+                // Removed complex sorting causing 406
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (nextJobData) setNextJob(nextJobData);
 
@@ -68,14 +74,15 @@ export default function Dashboard() {
 
             if (historyData) setHistory(historyData);
 
-            // 4. Fetch Open Jobs for Feed (excluding applied ones)
-            // First get applied job IDs to exclude
+            // 4. Fetch Open Jobs for Feed
+            // First get applied job IDs to MARK them, not exclude them
             const { data: appliedApps } = await supabase
                 .from('applications')
                 .select('job_id')
                 .eq('worker_id', user.id);
 
-            const appliedJobIds = appliedApps?.map(a => a.job_id) || [];
+            const fetchedAppliedIds = appliedApps?.map(a => a.job_id) || [];
+            setAppliedJobIds(fetchedAppliedIds);
 
             let query = supabase
                 .from('jobs')
@@ -84,9 +91,7 @@ export default function Dashboard() {
                 .order('created_at', { ascending: false })
                 .limit(5);
 
-            if (appliedJobIds.length > 0) {
-                query = query.not('id', 'in', `(${appliedJobIds.join(',')})`);
-            }
+            // We do NOT exclude applied jobs anymore
 
             const { data: jobsData } = await query;
             if (jobsData) setOpenJobs(jobsData);
@@ -96,6 +101,11 @@ export default function Dashboard() {
 
         fetchDashboardData();
     }, [navigate]);
+
+    const handleApplySuccess = (jobId: string) => {
+        setAppliedJobIds(prev => [...prev, jobId]);
+        // Ideally update openJobs state too if there's candidate count, but it's optional for dashboard feed
+    };
 
     if (loading) return (
         <div className="flex justify-center items-center min-h-[50vh]">
@@ -108,7 +118,7 @@ export default function Dashboard() {
     // Helper for Quest Progress
     const completedQuests = quests.filter(q => q.done).length;
     const totalQuests = quests.length;
-    const progressPercent = (completedQuests / totalQuests) * 100;
+
 
     return (
         <div className="flex flex-col gap-8 pb-12 font-sans text-accent">
@@ -216,14 +226,18 @@ export default function Dashboard() {
                         <span className="text-sm font-black uppercase text-gray-400">Sua Nota</span>
                     </div>
 
-                    <h3 className="text-4xl font-black text-accent mb-1">{worker.rating_average || 5}</h3>
+                    <h3 className="text-4xl font-black text-accent mb-1">{worker.rating_average ?? '-'}</h3>
                     <div className="flex gap-2 mb-3">
-                        {/* Mock tags for now until we have reviews tags */}
-                        {['Pontual', 'Ágil'].map((tag, i) => (
-                            <span key={i} className="text-[10px] uppercase font-black px-2 py-1 bg-gray-100 border border-gray-300 rounded-md text-gray-600">
-                                {tag}
-                            </span>
-                        ))}
+                        {/* Star rating visual */}
+                        <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                    key={star}
+                                    size={14}
+                                    className={star <= (worker.rating_average || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
+                                />
+                            ))}
+                        </div>
                     </div>
 
                     <p className="text-sm font-bold text-gray-500 line-clamp-1">
@@ -278,43 +292,15 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-4">
-                        {openJobs.length > 0 ? openJobs.map((job, i) => (
-                            <div key={i} className="group bg-white border-2 border-black p-6 rounded-2xl hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,166,81,1)] transition-all cursor-pointer relative overflow-hidden">
-
-                                {/* Match Badge (Mocked logic for now) */}
-                                <div className="absolute top-0 right-0 bg-black text-white text-[10px] font-black uppercase px-3 py-1 rounded-bl-xl border-b-2 border-l-2 border-white">
-                                    95% Match
-                                </div>
-
-                                <div className="flex gap-4 items-start">
-                                    <div className="w-14 h-14 bg-gray-100 rounded-xl border-2 border-black flex items-center justify-center shrink-0 overflow-hidden">
-                                        {job.company?.logo_url ? <img src={job.company.logo_url} className="w-full h-full object-cover" /> : <Briefcase size={24} />}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-xl font-black uppercase text-accent mb-1">{job.title}</h3>
-                                        <p className="text-sm font-bold text-gray-400 mb-3">{job.company?.name || 'Empresa Confidencial'} • {job.location}</p>
-
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            <span className="flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-md uppercase">
-                                                <Clock size={12} /> {new Date(job.start_date).toLocaleDateString()}
-                                            </span>
-                                            <span className="flex items-center gap-1 text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-md uppercase">
-                                                <Zap size={12} /> +XP
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col items-end justify-between self-stretch">
-                                        <div className="text-right">
-                                            <span className="block text-2xl font-black text-accnent">R$ {job.budget}</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase">por turno</span>
-                                        </div>
-                                        <button className="bg-primary hover:bg-black text-white px-6 py-2 rounded-xl font-black uppercase text-sm transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none translate-y-0 active:translate-y-1">
-                                            Aceitar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        {openJobs.length > 0 ? openJobs.map((job) => (
+                            <JobCard
+                                key={job.id}
+                                job={job}
+                                isApplied={appliedJobIds.includes(job.id)}
+                                onApply={(id) => applyForJob(id, () => handleApplySuccess(id))}
+                                isApplying={applyingId === job.id}
+                                variant="feed"
+                            />
                         )) : (
                             <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                                 <Search size={48} className="mx-auto text-gray-300 mb-4" />

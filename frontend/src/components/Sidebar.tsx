@@ -1,5 +1,5 @@
-import { Home, Briefcase, User, BarChart2, Wallet, FileText, Zap, PlusCircle, Building2 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { Home, Briefcase, User, BarChart2, Wallet, FileText, Zap, PlusCircle, Building2, MessageSquare, LogOut } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useEffect, useState } from 'react';
 
@@ -11,6 +11,12 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
     const [name, setName] = useState('');
     const [isVerified, setIsVerified] = useState(false);
     const [workerData, setWorkerData] = useState<any>(null); // Store full worker data
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/login');
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -22,12 +28,16 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
                 if (data) setName(data.name);
                 setIsVerified(!!user.email_confirmed_at);
             } else {
-                const { data } = await supabase.from('workers').select('full_name, level, xp, avatar_url, verified_identity').eq('id', user.id).single();
-                if (data) {
-                    const first = data.full_name?.split(' ')[0] || '';
-                    const last = data.full_name?.split(' ').length > 1 ? data.full_name?.split(' ').pop()?.[0] + '.' : '';
-                    setName(`${first} ${last}`);
-                    setWorkerData(data);
+                // Fetch from unified 'workers' table
+                const { data: worker } = await supabase
+                    .from('workers')
+                    .select('full_name, level, xp, avatar_url, verified_identity')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                if (worker) {
+                    setName(worker.full_name);
+                    setWorkerData(worker);
                 }
             }
         };
@@ -38,6 +48,7 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
         { icon: Home, label: 'Início', path: '/dashboard' },
         { icon: Briefcase, label: 'Buscar Vagas', path: '/jobs' },
         { icon: FileText, label: 'Meus Jobs', path: '/my-jobs' },
+        { icon: MessageSquare, label: 'Mensagens', path: '/messages' },
         { icon: BarChart2, label: 'Analytics', path: '/analytics' },
         { icon: Wallet, label: 'Carteira', path: '/wallet' },
         { icon: User, label: 'Meu Perfil', path: '/profile' },
@@ -47,6 +58,7 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
         { icon: Home, label: 'Dashboard', path: '/company/dashboard' },
         { icon: PlusCircle, label: 'Criar Vaga', path: '/company/create' },
         { icon: Briefcase, label: 'Minhas Vagas', path: '/company/jobs' },
+        { icon: MessageSquare, label: 'Mensagens', path: '/company/messages' },
         { icon: BarChart2, label: 'Analytics', path: '/company/analytics' },
         // { icon: Users, label: 'Candidatos', path: '/company/candidates' }, // Future
         { icon: User, label: 'Perfil Empresa', path: '/company/profile' },
@@ -91,7 +103,7 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
             </nav>
 
             {/* User Details (Hooked Investment) */}
-            <div className="p-6 border-t-2 border-black bg-gray-50">
+            <div className="p-6 border-t-2 border-black bg-gray-50 flex flex-col gap-4">
                 <div className={`flex items-center gap-4 p-4 rounded-xl border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] cursor-pointer transition-all ${isCompany ? 'hover:shadow-[4px_4px_0px_0px_rgba(33,150,243,1)]' : 'hover:shadow-[4px_4px_0px_0px_rgba(0,166,81,1)]'}`}>
                     <div className="relative">
                         <div className="w-12 h-12 rounded-xl bg-gray-200 border-2 border-black flex items-center justify-center overflow-hidden">
@@ -113,6 +125,13 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
                         </div>
                     </div>
                 </div>
+
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-2 w-full py-2 rounded-xl font-bold uppercase text-xs text-red-600 hover:bg-red-50 border-2 border-transparent hover:border-red-200 transition-all"
+                >
+                    <LogOut size={16} /> Sair
+                </button>
             </div>
         </aside>
     );

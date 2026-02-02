@@ -2,7 +2,6 @@ import { BarChart2, Eye, Users, CheckCircle, TrendingUp, Download, Calendar, Loa
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { format, subDays, eachDayOfInterval, isSameDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 export default function CompanyAnalytics() {
     const [loading, setLoading] = useState(true);
@@ -176,39 +175,33 @@ export default function CompanyAnalytics() {
                     </div>
                 </div>
 
-                {/* Engagement / Hooked Component (MOCKED as requested) */}
-                <div className="bg-gradient-to-br from-indigo-900 to-black text-white border-2 border-black rounded-2xl p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+                {/* Rank de Mercado - Real Data Required */}
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 text-white border-2 border-black rounded-2xl p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
                     <div className="relative z-10">
                         <div className="flex items-center justify-between mb-8">
                             <h2 className="text-lg font-black uppercase opacity-80">Rank de Mercado</h2>
-                            <div className="bg-yellow-400 text-black text-xs font-black px-2 py-1 rounded border-2 border-black">
-                                TOP 15%
+                            <div className="bg-gray-600 text-white text-xs font-black px-2 py-1 rounded border-2 border-gray-500">
+                                EM BREVE
                             </div>
                         </div>
 
-                        <div className="mb-2 flex justify-between items-end">
-                            <span className="text-4xl font-black">92<span className="text-xl">.0</span></span>
-                            <span className="text-xs font-bold uppercase opacity-60 mb-2">Score de Eficiência</span>
+                        <div className="mb-6 flex flex-col items-center justify-center py-8">
+                            <TrendingUp size={48} className="text-gray-500 mb-4" />
+                            <span className="text-xl font-bold text-gray-400 text-center">Dados insuficientes</span>
                         </div>
 
-                        <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden border border-white/20 mb-6">
-                            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 w-[92%] relative">
-                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-white animate-pulse"></div>
-                            </div>
-                        </div>
-
-                        <p className="text-sm font-medium opacity-80 leading-relaxed mb-6">
-                            Você é mais rápido que 85% das empresas do seu setor. Continue respondendo rápido para alcançar o selo <span className="text-yellow-400 font-bold">Top Employer</span>.
+                        <p className="text-sm font-medium opacity-60 leading-relaxed mb-6 text-center">
+                            Continue publicando vagas e contratando para desbloquear seu rank de mercado e comparativo com outras empresas.
                         </p>
 
-                        <button className="w-full bg-white text-black font-black uppercase py-4 rounded-xl hover:bg-yellow-400 transition-colors border-2 border-transparent hover:border-black">
-                            Ver Comparativo Completo
-                        </button>
+                        <div className="w-full bg-gray-700 text-gray-400 font-bold uppercase py-4 rounded-xl text-center text-sm border-2 border-gray-600">
+                            Mínimo de 5 contratações necessárias
+                        </div>
                     </div>
 
                     {/* Decorative */}
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/30 rounded-full blur-3xl"></div>
-                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/30 rounded-full blur-3xl"></div>
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-gray-600/20 rounded-full blur-3xl"></div>
+                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gray-600/20 rounded-full blur-3xl"></div>
                 </div>
 
             </div>

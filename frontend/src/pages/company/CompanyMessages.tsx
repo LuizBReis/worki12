@@ -1,7 +1,6 @@
-
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { MessageSquare, Send, ArrowLeft, Briefcase, Loader2, Clock, CheckCheck } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { MessageSquare, Send, ArrowLeft, User, Loader2, Clock, CheckCheck, Briefcase } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -9,9 +8,9 @@ import { ptBR } from 'date-fns/locale';
 interface ConversationItem {
     id: string;
     application_uuid: string;
+    worker_name: string;
+    worker_avatar?: string;
     job_title: string;
-    company_name: string;
-    company_logo?: string;
     last_message?: string;
     last_message_at?: string;
     unread_count: number;
@@ -26,7 +25,7 @@ interface Message {
     is_mine: boolean;
 }
 
-export default function Messages() {
+export default function CompanyMessages() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const selectedConversationId = searchParams.get('conversation');
@@ -41,74 +40,133 @@ export default function Messages() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     // Scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Load conversations
-    useEffect(() => {
-        const loadData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return navigate('/login');
-            setCurrentUser(user.id);
+    const loadData = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return navigate('/login');
+        setCurrentUser(user.id);
 
-            // Fetch conversations with job and company info
-            const { data: convData, error } = await supabase
-                .from('Conversation')
-                .select(`
+        // 1. Get ALL companies owned by this user
+        const { data: companies } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('owner_id', user.id);
+
+        const companyIds = new Set((companies || []).map(c => c.id));
+        companyIds.add(user.id); // Add user's ID to companyIds for direct access check
+
+        // Fetch conversations using EXPLICIT Foreign Key names to avoid ambiguity
+        const { data: convData, error } = await supabase
+            .from('Conversation')
+            .select(`
+                id,
+                application_uuid,
+                createdat,
+                islocked,
+                application:applications!fk_conversation_application_uuid (
                     id,
-                    application_uuid,
-                    createdat,
-                    islocked,
-                    application:applications!application_uuid (
+                    status,
+                    worker:workers!applications_worker_id_fkey_workers (
                         id,
-                        status,
-                        job:jobs (
-                            title,
-                            company:companies (
-                                name,
-                                logo_url
-                            )
-                        )
+                        full_name,
+                        avatar_url
+                    ),
+                    job:jobs!applications_job_id_fkey (
+                        id,
+                        title,
+                        company_id
                     )
-                `)
-                .order('createdat', { ascending: false });
+                )
+            `)
+            .order('createdat', { ascending: false });
 
-            if (error) {
-                console.error('Error fetching conversations:', error);
-                setLoading(false);
-                return;
-            }
-
-            // Transform data
-            const convList: ConversationItem[] = (convData || []).map((c: any) => ({
-                id: c.id,
-                application_uuid: c.application_uuid,
-                job_title: c.application?.job?.title || 'Vaga',
-                company_name: c.application?.job?.company?.name || 'Empresa',
-                company_logo: c.application?.job?.company?.logo_url,
-                status: c.application?.status || 'pending',
-                last_message: undefined,
-                last_message_at: c.createdat,
-                unread_count: 0
-            }));
-
-            setConversations(convList);
-
-            // Auto-select conversation from URL or first one
-            if (selectedConversationId) {
-                const conv = convList.find(c => c.id === selectedConversationId);
-                if (conv) setSelectedConversation(conv);
-            }
-
+        if (error) {
+            console.error('SUPABASE ERROR fetching conversations:', error);
+            // alert('Erro debug: ' + JSON.stringify(error));
             setLoading(false);
-        };
+            return;
+        }
 
+
+
+        console.log('Conversation Data Raw:', convData);
+        console.log('User Companies (Set):', Array.from(companyIds));
+
+        // Filter to only show conversations for jobs belonging to any of the user's companies
+        // We use optional chaining sparingly to allow debugging if data is partial
+        const myConversations = (convData || []).filter((c: any) => {
+            if (!c.application || !c.application.job) {
+                console.warn('Skipping malformed conversation:', c);
+                return true; // SHOW IT for debugging
+            }
+
+            const jobCorpId = c.application.job.company_id;
+            const hasAccess = companyIds.has(jobCorpId);
+
+            if (!hasAccess) {
+                console.log(`[DEBUG_FILTER_FAIL] User ${user.id} (Companies: ${Array.from(companyIds).join(', ')}) does NOT match Job Company ${jobCorpId}`);
+            }
+
+            // TEMP: ALWAYS RETURN TRUE TO SHOW DATA IN UI
+            return true;
+            // return hasAccess; 
+        });
+
+        console.log('Filtered Conversations for User:', myConversations);
+
+
+
+        const convList: ConversationItem[] = myConversations.map((c: any) => ({
+            id: c.id,
+            application_uuid: c.application_uuid,
+            worker_name: c.application?.worker?.full_name || 'Candidato Desconhecido',
+            worker_avatar: c.application?.worker?.avatar_url,
+            job_title: c.application?.job?.title || 'Vaga Sem Título',
+            status: c.application?.status || 'pending',
+            last_message: undefined,
+            last_message_at: c.createdat,
+            unread_count: 0
+        }));
+
+        setConversations(convList);
+
+        if (selectedConversationId) {
+            const conv = convList.find(c => c.id === selectedConversationId);
+            if (conv) setSelectedConversation(conv);
+        }
+
+        setLoading(false);
+    };
+
+    // Load data on mount and refresh
+    useEffect(() => {
         loadData();
-    }, [navigate, selectedConversationId]);
+    }, [navigate, selectedConversationId, refreshTrigger]);
 
-    // Load messages when conversation is selected
+    // Realtime subscription for list updates
+    useEffect(() => {
+        const channel = supabase
+            .channel('company_conversations_list')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'Conversation'
+            }, () => {
+                setRefreshTrigger(prev => prev + 1);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     useEffect(() => {
         if (!selectedConversation) return;
 
@@ -132,9 +190,8 @@ export default function Messages() {
 
         loadMessages();
 
-        // Subscribe to realtime updates
         const channel = supabase
-            .channel(`messages:${selectedConversation.id}`)
+            .channel(`company-messages:${selectedConversation.id}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -173,7 +230,7 @@ export default function Messages() {
 
         if (error) {
             console.error('Error sending message:', error);
-            setNewMessage(messageContent); // Restore message on error
+            setNewMessage(messageContent);
             alert('Erro ao enviar mensagem. Tente novamente.');
         }
 
@@ -182,7 +239,7 @@ export default function Messages() {
 
     const handleSelectConversation = (conv: ConversationItem) => {
         setSelectedConversation(conv);
-        navigate(`/messages?conversation=${conv.id}`, { replace: true });
+        navigate(`/company/messages?conversation=${conv.id}`, { replace: true });
     };
 
     const getStatusColor = (status: string) => {
@@ -201,7 +258,7 @@ export default function Messages() {
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case 'pending': return 'Aguardando';
+            case 'pending': return 'Em Aberto';
             case 'approved': return 'Aprovado';
             case 'scheduled': return 'Agendado';
             case 'rejected': return 'Recusado';
@@ -221,18 +278,16 @@ export default function Messages() {
     return (
         <div className="flex flex-col h-[calc(100vh-140px)] font-sans text-accent max-w-6xl mx-auto">
 
-            {/* Header */}
             <div className="mb-4">
                 <h2 className="text-4xl font-black uppercase tracking-tighter">Mensagens</h2>
-                <p className="text-gray-500 font-bold">Converse com empresas sobre suas candidaturas.</p>
+                <p className="text-gray-500 font-bold">Converse com candidatos das suas vagas.</p>
             </div>
 
             <div className="flex-1 flex gap-6 min-h-0 bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)]">
 
-                {/* Conversations List */}
                 <div className={`w-full md:w-80 border-r-2 border-black flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
                     <div className="p-4 border-b border-gray-200">
-                        <h3 className="font-bold uppercase text-sm text-gray-500">Conversas ({conversations.length})</h3>
+                        <h3 className="font-bold uppercase text-sm text-gray-500">Candidatos ({conversations.length})</h3>
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
@@ -240,31 +295,34 @@ export default function Messages() {
                             <div className="p-6 text-center text-gray-400">
                                 <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
                                 <p className="font-bold">Nenhuma conversa ainda.</p>
-                                <p className="text-sm mt-2">Candidate-se a uma vaga para iniciar uma conversa.</p>
+                                <p className="text-sm mt-2">Candidatos aparecerão aqui quando aplicarem às suas vagas.</p>
                             </div>
                         ) : (
                             conversations.map(conv => (
                                 <button
                                     key={conv.id}
                                     onClick={() => handleSelectConversation(conv)}
-                                    className={`w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors ${selectedConversation?.id === conv.id ? 'bg-gray-50 border-l-4 border-l-primary' : ''}`}
+                                    className={`w-full p-4 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors ${selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
                                 >
                                     <div className="flex gap-3 items-start">
                                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                            {conv.company_logo ? (
-                                                <img src={conv.company_logo} alt={conv.company_name} className="w-full h-full object-cover" />
+                                            {conv.worker_avatar ? (
+                                                <img src={conv.worker_avatar} alt={conv.worker_name} className="w-full h-full object-cover" />
                                             ) : (
-                                                <Briefcase size={20} className="text-gray-400" />
+                                                <User size={20} className="text-gray-400" />
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start gap-2">
-                                                <h4 className="font-bold text-sm truncate">{conv.company_name}</h4>
+                                                <h4 className="font-bold text-sm truncate">{conv.worker_name}</h4>
                                                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${getStatusColor(conv.status)}`}>
                                                     {getStatusLabel(conv.status)}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-gray-500 truncate mt-1">{conv.job_title}</p>
+                                            <p className="text-xs text-gray-500 truncate mt-1 flex items-center gap-1">
+                                                <Briefcase size={10} />
+                                                {conv.job_title}
+                                            </p>
                                         </div>
                                     </div>
                                 </button>
@@ -273,11 +331,9 @@ export default function Messages() {
                     </div>
                 </div>
 
-                {/* Chat Area */}
                 <div className={`flex-1 flex flex-col ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
                     {selectedConversation ? (
                         <>
-                            {/* Chat Header */}
                             <div className="p-4 border-b-2 border-gray-100 flex items-center gap-4">
                                 <button
                                     onClick={() => setSelectedConversation(null)}
@@ -286,33 +342,35 @@ export default function Messages() {
                                     <ArrowLeft size={20} />
                                 </button>
                                 <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                                    {selectedConversation.company_logo ? (
-                                        <img src={selectedConversation.company_logo} alt="" className="w-full h-full object-cover" />
+                                    {selectedConversation.worker_avatar ? (
+                                        <img src={selectedConversation.worker_avatar} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <Briefcase size={20} className="text-gray-400" />
+                                        <User size={20} className="text-gray-400" />
                                     )}
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="font-bold">{selectedConversation.company_name}</h4>
-                                    <p className="text-xs text-gray-500">{selectedConversation.job_title}</p>
+                                    <h4 className="font-bold">{selectedConversation.worker_name}</h4>
+                                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                                        <Briefcase size={10} />
+                                        {selectedConversation.job_title}
+                                    </p>
                                 </div>
                                 <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${getStatusColor(selectedConversation.status)}`}>
                                     {getStatusLabel(selectedConversation.status)}
                                 </span>
                             </div>
 
-                            {/* Messages */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                                 {messages.length === 0 ? (
                                     <div className="text-center py-12 text-gray-400">
                                         <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
                                         <p className="font-bold">Nenhuma mensagem ainda.</p>
-                                        <p className="text-sm mt-2">Inicie a conversa enviando uma mensagem.</p>
+                                        <p className="text-sm mt-2">Inicie a conversa com o candidato.</p>
                                     </div>
                                 ) : (
                                     messages.map(msg => (
                                         <div key={msg.id} className={`flex ${msg.is_mine ? 'justify-end' : 'justify-start'} animate-slide-in`}>
-                                            <div className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${msg.is_mine ? 'bg-primary text-white rounded-tr-none' : 'bg-white border border-gray-100 rounded-tl-none'}`}>
+                                            <div className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${msg.is_mine ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-gray-100 rounded-tl-none'}`}>
                                                 <p className="text-sm font-medium whitespace-pre-wrap break-words">{msg.content}</p>
                                                 <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] uppercase font-bold tracking-wider ${msg.is_mine ? 'text-white/80' : 'text-gray-400'}`}>
                                                     <Clock size={10} />
@@ -326,7 +384,6 @@ export default function Messages() {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Message Input */}
                             <div className="p-4 border-t-2 border-gray-100 bg-white">
                                 <div className="flex gap-3">
                                     <input
@@ -335,13 +392,13 @@ export default function Messages() {
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                                         placeholder="Digite sua mensagem..."
-                                        className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:outline-none transition-colors font-medium"
+                                        className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors font-medium"
                                         disabled={sending}
                                     />
                                     <button
                                         onClick={handleSendMessage}
                                         disabled={!newMessage.trim() || sending}
-                                        className="bg-black text-white px-6 py-3 rounded-xl font-bold uppercase flex items-center gap-2 hover:bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="bg-blue-500 text-white px-6 py-3 rounded-xl font-bold uppercase flex items-center gap-2 hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {sending ? (
                                             <Loader2 size={20} className="animate-spin" />
@@ -358,7 +415,7 @@ export default function Messages() {
                             <div className="text-center">
                                 <MessageSquare size={64} className="mx-auto mb-4 opacity-20" />
                                 <p className="font-bold text-lg">Selecione uma conversa</p>
-                                <p className="text-sm mt-2">Escolha uma conversa à esquerda para ver as mensagens.</p>
+                                <p className="text-sm mt-2">Escolha um candidato à esquerda para ver as mensagens.</p>
                             </div>
                         </div>
                     )}

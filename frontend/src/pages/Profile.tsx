@@ -11,6 +11,7 @@ export default function Profile() {
     const [isEditing, setIsEditing] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
 
     // Editing State
     const [formData, setFormData] = useState({
@@ -65,41 +66,42 @@ export default function Profile() {
         fetchProfile();
     }, [navigate]);
 
-    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
         try {
             setUploading(true);
             if (!event.target.files || event.target.files.length === 0) {
-                throw new Error('You must select an image to upload.');
+                return;
             }
 
             const file = event.target.files[0];
             const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${profile.id}/${fileName}`;
+            const fileName = `${profile.id}/${type}_${Date.now()}.${fileExt}`;
 
-            let { error: uploadError } = await supabase.storage
+            // Upload to 'avatars' bucket (used for both for now, or use 'covers' if exists)
+            // Using 'avatars' for simplicity as confirmed it exists
+            const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, file);
+                .upload(fileName, file, { upsert: true });
 
-            if (uploadError) {
-                throw uploadError;
-            }
+            if (uploadError) throw uploadError;
 
-            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+            const updates: any = {};
+            if (type === 'avatar') updates.avatar_url = publicUrl;
+            else updates.cover_url = publicUrl; // Ensure this column exists or add it to workers table
 
             const { error: updateError } = await supabase
                 .from('workers')
-                .update({ avatar_url: publicUrl })
+                .update(updates)
                 .eq('id', profile.id);
 
-            if (updateError) {
-                throw updateError;
-            }
+            if (updateError) throw updateError;
 
-            setProfile({ ...profile, avatar_url: publicUrl });
-            alert('Foto de perfil atualizada!');
+            setProfile({ ...profile, ...updates });
+            alert(`${type === 'avatar' ? 'Foto de perfil' : 'Capa'} atualizada!`);
         } catch (error) {
-            alert('Erro ao fazer upload da imagem!');
+            alert('Erro ao fazer upload!');
             console.error(error);
         } finally {
             setUploading(false);
@@ -152,8 +154,30 @@ export default function Profile() {
         <div className="flex flex-col gap-8 pb-12 font-sans text-accent max-w-4xl mx-auto">
 
             {/* Header / Cover */}
-            <div className="relative mb-12">
-                <div className="h-48 bg-gradient-to-r from-gray-900 to-black rounded-3xl border-2 border-black"></div>
+            {/* Header / Cover */}
+            <div className="relative mb-12 group">
+                <div className="h-48 bg-gray-900 rounded-3xl border-2 border-black overflow-hidden relative">
+                    {profile.cover_url ? (
+                        <img src={profile.cover_url} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-r from-gray-900 to-black"></div>
+                    )}
+
+                    {/* Cover Upload Button */}
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => coverInputRef.current?.click()} className="bg-black/50 text-white p-2 rounded-lg backdrop-blur-sm hover:bg-black transition-colors">
+                            <Camera size={20} />
+                        </button>
+                    </div>
+                </div>
+                <input
+                    type="file"
+                    ref={coverInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleUpload(e, 'cover')}
+                    disabled={uploading}
+                />
 
                 {/* Profile Card Overlay */}
                 <div className="absolute -bottom-12 left-6 right-6 flex flex-col md:flex-row items-end md:items-center justify-between gap-4">
@@ -176,7 +200,7 @@ export default function Profile() {
                                     ref={fileInputRef}
                                     className="hidden"
                                     accept="image/*"
-                                    onChange={handleAvatarUpload}
+                                    onChange={(e) => handleUpload(e, 'avatar')}
                                     disabled={uploading}
                                 />
                             </div>
@@ -270,7 +294,7 @@ export default function Profile() {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-bold text-gray-500">Avaliação</span>
                                 <span className="flex items-center gap-1 text-lg font-black text-yellow-500">
-                                    <Star size={18} fill="currentColor" /> {profile.rating_average || 5}
+                                    <Star size={18} fill="currentColor" /> {profile.rating_average || '-'}
                                 </span>
                             </div>
                         </div>

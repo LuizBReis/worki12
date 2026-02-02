@@ -1,8 +1,9 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { MapPin, CheckCircle2, Clock, XCircle, Loader2, Calendar, DollarSign } from 'lucide-react';
+import { MapPin, CheckCircle2, Clock, XCircle, Loader2, DollarSign, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import RateModal from '../components/RateModal';
 
 export default function MyJobs() {
     const navigate = useNavigate();
@@ -14,10 +15,24 @@ export default function MyJobs() {
         history: any[]
     }>({ applied: [], scheduled: [], history: [] });
 
+    // Rating State
+    const [rateModalOpen, setRateModalOpen] = useState(false);
+    const [selectedJobToRate, setSelectedJobToRate] = useState<any>(null);
+    const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(new Set());
+
     useEffect(() => {
         const fetchJobs = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return navigate('/login');
+
+            // Fetch my reviews to know what I've rated
+            const { data: myReviews } = await supabase
+                .from('reviews')
+                .select('job_id')
+                .eq('reviewer_id', user.id);
+
+            const reviewedSet = new Set(myReviews?.map(r => r.job_id) || []);
+            setReviewedJobIds(reviewedSet);
 
             // Fetch applications with job details and company details
             const { data, error } = await supabase
@@ -34,6 +49,7 @@ export default function MyJobs() {
                         work_start_time,
                         location,
                         company:companies (
+                            id,
                             name,
                             logo_url
                         )
@@ -53,9 +69,12 @@ export default function MyJobs() {
                     // Normalize app object for easier consumption
                     const application = {
                         id: app.id,
-                        status: app.status, // pending, approved, rejected, completed
+                        job_id: app.job?.id, // Important for rating
+                        status: app.status,
                         title: app.job?.title || 'Job Desconhecido',
-                        company: app.job?.company?.name || 'Empresa Confidencial',
+                        company_id: app.job?.company?.id,
+                        company_name: app.job?.company?.name || 'Empresa Confidencial',
+                        company_logo: app.job?.company?.logo_url,
                         pay: app.job?.budget || 0,
                         date: app.job?.start_date ? new Date(app.job.start_date).toLocaleDateString('pt-BR') : 'Data a definir',
                         time: app.job?.work_start_time || 'Horário a definir',
@@ -80,6 +99,37 @@ export default function MyJobs() {
 
         fetchJobs();
     }, [navigate]);
+
+    const handleOpenRateModal = (job: any) => {
+        setSelectedJobToRate(job);
+        setRateModalOpen(true);
+    };
+
+    const handleSubmitRate = async (rating: number, comment: string) => {
+        if (!selectedJobToRate) return;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
+            const { error } = await supabase.from('reviews').insert({
+                job_id: selectedJobToRate.job_id,
+                reviewer_id: user.id,
+                reviewed_id: selectedJobToRate.company_id, // Rate the company
+                rating: rating,
+                comment: comment
+            });
+
+            if (error) throw error;
+
+            setReviewedJobIds(prev => new Set(prev).add(selectedJobToRate.job_id));
+            alert('Avaliação enviada com sucesso!');
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            alert('Erro ao enviar avaliação.');
+            throw error;
+        }
+    };
 
     if (loading) return (
         <div className="flex justify-center items-center min-h-[50vh]">
@@ -142,7 +192,7 @@ export default function MyJobs() {
                     <div key={i} className="bg-white border-2 border-gray-200 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center opacity-80 hover:opacity-100 transition-opacity gap-4">
                         <div>
                             <h3 className="font-black text-xl uppercase mb-1">{job.title}</h3>
-                            <p className="text-sm font-bold text-gray-500">{job.company} • {job.location}</p>
+                            <p className="text-sm font-bold text-gray-500">{job.company_name} • {job.location}</p>
                             <span className="inline-block mt-2 bg-yellow-100 text-yellow-700 text-xs font-black px-2 py-1 rounded-md uppercase">
                                 {job.status === 'pending' ? 'Aguardando' : 'Em Análise'}
                             </span>
@@ -163,12 +213,12 @@ export default function MyJobs() {
                             <div>
                                 <h3 className="font-black text-xl uppercase mb-1">{job.title}</h3>
                                 <span className="flex items-center gap-1.5 text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg uppercase">
-                                    <Clock size={14} /> {new Date(job.start_date).toLocaleDateString()} • {job.work_start_time}
+                                    <Clock size={14} /> {new Date(job.date).toLocaleDateString()} • {job.time}
                                 </span>
-                                <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 px-3 py-1.5 rounded-lg uppercase">
-                                    <DollarSign size={14} /> R$ {job.budget}
+                                <span className="flex items-center gap-1.5 text-xs font-bold bg-green-100 text-green-700 px-3 py-1.5 rounded-lg uppercase ml-2">
+                                    <DollarSign size={14} /> R$ {job.pay}
                                 </span>
-                                <p className="text-sm font-bold text-gray-500 flex items-center gap-1">
+                                <p className="text-sm font-bold text-gray-500 flex items-center gap-1 mt-1">
                                     <MapPin size={14} /> {job.location}
                                 </p>
                             </div>
@@ -176,7 +226,7 @@ export default function MyJobs() {
                         <div className="flex items-center justify-between md:justify-end gap-4 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 w-full md:w-auto">
                             <div>
                                 <span className="block text-sm font-bold text-gray-400 uppercase">Receber</span>
-                                <span className="block text-2xl font-black text-primary">R$ {job.budget}</span>
+                                <span className="block text-2xl font-black text-primary">R$ {job.pay}</span>
                             </div>
                             <span className="bg-green-100 text-green-700 text-xs font-black uppercase px-3 py-1 rounded-full border border-green-200">Confirmado</span>
                         </div>
@@ -187,14 +237,28 @@ export default function MyJobs() {
                     <div key={i} className="bg-gray-50 border-2 border-transparent hover:border-black p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center transition-all cursor-pointer gap-2">
                         <div>
                             <h3 className="font-black text-lg uppercase mb-1 text-gray-700">{job.title}</h3>
-                            <p className="text-sm font-bold text-gray-400">{job.date} • {job.company}</p>
+                            <p className="text-sm font-bold text-gray-400">{job.date} • {job.company_name}</p>
                         </div>
                         <div className="flex items-center justify-between w-full md:w-auto gap-4">
                             <span className="block font-black text-gray-600">R$ {job.pay}</span>
                             {job.status === 'completed' ? (
-                                <span className="text-xs font-black text-green-600 flex items-center gap-1 uppercase bg-green-100 px-2 py-1 rounded-md">
-                                    <CheckCircle2 size={12} /> Pago
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-green-600 flex items-center gap-1 uppercase bg-green-100 px-2 py-1 rounded-md">
+                                        <CheckCircle2 size={12} /> Pago
+                                    </span>
+                                    {!reviewedJobIds.has(job.job_id) ? (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleOpenRateModal(job); }}
+                                            className="text-xs font-black text-white bg-black hover:bg-yellow-500 hover:text-black flex items-center gap-1 uppercase px-3 py-1.5 rounded-md transition-colors"
+                                        >
+                                            <Star size={12} /> Avaliar
+                                        </button>
+                                    ) : (
+                                        <span className="text-xs font-bold text-gray-400 flex items-center gap-1 uppercase">
+                                            <Star size={12} fill="currentColor" /> Avaliado
+                                        </span>
+                                    )}
+                                </div>
                             ) : (
                                 <span className="text-xs font-black text-red-500 flex items-center gap-1 uppercase bg-red-100 px-2 py-1 rounded-md">
                                     <XCircle size={12} /> {job.status === 'rejected' ? 'Não Selecionado' : 'Cancelado'}
@@ -204,6 +268,16 @@ export default function MyJobs() {
                     </div>
                 ))}
             </div>
+
+            <RateModal
+                isOpen={rateModalOpen}
+                onClose={() => setRateModalOpen(false)}
+                onSubmit={handleSubmitRate}
+                targetName={selectedJobToRate?.company_name || 'Empresa'}
+                targetPhotoUrl={selectedJobToRate?.company_logo}
+                title="Avaliar Empresa"
+                subtitle={selectedJobToRate?.title}
+            />
 
         </div>
     );

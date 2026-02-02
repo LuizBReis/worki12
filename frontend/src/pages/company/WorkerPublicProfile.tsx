@@ -14,36 +14,70 @@ export default function WorkerPublicProfile() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (id) fetchProfile();
+        if (id) {
+            fetchProfile();
+            // Track View
+            import('../../services/analytics').then(({ AnalyticsService }) => {
+                AnalyticsService.trackProfileView(id);
+            });
+        }
     }, [id]);
 
     const fetchProfile = async () => {
         try {
             // Fetch Profile
             const { data: profileData, error: profileError } = await supabase
-                .from('worker_profiles')
-                .select('*')
+                .from('workers')
+                .select('id, full_name, bio, city, level, xp, completed_jobs_count, recommendation_score, tags, created_at, avatar_url')
                 .eq('id', id)
                 .single();
 
             if (profileError) throw profileError;
-            setProfile(profileData);
+
+            // Map fields for UI consistency
+            const mappedProfile = {
+                ...profileData,
+                location: profileData.city,
+                joined_at: profileData.created_at,
+                photo_url: profileData.avatar_url,
+                completed_jobs: profileData.completed_jobs_count
+            };
+
+            setProfile(mappedProfile);
 
             // Fetch Reviews
             const { data: reviewsData } = await supabase
                 .from('reviews')
-                .select('*, reviewer:reviewer_id(name)') // Assuming companies have name in users or linked
+                .select('*')
                 .eq('reviewed_id', id)
                 .order('created_at', { ascending: false });
-            setReviews(reviewsData || []);
 
-            // Fetch History (Completed Jobs) via Applications for now
-            // Ideally we query jobs table but simplified:
+            if (reviewsData && reviewsData.length > 0) {
+                // Manually fetch company names (as per existing logic)
+                const reviewerIds = [...new Set(reviewsData.map(r => r.reviewer_id))];
+                const { data: companies } = await supabase
+                    .from('companies')
+                    .select('id, name')
+                    .in('id', reviewerIds);
+
+                const companyMap = new Map((companies || []).map(c => [c.id, c.name]));
+
+                // Attach names
+                const enrichedReviews = reviewsData.map(r => ({
+                    ...r,
+                    company: { name: companyMap.get(r.reviewer_id) || 'Empresa' }
+                }));
+                setReviews(enrichedReviews);
+            } else {
+                setReviews([]);
+            }
+
+            // Fetch History (Completed Jobs)
             const { data: historyData } = await supabase
                 .from('applications')
                 .select('*, job:jobs(title, company:companies(name))')
                 .eq('worker_id', id)
-                .eq('status', 'hired') // Assuming hired means worked. Ideally 'completed'
+                .in('status', ['hired', 'completed'])
                 .limit(5);
             setHistory(historyData || []);
 
@@ -86,9 +120,7 @@ export default function WorkerPublicProfile() {
                         <button className="px-6 py-2 border-2 border-black rounded-xl font-bold uppercase hover:bg-gray-50 transition-colors flex items-center gap-2">
                             <MessageSquare size={18} /> Mensagem
                         </button>
-                        <button className="px-6 py-2 bg-black text-white rounded-xl font-bold uppercase hover:bg-green-600 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
-                            Contratar
-                        </button>
+
                     </div>
 
                     {/* Basic Info */}
@@ -162,7 +194,7 @@ export default function WorkerPublicProfile() {
                         {reviews.length > 0 ? reviews.map((r: any) => (
                             <div key={r.id} className="bg-white p-4 rounded-xl border-2 border-gray-100">
                                 <div className="flex justify-between items-start mb-2">
-                                    <span className="font-bold text-sm">Empresa Parceira</span>
+                                    <span className="font-bold text-sm">{r.company?.name || 'Empresa Confidencial'}</span>
                                     <div className="flex text-yellow-400">
                                         {[...Array(5)].map((_, i) => (
                                             <Star key={i} size={12} fill={i < r.rating ? "currentColor" : "none"} strokeWidth={3} className={i < r.rating ? "" : "text-gray-300"} />

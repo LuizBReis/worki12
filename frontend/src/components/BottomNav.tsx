@@ -1,11 +1,11 @@
-import { Home, Briefcase, User, BarChart2, FileText } from 'lucide-react';
+import { Home, Briefcase, User, BarChart2, MessageSquare } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export default function BottomNav() {
     const navItems = [
         { icon: Home, label: 'Início', path: '/dashboard' },
         { icon: Briefcase, label: 'Vagas', path: '/jobs' },
-        { icon: FileText, label: 'Meus Jobs', path: '/my-jobs' },
+        { icon: MessageSquare, label: 'Mensagens', path: '/messages' },
         { icon: BarChart2, label: 'Analytics', path: '/analytics' },
         { icon: User, label: 'Perfil', path: '/profile' },
     ];

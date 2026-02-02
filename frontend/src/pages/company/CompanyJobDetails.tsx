@@ -25,7 +25,14 @@ export default function CompanyJobDetails() {
                 .single();
 
             if (error) throw error;
-            setJob(data);
+
+            // Fetch candidate count manually
+            const { count } = await supabase
+                .from('applications')
+                .select('id', { count: 'exact', head: true })
+                .eq('job_id', id);
+
+            setJob({ ...data, candidates_count: count || 0 });
         } catch (error) {
             console.error('Error fetching job:', error);
             navigate('/company/jobs');

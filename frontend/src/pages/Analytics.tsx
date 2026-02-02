@@ -8,8 +8,8 @@ export default function Analytics() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
-        rating: 5.0,
-        reliability: 100,
+        rating: null as number | null,
+        reliability: null as number | null,
         totalJobs: 0,
         totalEarnings: 0,
         hoursWorked: 0,
@@ -36,7 +36,7 @@ export default function Analytics() {
                 .eq('worker_id', user.id);
 
             if (worker) {
-                let reliability = 100;
+                let reliability: number | null = null;
                 let hours = 0;
                 const categories: Record<string, number> = {};
                 const valueHistory: number[] = [];

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, DollarSign, MapPin, Calendar, Clock, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Briefcase, DollarSign, MapPin, Calendar, Loader2 } from 'lucide-react';
 
 export default function CreateJob() {
     const navigate = useNavigate();

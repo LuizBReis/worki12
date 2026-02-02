@@ -22,14 +22,26 @@ export default function CompanyJobs() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const { data } = await supabase
+            const { data: jobsData } = await supabase
                 .from('jobs')
                 .select('*')
                 .eq('company_id', user.id)
                 .neq('status', 'deleted') // Filter out deleted jobs
                 .order('created_at', { ascending: false });
 
-            if (data) setJobs(data);
+            if (jobsData) {
+                // Fetch candidate counts for each job
+                const jobsWithCounts = await Promise.all(jobsData.map(async (job) => {
+                    const { count } = await supabase
+                        .from('applications')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('job_id', job.id);
+
+                    return { ...job, candidates_count: count || 0 };
+                }));
+
+                setJobs(jobsWithCounts);
+            }
         } catch (error) {
             console.error(error);
         } finally {
