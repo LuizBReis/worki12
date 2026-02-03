@@ -286,8 +286,8 @@ export default function Dashboard() {
                             <Briefcase size={20} /> Vagas para Você
                         </h2>
                         <div className="flex gap-2">
-                            <button className="p-2 hover:bg-gray-100 rounded-lg"><Search size={20} /></button>
-                            <button className="p-2 hover:bg-gray-100 rounded-lg"><Filter size={20} /></button>
+                            <button onClick={() => navigate('/jobs')} className="p-2 hover:bg-gray-100 rounded-lg"><Search size={20} /></button>
+                            <button onClick={() => navigate('/jobs')} className="p-2 hover:bg-gray-100 rounded-lg"><Filter size={20} /></button>
                         </div>
                     </div>
 

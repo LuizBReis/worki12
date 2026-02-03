@@ -75,21 +75,28 @@ export function useJobApplication() {
                 throw error;
             }
 
-            // 3. Create Conversation for this application
+            // 3. Create Conversation for this application (only if doesn't exist)
             if (data) {
-                const { error: convError } = await supabase
+                // First check if conversation already exists to prevent duplicates
+                const { data: existingConv } = await supabase
                     .from('Conversation')
-                    .insert({
-                        id: crypto.randomUUID(),
-                        application_uuid: data.id,
-                        createdat: new Date().toISOString(),
-                        islocked: false
-                    });
+                    .select('id')
+                    .eq('application_uuid', data.id)
+                    .maybeSingle();
 
-                if (convError) {
-                    console.error('Error creating conversation:', convError);
-                    // We don't block the application success if conversation creation fails, 
-                    // but we should probably alert or retry. For now, just logging.
+                if (!existingConv) {
+                    const { error: convError } = await supabase
+                        .from('Conversation')
+                        .insert({
+                            id: crypto.randomUUID(),
+                            application_uuid: data.id,
+                            createdat: new Date().toISOString(),
+                            islocked: false
+                        });
+
+                    if (convError) {
+                        console.error('Error creating conversation:', convError);
+                    }
                 }
             }
 

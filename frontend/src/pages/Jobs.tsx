@@ -40,7 +40,7 @@ export default function Jobs() {
                 setAppliedJobIds(userApps.map(app => app.job_id));
             }
 
-            // 2. Fetch all open jobs
+            // 2. Fetch all open jobs with created_at for display
             let query = supabase
                 .from('jobs')
                 .select('*, company:companies(name, logo_url, rating_average, reviews_count)')

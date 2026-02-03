@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, MessageSquare, Play, Square, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -16,6 +16,7 @@ export default function CompanyJobCandidates() {
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
+    const [confirmingCheckin, setConfirmingCheckin] = useState<string | null>(null);
 
     useEffect(() => {
         if (id) fetchCandidates();
@@ -32,7 +33,11 @@ export default function CompanyJobCandidates() {
                 .from('applications')
                 .select(`
                     *,
-                    worker:workers!applications_worker_id_fkey_workers(*)
+                    worker:workers!applications_worker_id_fkey_workers(*),
+                    worker_checkin_at,
+                    worker_checkout_at,
+                    company_checkin_confirmed_at,
+                    company_checkout_confirmed_at
                 `)
                 .eq('job_id', id)
                 .order('created_at', { ascending: false });
@@ -136,6 +141,42 @@ export default function CompanyJobCandidates() {
         } catch (error) {
             console.error('Error starting chat:', error);
             alert('Erro ao iniciar conversa.');
+        }
+    };
+
+    const handleConfirmCheckin = async (appId: string) => {
+        setConfirmingCheckin(appId);
+        try {
+            const { error } = await supabase
+                .from('applications')
+                .update({ company_checkin_confirmed_at: new Date().toISOString() })
+                .eq('id', appId);
+
+            if (error) throw error;
+            fetchCandidates();
+        } catch (error) {
+            console.error('Error confirming check-in:', error);
+            alert('Erro ao confirmar check-in.');
+        } finally {
+            setConfirmingCheckin(null);
+        }
+    };
+
+    const handleConfirmCheckout = async (appId: string) => {
+        setConfirmingCheckin(appId);
+        try {
+            const { error } = await supabase
+                .from('applications')
+                .update({ company_checkout_confirmed_at: new Date().toISOString() })
+                .eq('id', appId);
+
+            if (error) throw error;
+            fetchCandidates();
+        } catch (error) {
+            console.error('Error confirming check-out:', error);
+            alert('Erro ao confirmar check-out.');
+        } finally {
+            setConfirmingCheckin(null);
         }
     };
 
@@ -247,12 +288,51 @@ export default function CompanyJobCandidates() {
                                                     )}
 
                                                     {app.status === 'hired' && (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'completed'); }}
-                                                            className="p-1 px-3 bg-primary text-black border border-black rounded-lg text-xs font-bold uppercase hover:bg-green-400 transition-colors"
-                                                        >
-                                                            Finalizar Job
-                                                        </button>
+                                                        <>
+                                                            {/* Show check-in status */}
+                                                            {app.worker_checkin_at && !app.company_checkin_confirmed_at && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleConfirmCheckin(app.id); }}
+                                                                    disabled={confirmingCheckin === app.id}
+                                                                    className="p-1 px-3 bg-blue-500 text-white rounded-lg text-xs font-bold uppercase hover:bg-blue-600 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                                                >
+                                                                    {confirmingCheckin === app.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                                                                    Confirmar Chegada
+                                                                </button>
+                                                            )}
+                                                            {app.company_checkin_confirmed_at && (
+                                                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
+                                                                    <CheckCircle size={12} /> Chegada OK
+                                                                </span>
+                                                            )}
+
+                                                            {/* Show check-out status */}
+                                                            {app.worker_checkout_at && !app.company_checkout_confirmed_at && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleConfirmCheckout(app.id); }}
+                                                                    disabled={confirmingCheckin === app.id}
+                                                                    className="p-1 px-3 bg-purple-500 text-white rounded-lg text-xs font-bold uppercase hover:bg-purple-600 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                                                >
+                                                                    {confirmingCheckin === app.id ? <Loader2 size={14} className="animate-spin" /> : <Square size={14} />}
+                                                                    Confirmar Saída
+                                                                </button>
+                                                            )}
+                                                            {app.company_checkout_confirmed_at && (
+                                                                <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded flex items-center gap-1">
+                                                                    <CheckCircle size={12} /> Saída OK
+                                                                </span>
+                                                            )}
+
+                                                            {/* Finalize button only if both checkouts confirmed */}
+                                                            {app.company_checkin_confirmed_at && app.company_checkout_confirmed_at && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'completed'); }}
+                                                                    className="p-1 px-3 bg-primary text-black border border-black rounded-lg text-xs font-bold uppercase hover:bg-green-400 transition-colors"
+                                                                >
+                                                                    Finalizar Job
+                                                                </button>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             )}

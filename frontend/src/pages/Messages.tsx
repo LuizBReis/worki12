@@ -64,6 +64,7 @@ export default function Messages() {
                     application:applications!application_uuid (
                         id,
                         status,
+                        worker_id,
                         job:jobs (
                             title,
                             company:companies (
@@ -81,8 +82,13 @@ export default function Messages() {
                 return;
             }
 
+            // Filter to only show conversations for applications by this user
+            const myConversations = (convData || []).filter((c: any) =>
+                c.application?.worker_id === user.id
+            );
+
             // Transform data
-            const convList: ConversationItem[] = (convData || []).map((c: any) => ({
+            const convList: ConversationItem[] = myConversations.map((c: any) => ({
                 id: c.id,
                 application_uuid: c.application_uuid,
                 job_title: c.application?.job?.title || 'Vaga',

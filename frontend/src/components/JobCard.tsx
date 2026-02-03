@@ -1,5 +1,7 @@
-import { Briefcase, Clock, DollarSign, MapPin, ArrowRight, CheckCircle2, Loader2, Zap, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { Briefcase, Clock, DollarSign, MapPin, ArrowRight, CheckCircle2, Loader2, Zap, Star, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { useState } from 'react';
+import { formatDistanceToNow, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { AnalyticsService } from '../services/analytics';
 
 interface Job {
@@ -14,7 +16,11 @@ interface Job {
     };
     location: string;
     start_date: string;
+    created_at?: string;
     work_start_time?: string;
+    work_end_time?: string;
+    estimated_hours?: number;
+    has_lunch?: boolean;
     budget: number;
     budget_period?: string; // 'por turno' etc.
     candidates_count?: number;
@@ -37,6 +43,21 @@ export default function JobCard({
     variant = 'search',
     matchScore = 95
 }: JobCardProps) {
+    const calculateHours = (start?: string, end?: string, lunch: boolean = false) => {
+        if (!start || !end) return { total: 0, work: 0 };
+        const [startH, startM] = start.split(':').map(Number);
+        const [endH, endM] = end.split(':').map(Number);
+
+        let total = (endH + endM / 60) - (startH + startM / 60);
+        if (total < 0) total += 24; // Handle overnight
+
+        const work = lunch ? Math.max(0, total - 1) : total;
+        return {
+            total: total.toFixed(1).replace('.0', ''),
+            work: work.toFixed(1).replace('.0', '')
+        };
+    };
+
     const [isExpanded, setIsExpanded] = useState(false);
 
     const toggleExpand = () => {
@@ -105,10 +126,36 @@ export default function JobCard({
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-3 mb-6">
-                        <span className="flex items-center gap-1.5 text-xs font-bold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg uppercase">
-                            <Clock size={14} /> {new Date(job.start_date).toLocaleDateString()}
-                            {job.work_start_time ? ` • ${job.work_start_time}` : ''}
+                        <span className="flex flex-col gap-1 items-start bg-gray-100 text-gray-600 px-3 py-2 rounded-lg text-xs font-bold uppercase">
+                            <span className="flex items-center gap-1.5 capitalize">
+                                <Clock size={14} />
+                                {(() => {
+                                    const dateStr = job.start_date.split('T')[0];
+                                    const [y, m, d] = dateStr.split('-').map(Number);
+                                    const date = new Date(y, m - 1, d);
+                                    return format(date, "EEEE, dd/MM/yyyy", { locale: ptBR });
+                                })()}
+                            </span>
+                            {(job.work_start_time || job.work_end_time) && (
+                                <span className="text-[10px] text-gray-500 font-bold border-t border-gray-200 pt-1 mt-1 w-full relative -left-[1px]">
+                                    {(() => {
+                                        const { work } = calculateHours(job.work_start_time, job.work_end_time, job.has_lunch);
+                                        return (
+                                            <>
+                                                {job.work_start_time || '--:--'} - {job.work_end_time || '--:--'} • {work}h de trabalho
+                                                {job.has_lunch && ' • 1h almoço'}
+                                            </>
+                                        );
+                                    })()}
+                                </span>
+                            )}
                         </span>
+
+                        {job.created_at && (
+                            <span className="flex items-center gap-1.5 text-xs font-bold bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg">
+                                <Calendar size={14} /> Publicado {formatDistanceToNow(new Date(job.created_at), { addSuffix: true, locale: ptBR })}
+                            </span>
+                        )}
 
                         {variant === 'feed' ? (
                             <span className="flex items-center gap-1.5 text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-lg uppercase">

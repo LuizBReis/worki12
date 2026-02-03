@@ -95,32 +95,15 @@ export default function CompanyMessages() {
 
 
 
-        console.log('Conversation Data Raw:', convData);
-        console.log('User Companies (Set):', Array.from(companyIds));
-
         // Filter to only show conversations for jobs belonging to any of the user's companies
-        // We use optional chaining sparingly to allow debugging if data is partial
         const myConversations = (convData || []).filter((c: any) => {
             if (!c.application || !c.application.job) {
-                console.warn('Skipping malformed conversation:', c);
-                return true; // SHOW IT for debugging
+                return false; // Skip malformed data
             }
 
             const jobCorpId = c.application.job.company_id;
-            const hasAccess = companyIds.has(jobCorpId);
-
-            if (!hasAccess) {
-                console.log(`[DEBUG_FILTER_FAIL] User ${user.id} (Companies: ${Array.from(companyIds).join(', ')}) does NOT match Job Company ${jobCorpId}`);
-            }
-
-            // TEMP: ALWAYS RETURN TRUE TO SHOW DATA IN UI
-            return true;
-            // return hasAccess; 
+            return companyIds.has(jobCorpId);
         });
-
-        console.log('Filtered Conversations for User:', myConversations);
-
-
 
         const convList: ConversationItem[] = myConversations.map((c: any) => ({
             id: c.id,
