@@ -28,6 +28,7 @@ import CompanyAnalytics from './pages/company/CompanyAnalytics';
 import CompanyJobDetails from './pages/company/CompanyJobDetails';
 import CompanyJobCandidates from './pages/company/CompanyJobCandidates';
 import CompanyMessages from './pages/company/CompanyMessages';
+import CompanyWallet from './pages/company/CompanyWallet';
 import WorkerPublicProfile from './pages/company/WorkerPublicProfile';
 
 // Componente para redirecionar usuários logados da raiz
@@ -91,6 +92,7 @@ function App() {
               <Route path="worker/:id" element={<WorkerPublicProfile />} />
               <Route path="profile" element={<CompanyProfile />} />
               <Route path="messages" element={<CompanyMessages />} />
+              <Route path="wallet" element={<CompanyWallet />} />
               <Route path="analytics" element={<CompanyAnalytics />} />
             </Route>
 

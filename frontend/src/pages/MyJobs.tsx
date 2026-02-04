@@ -123,13 +123,13 @@ export default function MyJobs() {
                     }
                 }
 
-                const isInProgress = (app.status === 'approved' || app.status === 'scheduled' || app.status === 'in_progress') && isJobToday && isWithinWorkHours;
+                const isInProgress = (app.status === 'approved' || app.status === 'scheduled' || app.status === 'in_progress' || app.status === 'hired') && isJobToday && isWithinWorkHours;
 
                 if (app.status === 'pending' || app.status === 'reviewing') {
                     applied.push(application);
                 } else if (isInProgress) {
                     in_progress.push(application);
-                } else if (app.status === 'approved' || app.status === 'scheduled') {
+                } else if (app.status === 'approved' || app.status === 'scheduled' || app.status === 'hired') {
                     scheduled.push(application);
                 } else if (app.status === 'completed' || app.status === 'rejected' || app.status === 'cancelled') {
                     history.push(application);

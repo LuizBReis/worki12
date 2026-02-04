@@ -72,7 +72,7 @@ export default function CompanyMessages() {
                 application:applications!fk_conversation_application_uuid (
                     id,
                     status,
-                    worker:workers!applications_worker_id_fkey_workers (
+                    worker:workers (
                         id,
                         full_name,
                         avatar_url

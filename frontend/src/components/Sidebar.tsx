@@ -59,6 +59,7 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
         { icon: PlusCircle, label: 'Criar Vaga', path: '/company/create' },
         { icon: Briefcase, label: 'Minhas Vagas', path: '/company/jobs' },
         { icon: MessageSquare, label: 'Mensagens', path: '/company/messages' },
+        { icon: Wallet, label: 'Carteira', path: '/company/wallet' },
         { icon: BarChart2, label: 'Analytics', path: '/company/analytics' },
         // { icon: Users, label: 'Candidatos', path: '/company/candidates' }, // Future
         { icon: User, label: 'Perfil Empresa', path: '/company/profile' },

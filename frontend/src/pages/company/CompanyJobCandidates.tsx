@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, MessageSquare, Play, Square, Loader2 } from 'lucide-react';
+import { WalletService } from '../../services/walletService';
+import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, MessageSquare, Play, Square, Loader2, DollarSign } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -33,7 +34,7 @@ export default function CompanyJobCandidates() {
                 .from('applications')
                 .select(`
                     *,
-                    worker:workers!applications_worker_id_fkey_workers(*),
+                    worker:workers(*),
                     worker_checkin_at,
                     worker_checkout_at,
                     company_checkin_confirmed_at,
@@ -99,7 +100,20 @@ export default function CompanyJobCandidates() {
 
             if (appError) throw appError;
 
-            alert('Avaliação enviada e job finalizado!');
+            // 3. Release Escrow Payment to Freelancer
+            const escrowResult = await WalletService.releaseEscrow(
+                selectedApp.job_id,
+                selectedApp.id,
+                selectedApp.worker_id
+            );
+
+            if (escrowResult.success) {
+                alert('Avaliação enviada, job finalizado e pagamento liberado!');
+            } else {
+                console.warn('Escrow release warning:', escrowResult.error);
+                alert('Avaliação enviada e job finalizado! (Pagamento será processado em breve)');
+            }
+
             setRatingModalOpen(false);
             setRating(5);
             setComment('');

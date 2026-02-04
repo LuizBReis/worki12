@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap, Calendar, Clock, Globe } from 'lucide-react';
+import { WalletService } from '../../services/walletService';
+import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap, Calendar, Clock, Globe, Wallet, AlertTriangle } from 'lucide-react';
 
 export default function CompanyCreateJob() {
     const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function CompanyCreateJob() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<{ name: string, slug: string }[]>([]);
+    const [companyBalance, setCompanyBalance] = useState<number>(0);
+    const [balanceLoading, setBalanceLoading] = useState(true);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -50,7 +53,24 @@ export default function CompanyCreateJob() {
             }
         }
         loadCategories();
+        loadCompanyBalance();
     }, []);
+
+    // Fetch company balance
+    const loadCompanyBalance = async () => {
+        setBalanceLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const wallet = await WalletService.getOrCreateWallet(user.id, 'company');
+                setCompanyBalance(wallet?.balance || 0);
+            }
+        } catch (error) {
+            console.error('Error loading balance:', error);
+        } finally {
+            setBalanceLoading(false);
+        }
+    };
 
     // Fetch Job Data if Editing
     useEffect(() => {
@@ -119,6 +139,23 @@ export default function CompanyCreateJob() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Usuário não autenticado");
 
+            const budgetAmount = parseFloat(formData.budget) || 0;
+
+            // For new jobs, verify balance and reserve escrow
+            if (!isEditing) {
+                if (budgetAmount <= 0) {
+                    alert('Por favor, defina um valor para a vaga.');
+                    setLoading(false);
+                    return;
+                }
+
+                if (companyBalance < budgetAmount) {
+                    alert(`Saldo insuficiente. Você tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${budgetAmount.toFixed(2)}.`);
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const payload = {
                 company_id: user.id,
                 title: formData.title,
@@ -127,7 +164,7 @@ export default function CompanyCreateJob() {
                 description: formData.description,
                 requirements: formData.requirements,
                 location: formData.location,
-                budget: parseFloat(formData.budget),
+                budget: budgetAmount,
                 budget_type: formData.budget_type,
                 start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
                 scope: formData.scope,
@@ -141,14 +178,26 @@ export default function CompanyCreateJob() {
                 const { error } = await supabase.from('jobs').update(payload).eq('id', id);
                 if (error) throw error;
             } else {
-                const { error } = await supabase.from('jobs').insert(payload);
+                // Create job first
+                const { data: newJob, error } = await supabase.from('jobs').insert(payload).select().single();
                 if (error) throw error;
+
+                // Reserve escrow for the job
+                const escrowResult = await WalletService.reserveEscrow(newJob.id, budgetAmount, user.id);
+                if (!escrowResult.success) {
+                    // Rollback: delete the job if escrow fails
+                    await supabase.from('jobs').delete().eq('id', newJob.id);
+                    throw new Error(escrowResult.error || 'Erro ao reservar pagamento');
+                }
+
+                // Update local balance
+                setCompanyBalance(prev => prev - budgetAmount);
             }
 
             navigate('/company/dashboard');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving job:', error);
-            alert('Erro ao salvar vaga. Verifique os dados.');
+            alert(error.message || 'Erro ao salvar vaga. Verifique os dados.');
         } finally {
             setLoading(false);
         }
@@ -287,6 +336,30 @@ export default function CompanyCreateJob() {
                             <h2 className="text-xl font-black uppercase flex items-center gap-2">
                                 <DollarSign size={20} /> Orçamento & Cronograma
                             </h2>
+
+                            {/* Balance Card */}
+                            {!isEditing && (
+                                <div className={`p-4 rounded-xl border-2 flex items-center justify-between ${parseFloat(formData.budget || '0') > companyBalance
+                                        ? 'bg-red-50 border-red-300'
+                                        : 'bg-green-50 border-green-300'
+                                    }`}>
+                                    <div className="flex items-center gap-3">
+                                        <Wallet size={24} className={parseFloat(formData.budget || '0') > companyBalance ? 'text-red-500' : 'text-green-600'} />
+                                        <div>
+                                            <span className="text-xs font-bold uppercase text-gray-500 block">Seu Saldo Disponível</span>
+                                            <span className={`text-2xl font-black ${parseFloat(formData.budget || '0') > companyBalance ? 'text-red-600' : 'text-green-700'}`}>
+                                                {balanceLoading ? '...' : `R$ ${companyBalance.toFixed(2).replace('.', ',')}`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {parseFloat(formData.budget || '0') > companyBalance && (
+                                        <div className="flex items-center gap-2 text-red-600 text-xs font-bold">
+                                            <AlertTriangle size={16} />
+                                            <span>Saldo insuficiente</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
