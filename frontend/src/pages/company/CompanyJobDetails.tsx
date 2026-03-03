@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { ArrowLeft, MapPin, Clock, Users, Briefcase, Eye, MoreHorizontal, Edit2, PauseCircle, PlayCircle, Trash2, Check } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { WalletService } from '../../services/walletService';
 
 export default function CompanyJobDetails() {
     const { id } = useParams();
@@ -48,6 +49,12 @@ export default function CompanyJobDetails() {
     };
 
     const handleDelete = async () => {
+        if (!id) return;
+
+        // 1. First refund any pending escrow back to the company wallet
+        await WalletService.refundEscrow(id, 'Dinheiro retornado do escrow - vaga deletada');
+
+        // 2. Then mark the job as deleted
         const { error } = await supabase.from('jobs').update({ status: 'deleted' }).eq('id', id);
         if (!error) navigate('/company/jobs');
     };

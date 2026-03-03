@@ -4,6 +4,7 @@ import { WalletService } from '../../services/walletService';
 import type { WalletTransaction, EscrowTransaction } from '../../services/walletService';
 import { DollarSign, ArrowDownLeft, ArrowUpRight, History, Loader2, Lock, Wallet, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import DepositModal from '../../components/DepositModal';
 
 export default function CompanyWallet() {
     const navigate = useNavigate();
@@ -12,41 +13,54 @@ export default function CompanyWallet() {
     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
     const [escrows, setEscrows] = useState<EscrowTransaction[]>([]);
     const [stats, setStats] = useState({ totalSpent: 0, inEscrow: 0 });
+    const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+
+    const fetchWalletData = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return navigate('/login');
+
+        // 1. Get or create company wallet
+        const wallet = await WalletService.getOrCreateWallet(user.id, 'company');
+        if (wallet) {
+            setBalance(wallet.balance);
+        }
+
+        // 2. Fetch Transactions
+        const txs = await WalletService.getTransactions(user.id);
+        setTransactions(txs);
+
+        // 3. Fetch Escrows
+        const companyEscrows = await WalletService.getCompanyEscrows(user.id);
+        setEscrows(companyEscrows);
+
+        // 4. Calculate Stats
+        const totalSpent = txs
+            .filter(t => t.type === 'escrow_release' || (t.type === 'debit' && t.amount < 0))
+            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
+
+        const inEscrow = companyEscrows
+            .filter(e => e.status === 'reserved')
+            .reduce((acc, e) => acc + e.amount, 0);
+
+        setStats({ totalSpent, inEscrow });
+
+        setLoading(false);
+    };
 
     useEffect(() => {
-        const fetchWalletData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return navigate('/login');
+        let isMounted = true;
+        const init = async () => {
+            await fetchWalletData(); // Load local data fast
 
-            // 1. Get or create company wallet
-            const wallet = await WalletService.getOrCreateWallet(user.id, 'company');
-            if (wallet) {
-                setBalance(wallet.balance);
+            // Background sync with Asaas silently
+            const res = await WalletService.syncBalance();
+            if (isMounted && res.success && res.hasUpdates) {
+                await fetchWalletData(); // Refresh UI with new Asaas data if updates found
             }
-
-            // 2. Fetch Transactions
-            const txs = await WalletService.getTransactions(user.id);
-            setTransactions(txs);
-
-            // 3. Fetch Escrows
-            const companyEscrows = await WalletService.getCompanyEscrows(user.id);
-            setEscrows(companyEscrows);
-
-            // 4. Calculate Stats
-            const totalSpent = txs
-                .filter(t => t.type === 'escrow_release' || (t.type === 'debit' && t.amount < 0))
-                .reduce((acc, t) => acc + Math.abs(t.amount), 0);
-
-            const inEscrow = companyEscrows
-                .filter(e => e.status === 'reserved')
-                .reduce((acc, e) => acc + e.amount, 0);
-
-            setStats({ totalSpent, inEscrow });
-
-            setLoading(false);
         };
 
-        fetchWalletData();
+        init();
+        return () => { isMounted = false; };
     }, [navigate]);
 
     const formatDate = (dateStr: string) => {
@@ -103,7 +117,7 @@ export default function CompanyWallet() {
                         </button>
                         <button
                             className="flex-1 bg-white/10 text-white py-4 rounded-xl font-bold uppercase hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-                            onClick={() => alert('Funcionalidade de adicionar saldo em breve!')}
+                            onClick={() => setIsDepositModalOpen(true)}
                         >
                             <ArrowDownLeft size={20} /> Adicionar Saldo
                         </button>
@@ -112,6 +126,14 @@ export default function CompanyWallet() {
                 {/* Background Element */}
                 <Wallet size={200} className="absolute -top-10 -right-10 text-white/5 rotate-12" />
             </div>
+
+            <DepositModal
+                isOpen={isDepositModalOpen}
+                onClose={() => setIsDepositModalOpen(false)}
+                onSuccess={() => {
+                    fetchWalletData();
+                }}
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 gap-6">

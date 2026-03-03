@@ -45,6 +45,7 @@ export default function Jobs() {
                 .from('jobs')
                 .select('*, company:companies(name, logo_url, rating_average, reviews_count)')
                 .eq('status', 'open')
+                .gte('start_date', new Date().toISOString()) // Filter out expired jobs
                 .order('created_at', { ascending: false });
 
             const { data, error } = await query;

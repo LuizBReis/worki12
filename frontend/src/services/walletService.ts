@@ -5,6 +5,8 @@ export interface Wallet {
     user_id: string;
     balance: number;
     user_type: 'company' | 'worker';
+    asaas_wallet_id?: string;
+    asaas_customer_id?: string;
     created_at: string;
     updated_at: string;
 }
@@ -45,8 +47,8 @@ export const WalletService = {
 
         if (existing) return existing as Wallet;
 
-        // Create new wallet with initial balance for companies
-        const initialBalance = userType === 'company' ? 500.00 : 0.00;
+        // Create new wallet
+        const initialBalance = 0.00;
 
         const { data: newWallet, error } = await supabase
             .from('wallets')
@@ -63,17 +65,65 @@ export const WalletService = {
             return null;
         }
 
-        // Log initial balance transaction for companies
-        if (userType === 'company' && newWallet) {
-            await supabase.from('wallet_transactions').insert({
-                wallet_id: newWallet.id,
-                amount: initialBalance,
-                type: 'initial_balance',
-                description: 'Saldo inicial para testes'
-            });
-        }
-
         return newWallet as Wallet;
+    },
+
+    /**
+     * Onboard user to Asaas Subaccount
+     */
+    async onboardAsaas(payload: { name: string, email: string, cpfCnpj: string, type: 'company' | 'worker', phone?: string, companyType?: string }): Promise<{ success: boolean; walletId?: string; error?: string }> {
+        try {
+            const { data, error } = await supabase.functions.invoke('asaas-onboard', {
+                body: payload
+            });
+
+            if (error) {
+                let msg = error.message;
+                if (error.context && typeof error.context.json === 'function') {
+                    try {
+                        const errData = await error.context.json();
+                        msg = errData.error || msg;
+                    } catch (e) { }
+                }
+                throw new Error(msg);
+            }
+
+            if (data?.error) throw new Error(data.error);
+
+            return { success: true, walletId: data.walletId };
+        } catch (error: any) {
+            console.error('Error onboarding to Asaas:', error);
+            return { success: false, error: error.message || 'Erro ao criar conta de pagamento' };
+        }
+    },
+
+    /**
+     * Withdraw funds from Worki Wallet to Bank Account via Asaas PIX
+     */
+    async withdrawFunds(amount: number, pixKey: string, pixKeyType: string = 'CPF'): Promise<{ success: boolean; error?: string }> {
+        try {
+            const { data, error } = await supabase.functions.invoke('asaas-withdraw', {
+                body: { amount, pixKey, pixKeyType }
+            });
+
+            if (error) {
+                let msg = error.message;
+                if (error.context && typeof error.context.json === 'function') {
+                    try {
+                        const errData = await error.context.json();
+                        msg = errData.error || msg;
+                    } catch (e) { }
+                }
+                throw new Error(msg);
+            }
+
+            if (data?.error) throw new Error(data.error);
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error withdrawing funds:', error);
+            return { success: false, error: error.message || 'Erro ao realizar saque' };
+        }
     },
 
     /**
@@ -170,94 +220,105 @@ export const WalletService = {
         }
     },
 
+
     /**
-     * Release escrow when job is completed
+     * Create Asaas Deposit (Pix Charge)
+     */
+    async createDeposit(payload: { amount: number, name?: string, cpfCnpj?: string }): Promise<{ paymentId?: string; pixQrCodeUrl?: string; error?: string }> {
+        try {
+            const { data, error } = await supabase.functions.invoke('asaas-deposit', {
+                body: payload
+            });
+
+            if (error) {
+                let msg = error.message;
+                if (error.context && typeof error.context.json === 'function') {
+                    try {
+                        const errData = await error.context.json();
+                        msg = errData.error || msg;
+                    } catch (e) { }
+                }
+                throw new Error(msg);
+            }
+
+            if (data?.error) throw new Error(data.error);
+
+            return data;
+        } catch (error: any) {
+            console.error('Error creating deposit:', error);
+            return { error: error.message || 'Erro ao criar depósito via Asaas' };
+        }
+    },
+
+    /**
+     * Sync missing deposits/payments directly from Asaas Master API
+     */
+    async syncBalance(): Promise<{ success: boolean; hasUpdates?: boolean; totalSynced?: number; message?: string; error?: string }> {
+        try {
+            const { data, error } = await supabase.functions.invoke('asaas-sync', {
+                body: {}
+            });
+
+            if (error) {
+                let msg = error.message;
+                if (error.context && typeof error.context.json === 'function') {
+                    try {
+                        const errData = await error.context.json();
+                        msg = errData.error || msg;
+                    } catch (e) { }
+                }
+                throw new Error(msg);
+            }
+
+            if (data?.error) throw new Error(data.error);
+
+            return data;
+        } catch (error: any) {
+            console.error('Error syncing balance:', error);
+            return { success: false, error: error.message || 'Erro ao sincronizar saldo' };
+        }
+    },
+
+    /**
+     * Release escrow when job is completed (via Asaas Subaccount Transfer)
      */
     async releaseEscrow(jobId: string, applicationId: string, workerUserId: string): Promise<{ success: boolean; error?: string }> {
         try {
-            // 1. Get escrow transaction
-            const { data: escrow } = await supabase
-                .from('escrow_transactions')
-                .select('*')
-                .eq('job_id', jobId)
-                .eq('status', 'reserved')
-                .single();
-
-            if (!escrow) {
-                return { success: false, error: 'Escrow não encontrado' };
-            }
-
-            // 2. Get or create worker wallet
-            const workerWallet = await this.getOrCreateWallet(workerUserId, 'worker');
-            if (!workerWallet) {
-                return { success: false, error: 'Erro ao acessar carteira do freelancer' };
-            }
-
-            // 3. Update escrow status to released
-            const { error: escrowUpdateError } = await supabase
-                .from('escrow_transactions')
-                .update({
-                    status: 'released',
-                    application_id: applicationId,
-                    worker_wallet_id: workerWallet.id,
-                    released_at: new Date().toISOString()
-                })
-                .eq('id', escrow.id);
-
-            if (escrowUpdateError) throw escrowUpdateError;
-
-            // 4. Add amount to worker wallet
-            const { error: walletUpdateError } = await supabase
-                .from('wallets')
-                .update({
-                    balance: workerWallet.balance + escrow.amount,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', workerWallet.id);
-
-            if (walletUpdateError) throw walletUpdateError;
-
-            // 5. Log wallet transaction for worker
-            await supabase.from('wallet_transactions').insert({
-                wallet_id: workerWallet.id,
-                amount: escrow.amount,
-                type: 'escrow_release',
-                description: 'Pagamento por trabalho concluído',
-                reference_id: jobId
+            const { data, error } = await supabase.functions.invoke('asaas-checkout', {
+                body: { jobId, applicationId, workerId: workerUserId }
             });
 
-            // 6. Update worker's earnings_total in workers table
-            const { data: currentWorker } = await supabase
-                .from('workers')
-                .select('earnings_total')
-                .eq('id', workerUserId)
-                .single();
+            if (error) {
+                let msg = error.message;
+                if (error.context && typeof error.context.json === 'function') {
+                    try {
+                        const errData = await error.context.json();
+                        msg = errData.error || msg;
+                    } catch (e) { }
+                }
+                throw new Error(msg);
+            }
 
-            await supabase
-                .from('workers')
-                .update({
-                    earnings_total: (currentWorker?.earnings_total || 0) + escrow.amount
-                })
-                .eq('id', workerUserId);
+            if (data?.error) throw new Error(data.error);
 
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error releasing escrow:', error);
-            return { success: false, error: 'Erro ao liberar pagamento' };
+            return { success: false, error: error.message || 'Erro ao liberar pagamento' };
         }
     },
 
     /**
      * Refund escrow (if job is cancelled)
      */
-    async refundEscrow(jobId: string): Promise<{ success: boolean; error?: string }> {
+    async refundEscrow(jobId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
         try {
             // 1. Get escrow transaction
             const { data: escrow } = await supabase
                 .from('escrow_transactions')
                 .select('*, company_wallet:wallets!company_wallet_id(*)')
                 .eq('job_id', jobId)
-                .eq('status', 'reserved')
+                .in('status', ['reserved']) // ensure it's reserved
                 .single();
 
             if (!escrow) {
@@ -286,8 +347,8 @@ export const WalletService = {
                 wallet_id: escrow.company_wallet_id,
                 amount: escrow.amount,
                 type: 'credit',
-                description: 'Reembolso de vaga cancelada',
-                reference_id: jobId
+                description: reason || 'Reembolso de vaga cancelada',
+                reference_id: `refund-${jobId}`
             });
 
             return { success: true };

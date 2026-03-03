@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
+import NotificationBell from '../components/NotificationBell';
 import { Loader2 } from 'lucide-react';
 
 export default function MainLayout() {
@@ -57,8 +58,9 @@ export default function MainLayout() {
             <Sidebar />
 
             {/* Mobile Header (Optional, for Logo) */}
-            <header className="md:hidden flex items-center justify-center h-14 sticky top-0 bg-glass-surface/90 backdrop-blur-md z-40 border-b border-glass-border">
+            <header className="md:hidden flex items-center justify-between px-4 h-14 sticky top-0 bg-glass-surface/90 backdrop-blur-md z-40 border-b border-glass-border">
                 <h1 className="text-xl font-black text-primary tracking-tighter">Worki.</h1>
+                <NotificationBell />
             </header>
 
             {/* Main Content Area */}
@@ -67,7 +69,7 @@ export default function MainLayout() {
             </main>
 
             {/* Mobile Navigation */}
-            <BottomNav />
+            <BottomNav type="worker" />
         </div>
     );
 }

@@ -46,7 +46,7 @@ export default function Messages() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Load conversations
+    // Load conversations and unread counts
     useEffect(() => {
         const loadData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -87,6 +87,26 @@ export default function Messages() {
                 c.application?.worker_id === user.id
             );
 
+            // Fetch all unread messages for these conversations
+            const conversationIds = myConversations.map((c: any) => c.id);
+            let unreadCounts: Record<string, number> = {};
+
+            if (conversationIds.length > 0) {
+                const { data: unreadData } = await supabase
+                    .from('Message')
+                    .select('conversationid')
+                    .in('conversationid', conversationIds)
+                    .neq('senderid', user.id) // Messages sent by OTHERS
+                    .is('read_at', null);     // That are NOT read
+
+                if (unreadData) {
+                    unreadCounts = unreadData.reduce((acc: any, curr: any) => {
+                        acc[curr.conversationid] = (acc[curr.conversationid] || 0) + 1;
+                        return acc;
+                    }, {});
+                }
+            }
+
             // Transform data
             const convList: ConversationItem[] = myConversations.map((c: any) => ({
                 id: c.id,
@@ -97,7 +117,7 @@ export default function Messages() {
                 status: c.application?.status || 'pending',
                 last_message: undefined,
                 last_message_at: c.createdat,
-                unread_count: 0
+                unread_count: unreadCounts[c.id] || 0
             }));
 
             setConversations(convList);
@@ -105,7 +125,10 @@ export default function Messages() {
             // Auto-select conversation from URL or first one
             if (selectedConversationId) {
                 const conv = convList.find(c => c.id === selectedConversationId);
-                if (conv) setSelectedConversation(conv);
+                if (conv) {
+                    setSelectedConversation(conv);
+                    markAsRead(conv.id, user.id);
+                }
             }
 
             setLoading(false);
@@ -114,9 +137,23 @@ export default function Messages() {
         loadData();
     }, [navigate, selectedConversationId]);
 
+    const markAsRead = async (conversationId: string, userId: string) => {
+        // Optimistic update
+        setConversations(prev => prev.map(c =>
+            c.id === conversationId ? { ...c, unread_count: 0 } : c
+        ));
+
+        await supabase
+            .from('Message')
+            .update({ read_at: new Date().toISOString() })
+            .eq('conversationid', conversationId)
+            .neq('senderid', userId)
+            .is('read_at', null);
+    };
+
     // Load messages when conversation is selected
     useEffect(() => {
-        if (!selectedConversation) return;
+        if (!selectedConversation || !currentUser) return;
 
         const loadMessages = async () => {
             const { data, error } = await supabase
@@ -134,6 +171,9 @@ export default function Messages() {
                 ...m,
                 is_mine: m.senderid === currentUser
             })));
+
+            // Mark as read when opening
+            markAsRead(selectedConversation.id, currentUser);
         };
 
         loadMessages();
@@ -148,10 +188,17 @@ export default function Messages() {
                 filter: `conversationid=eq.${selectedConversation.id}`
             }, (payload) => {
                 const newMsg = payload.new as any;
+                const isMine = newMsg.senderid === currentUser;
+
                 setMessages(prev => [...prev, {
                     ...newMsg,
-                    is_mine: newMsg.senderid === currentUser
+                    is_mine: isMine
                 }]);
+
+                // If I am viewing this and it's not mine, mark as read immediately
+                if (!isMine) {
+                    markAsRead(selectedConversation.id, currentUser);
+                }
             })
             .subscribe();
 
@@ -266,11 +313,17 @@ export default function Messages() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start gap-2">
                                                 <h4 className="font-bold text-sm truncate">{conv.company_name}</h4>
-                                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${getStatusColor(conv.status)}`}>
-                                                    {getStatusLabel(conv.status)}
-                                                </span>
+                                                {conv.unread_count > 0 ? (
+                                                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-red-500 text-white animate-pulse">
+                                                        {conv.unread_count}
+                                                    </span>
+                                                ) : (
+                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${getStatusColor(conv.status)}`}>
+                                                        {getStatusLabel(conv.status)}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <p className="text-xs text-gray-500 truncate mt-1">{conv.job_title}</p>
+                                            <p className={`text-xs truncate mt-1 ${conv.unread_count > 0 ? 'font-bold text-black' : 'text-gray-500'}`}>{conv.job_title}</p>
                                         </div>
                                     </div>
                                 </button>

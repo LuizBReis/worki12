@@ -1,6 +1,7 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
+import NotificationBell from '../components/NotificationBell';
 import { supabase } from '../lib/supabase';
 import { useEffect, useState } from 'react';
 
@@ -57,8 +58,9 @@ export default function CompanyLayout() {
             <Sidebar type="company" />
 
             {/* Mobile Header */}
-            <header className="md:hidden flex items-center justify-center h-14 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b border-gray-200">
+            <header className="md:hidden flex items-center justify-between px-4 h-14 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b border-gray-200">
                 <h1 className="text-xl font-black text-black tracking-tighter">Worki. <span className="text-xs text-blue-600 bg-blue-100 px-1 rounded ml-1">Business</span></h1>
+                <NotificationBell />
             </header>
 
             {/* Main Content Area */}
@@ -66,7 +68,7 @@ export default function CompanyLayout() {
                 <Outlet />
             </main>
 
-            <BottomNav />
+            <BottomNav type="company" />
         </div>
     );
 }

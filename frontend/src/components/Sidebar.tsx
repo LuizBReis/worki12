@@ -1,6 +1,7 @@
 import { Home, Briefcase, User, BarChart2, Wallet, FileText, Zap, PlusCircle, Building2, MessageSquare, LogOut } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import NotificationBell from './NotificationBell';
 import { useEffect, useState } from 'react';
 
 interface SidebarProps {
@@ -75,12 +76,15 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
 
             {/* Logo */}
             <div className={`p-8 border-b-2 border-black ${isCompany ? 'bg-white' : 'bg-black'} ${isCompany ? 'text-black' : 'text-white'}`}>
-                <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full border-2 border-black flex items-center justify-center ${isCompany ? 'bg-black text-white' : 'bg-primary text-black border-white'}`}>
-                        <span className="font-black text-sm">W.</span>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full border-2 border-black flex items-center justify-center ${isCompany ? 'bg-black text-white' : 'bg-primary text-black border-white'}`}>
+                            <span className="font-black text-sm">W.</span>
+                        </div>
+                        <h1 className="text-3xl font-black tracking-tighter">Worki.</h1>
+                        {isCompany && <span className="text-[10px] font-bold uppercase bg-gray-200 px-1.5 py-0.5 rounded border border-black">Empresa</span>}
                     </div>
-                    <h1 className="text-3xl font-black tracking-tighter">Worki.</h1>
-                    {isCompany && <span className="text-[10px] font-bold uppercase bg-gray-200 px-1.5 py-0.5 rounded border border-black ml-auto">Empresa</span>}
+                    <NotificationBell className={isCompany ? "text-gray-500 hover:bg-gray-100" : "text-gray-400 hover:bg-white/10"} />
                 </div>
             </div>
 

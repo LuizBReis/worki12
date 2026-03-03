@@ -1,0 +1,14 @@
+﻿src/components/AsaasApprovalBanner.tsx(3,37): error TS6133: 'CheckCircle2' is declared but its value is never read.
+src/components/AsaasApprovalBanner.tsx(19,25): error TS6133: 'isPending' is declared but its value is never read.
+src/components/BankInfoForm.tsx(43,56): error TS2339: Property 'updateBankInfo' does not exist on type '{ getOrCreateWallet(userId: string, userType: "worker" | "company"): Promise<Wallet | null>; onboardAsaas(payload: { name: string; email: string; cpfCnpj: string; type: "worker" | "company"; phone?: string | undefined; companyType?: string | undefined; }): Promise<...>; ... 9 more ...; getCompanyEscrows(companyUserI...'.
+src/contexts/NotificationContext.tsx(55,27): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+src/pages/company/CompanyOnboarding.tsx(4,53): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/pages/Dashboard.tsx(336,101): error TS2339: Property 'date' does not exist on type 'any[]'.
+src/pages/Dashboard.tsx(336,140): error TS2339: Property 'date' does not exist on type 'any[]'.
+src/pages/Dashboard.tsx(339,97): error TS2339: Property 'title' does not exist on type 'any[]'.
+src/pages/Dashboard.tsx(340,87): error TS2339: Property 'start_time' does not exist on type 'any[]'.
+src/pages/Dashboard.tsx(362,110): error TS2339: Property 'title' does not exist on type '{ title: any; }[]'.
+src/pages/Dashboard.tsx(362,124): error TS2339: Property 'title' does not exist on type '{ title: any; }[]'.
+src/pages/Profile.tsx(6,1): error TS6133: 'WalletService' is declared but its value is never read.
+src/pages/Profile.tsx(148,11): error TS6133: 'handleConnectStripe' is declared but its value is never read.
+src/pages/worker/WorkerOnboarding.tsx(5,48): error TS6133: 'MapPin' is declared but its value is never read.

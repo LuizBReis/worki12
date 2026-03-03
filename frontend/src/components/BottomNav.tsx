@@ -1,17 +1,32 @@
-import { Home, Briefcase, User, BarChart2, MessageSquare } from 'lucide-react';
+import { Home, Briefcase, User, MessageSquare, Wallet, PlusCircle } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-export default function BottomNav() {
-    const navItems = [
+interface BottomNavProps {
+    type?: 'worker' | 'company';
+}
+
+export default function BottomNav({ type = 'worker' }: BottomNavProps) {
+    const workerNavItems = [
         { icon: Home, label: 'Início', path: '/dashboard' },
         { icon: Briefcase, label: 'Vagas', path: '/jobs' },
-        { icon: MessageSquare, label: 'Mensagens', path: '/messages' },
-        { icon: BarChart2, label: 'Analytics', path: '/analytics' },
+        { icon: Wallet, label: 'Carteira', path: '/wallet' },
+        { icon: MessageSquare, label: 'Msgs', path: '/messages' }, // Shortened label
         { icon: User, label: 'Perfil', path: '/profile' },
     ];
 
+    const companyNavItems = [
+        { icon: Home, label: 'Início', path: '/company/dashboard' },
+        { icon: Briefcase, label: 'Vagas', path: '/company/jobs' },
+        { icon: PlusCircle, label: 'Criar', path: '/company/create' },
+        { icon: Wallet, label: 'Carteira', path: '/company/wallet' },
+        { icon: User, label: 'Perfil', path: '/company/profile' },
+    ];
+
+    const navItems = type === 'company' ? companyNavItems : workerNavItems;
+    const isCompany = type === 'company';
+
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t-2 border-black pb-safe z-50">
+        <nav className={`md:hidden fixed bottom-0 left-0 w-full bg-white border-t-2 border-black pb-safe z-50 ${isCompany ? 'border-b-4 border-b-blue-600' : 'border-b-4 border-b-primary'}`}>
             <div className="flex justify-around items-center h-16 px-1">
                 {navItems.map((item) => (
                     <NavLink
@@ -19,13 +34,15 @@ export default function BottomNav() {
                         to={item.path}
                         className={({ isActive }) => `
                  flex flex-col items-center justify-center w-full h-full gap-1 p-2
-                 ${isActive ? 'text-primary' : 'text-gray-400 hover:text-black'}
+                 ${isActive
+                                ? (isCompany ? 'text-blue-600' : 'text-primary')
+                                : 'text-gray-400 hover:text-black'}
                `}
                     >
                         {({ isActive }) => (
                             <>
                                 <item.icon size={22} strokeWidth={isActive ? 3 : 2} />
-                                <span className={`text-[10px] font-black uppercase ${isActive ? 'text-primary' : 'text-gray-400'}`}>
+                                <span className={`text-[10px] font-black uppercase ${isActive ? (isCompany ? 'text-blue-600' : 'text-primary') : 'text-gray-400'}`}>
                                     {item.label}
                                 </span>
                             </>

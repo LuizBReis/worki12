@@ -11,44 +11,81 @@ export default function Wallet() {
     const [balance, setBalance] = useState(0);
     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
     const [stats, setStats] = useState({ income: 0, pending: 0 });
+    const [withdrawing, setWithdrawing] = useState(false);
+
+    const fetchWalletData = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return navigate('/login');
+
+        // 1. Get or create worker wallet
+        const wallet = await WalletService.getOrCreateWallet(user.id, 'worker');
+        if (wallet) {
+            setBalance(wallet.balance);
+        }
+
+        // 2. Fetch Transactions
+        const txs = await WalletService.getTransactions(user.id);
+        setTransactions(txs);
+
+        // 3. Calculate Stats
+        const income = txs
+            .filter(t => t.type === 'escrow_release' || t.amount > 0)
+            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
+
+        // Fetch pending escrows (jobs that are hired but not completed)
+        const { data: pendingApps } = await supabase
+            .from('applications')
+            .select('job:jobs(budget)')
+            .eq('worker_id', user.id)
+            .eq('status', 'hired');
+
+        const pending = (pendingApps || []).reduce((acc: number, app: any) =>
+            acc + (app.job?.budget || 0), 0);
+
+        setStats({ income, pending });
+
+        setLoading(false);
+    };
 
     useEffect(() => {
-        const fetchWalletData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return navigate('/login');
+        let isMounted = true;
+        const init = async () => {
+            await fetchWalletData(); // Load local data fast
 
-            // 1. Get or create worker wallet
-            const wallet = await WalletService.getOrCreateWallet(user.id, 'worker');
-            if (wallet) {
-                setBalance(wallet.balance);
+            // Background sync with Asaas silently
+            const res = await WalletService.syncBalance();
+            if (isMounted && res.success && res.hasUpdates) {
+                await fetchWalletData(); // Refresh UI with new Asaas data if updates found
             }
-
-            // 2. Fetch Transactions
-            const txs = await WalletService.getTransactions(user.id);
-            setTransactions(txs);
-
-            // 3. Calculate Stats
-            const income = txs
-                .filter(t => t.type === 'escrow_release' || t.amount > 0)
-                .reduce((acc, t) => acc + Math.abs(t.amount), 0);
-
-            // Fetch pending escrows (jobs that are hired but not completed)
-            const { data: pendingApps } = await supabase
-                .from('applications')
-                .select('job:jobs(budget)')
-                .eq('worker_id', user.id)
-                .eq('status', 'hired');
-
-            const pending = (pendingApps || []).reduce((acc: number, app: any) =>
-                acc + (app.job?.budget || 0), 0);
-
-            setStats({ income, pending });
-
-            setLoading(false);
         };
 
-        fetchWalletData();
+        init();
+        return () => { isMounted = false; };
     }, [navigate]);
+
+    const handleWithdraw = async () => {
+        if (balance <= 0) {
+            alert('Saldo insuficiente para saque.');
+            return;
+        }
+
+        const pixKey = window.prompt(`Deseja sacar R$ ${balance.toFixed(2)}?\nHaverá retenção da taxa da plataforma.\n\nInsira sua Chave PIX:`);
+        if (!pixKey) return;
+
+        setWithdrawing(true);
+        // By default, assuming the Pix key type. In a full app, you'd add a selector (CPF, EMAIL, PHONE, EVP)
+        const pixKeyType = pixKey.includes('@') ? 'EMAIL' : (pixKey.length > 11 ? 'CNPJ' : 'CPF');
+
+        const { success, error } = await WalletService.withdrawFunds(balance, pixKey, pixKeyType);
+
+        if (success) {
+            alert('Saque solicitado com sucesso! O valor será transferido para sua chave PIX.');
+            fetchWalletData(); // Refresh balance
+        } else {
+            alert(error || 'Erro ao processar saque.');
+        }
+        setWithdrawing(false);
+    };
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('pt-BR', {
@@ -89,15 +126,16 @@ export default function Wallet() {
                     <div className="flex gap-4">
                         <button
                             className="flex-1 bg-primary text-white py-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-none hover:translate-y-1 transition-all flex items-center justify-center gap-2"
-                            onClick={() => alert('Funcionalidade de saque em breve!')}
+                            onClick={handleWithdraw}
+                            disabled={withdrawing || balance <= 0}
                         >
-                            <ArrowDownLeft size={20} /> Sacar (Pix)
+                            {withdrawing ? <Loader2 className="animate-spin" size={20} /> : <><ArrowDownLeft size={20} /> Sacar (Pix)</>}
                         </button>
                         <button
                             className="flex-1 bg-white/10 text-white py-4 rounded-xl font-bold uppercase hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-                            onClick={() => alert('Em breve!')}
+                            onClick={() => navigate('/profile')}
                         >
-                            <CreditCard size={20} /> Adicionar Conta
+                            <CreditCard size={20} /> Ver Perfil
                         </button>
                     </div>
                 </div>

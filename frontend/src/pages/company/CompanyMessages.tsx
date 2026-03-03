@@ -88,12 +88,9 @@ export default function CompanyMessages() {
 
         if (error) {
             console.error('SUPABASE ERROR fetching conversations:', error);
-            // alert('Erro debug: ' + JSON.stringify(error));
             setLoading(false);
             return;
         }
-
-
 
         // Filter to only show conversations for jobs belonging to any of the user's companies
         const myConversations = (convData || []).filter((c: any) => {
@@ -105,6 +102,26 @@ export default function CompanyMessages() {
             return companyIds.has(jobCorpId);
         });
 
+        // Fetch all unread messages for these conversations
+        const conversationIds = myConversations.map((c: any) => c.id);
+        let unreadCounts: Record<string, number> = {};
+
+        if (conversationIds.length > 0) {
+            const { data: unreadData } = await supabase
+                .from('Message')
+                .select('conversationid')
+                .in('conversationid', conversationIds)
+                .neq('senderid', user.id) // Messages sent by OTHERS (workers)
+                .is('read_at', null);     // That are NOT read
+
+            if (unreadData) {
+                unreadCounts = unreadData.reduce((acc: any, curr: any) => {
+                    acc[curr.conversationid] = (acc[curr.conversationid] || 0) + 1;
+                    return acc;
+                }, {});
+            }
+        }
+
         const convList: ConversationItem[] = myConversations.map((c: any) => ({
             id: c.id,
             application_uuid: c.application_uuid,
@@ -114,17 +131,34 @@ export default function CompanyMessages() {
             status: c.application?.status || 'pending',
             last_message: undefined,
             last_message_at: c.createdat,
-            unread_count: 0
+            unread_count: unreadCounts[c.id] || 0
         }));
 
         setConversations(convList);
 
         if (selectedConversationId) {
             const conv = convList.find(c => c.id === selectedConversationId);
-            if (conv) setSelectedConversation(conv);
+            if (conv) {
+                setSelectedConversation(conv);
+                markAsRead(conv.id, user.id);
+            }
         }
 
         setLoading(false);
+    };
+
+    const markAsRead = async (conversationId: string, userId: string) => {
+        // Optimistic update
+        setConversations(prev => prev.map(c =>
+            c.id === conversationId ? { ...c, unread_count: 0 } : c
+        ));
+
+        await supabase
+            .from('Message')
+            .update({ read_at: new Date().toISOString() })
+            .eq('conversationid', conversationId)
+            .neq('senderid', userId)
+            .is('read_at', null);
     };
 
     // Load data on mount and refresh
@@ -169,6 +203,11 @@ export default function CompanyMessages() {
                 ...m,
                 is_mine: m.senderid === currentUser
             })));
+
+            // Mark as read when opening
+            if (currentUser) {
+                markAsRead(selectedConversation.id, currentUser);
+            }
         };
 
         loadMessages();
@@ -182,10 +221,17 @@ export default function CompanyMessages() {
                 filter: `conversationid=eq.${selectedConversation.id}`
             }, (payload) => {
                 const newMsg = payload.new as any;
+                const isMine = newMsg.senderid === currentUser;
+
                 setMessages(prev => [...prev, {
                     ...newMsg,
-                    is_mine: newMsg.senderid === currentUser
+                    is_mine: isMine
                 }]);
+
+                // If I am viewing this and it's not mine, mark as read immediately
+                if (!isMine && currentUser) {
+                    markAsRead(selectedConversation.id, currentUser);
+                }
             })
             .subscribe();
 
@@ -298,11 +344,17 @@ export default function CompanyMessages() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start gap-2">
                                                 <h4 className="font-bold text-sm truncate">{conv.worker_name}</h4>
-                                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${getStatusColor(conv.status)}`}>
-                                                    {getStatusLabel(conv.status)}
-                                                </span>
+                                                {conv.unread_count > 0 ? (
+                                                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-red-500 text-white animate-pulse">
+                                                        {conv.unread_count}
+                                                    </span>
+                                                ) : (
+                                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${getStatusColor(conv.status)}`}>
+                                                        {getStatusLabel(conv.status)}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <p className="text-xs text-gray-500 truncate mt-1 flex items-center gap-1">
+                                            <p className={`text-xs truncate mt-1 flex items-center gap-1 ${conv.unread_count > 0 ? 'font-bold text-black' : 'text-gray-500'}`}>
                                                 <Briefcase size={10} />
                                                 {conv.job_title}
                                             </p>

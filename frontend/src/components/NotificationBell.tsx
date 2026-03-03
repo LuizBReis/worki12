@@ -1,0 +1,115 @@
+import { useState, useRef, useEffect } from 'react';
+import { Bell, Check, Info, MessageSquare, CreditCard, AlertCircle } from 'lucide-react';
+import { useNotifications } from '../contexts/NotificationContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
+
+export default function NotificationBell({ className = "" }: { className?: string }) {
+    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [dropdownRef]);
+
+    const handleNotificationClick = async (id: string, link?: string) => {
+        await markAsRead(id);
+        setIsOpen(false);
+        if (link) {
+            navigate(link);
+        }
+    };
+
+    const getIcon = (type: string) => {
+        switch (type) {
+            case 'message': return <MessageSquare size={16} className="text-blue-500" />;
+            case 'payment': return <CreditCard size={16} className="text-green-500" />;
+            case 'status_change': return <Info size={16} className="text-yellow-500" />; // Or check-circle
+            case 'system': return <AlertCircle size={16} className="text-gray-500" />;
+            default: return <Bell size={16} className="text-gray-500" />;
+        }
+    };
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`relative p-2 rounded-full hover:bg-white/10 transition-colors ${className}`}
+                aria-label="Notifications"
+            >
+                <Bell size={24} className={unreadCount > 0 ? "text-primary" : "currentColor"} />
+                {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                )}
+            </button>
+
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-xl shadow-2xl border-2 border-black z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                    <div className="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 className="font-bold text-sm">Notificações</h3>
+                        {unreadCount > 0 && (
+                            <button
+                                onClick={() => markAllAsRead()}
+                                className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                            >
+                                <Check size={12} />
+                                Marcar todas como lidas
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="max-h-[70vh] overflow-y-auto">
+                        {notifications.length === 0 ? (
+                            <div className="p-8 text-center text-gray-400">
+                                <Bell size={32} className="mx-auto mb-2 opacity-20" />
+                                <p className="text-sm">Nenhuma notificação.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {notifications.map((notification) => (
+                                    <div
+                                        key={notification.id}
+                                        onClick={() => handleNotificationClick(notification.id, notification.link)}
+                                        className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer flex gap-3 ${!notification.read_at ? 'bg-blue-50/50' : ''}`}
+                                    >
+                                        <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${!notification.read_at ? 'bg-white shadow-sm' : 'bg-gray-100'}`}>
+                                            {getIcon(notification.type)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm ${!notification.read_at ? 'font-bold text-black' : 'font-medium text-gray-700'}`}>
+                                                {notification.title}
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                                {notification.message}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400 mt-2">
+                                                {format(new Date(notification.created_at), "d 'de' MMM, HH:mm", { locale: ptBR })}
+                                            </p>
+                                        </div>
+                                        {!notification.read_at && (
+                                            <div className="h-2 w-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

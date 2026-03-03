@@ -1,5 +1,6 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import {
     Briefcase, Clock, Star, TrendingUp, Award, Zap,
@@ -10,101 +11,127 @@ import { useNavigate } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobApplication } from '../hooks/useJobApplication';
 
+interface NextJobData {
+    status: string;
+    job: {
+        title: string;
+        date: string;
+        start_time: string;
+        company: { name: string };
+    };
+}
+
+interface HistoryItem {
+    status: string;
+    created_at: string;
+    job: {
+        title: string;
+    };
+}
+
 export default function Dashboard() {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
+    const { applyForJob, applyingId } = useJobApplication();
 
-    const [worker, setWorker] = useState<any>(null);
-
-    // Real Data States
-    const [nextJob, setNextJob] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [openJobs, setOpenJobs] = useState<any[]>([]);
-    const [quests, setQuests] = useState<any[]>([]);
-    const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
-
-    // Use the hook
-    const { applyingId, applyForJob } = useJobApplication();
-
-    useEffect(() => {
-        const fetchDashboardData = async () => {
+    const { data: authUser } = useQuery({
+        queryKey: ['authUser'],
+        queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return navigate('/login');
+            return user;
+        },
+        staleTime: 300000
+    });
 
+    // React Query Hooks
+    const { data: worker, isLoading: isLoadingWorker } = useQuery({
+        queryKey: ['workerProfile'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No user');
+            const { data } = await supabase.from('workers').select('*').eq('id', user.id).single();
+            return data;
+        }
+    });
 
-            // 1. Fetch Worker Profile &Stats
-            const { data: workerData } = await supabase
-                .from('workers')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-
-            if (workerData) {
-                setWorker(workerData);
-
-                // Calculate Quests Progress based on real profile data
-                const newQuests = [
-                    { id: 1, title: 'Adicionar Foto de Perfil', xp: 50, done: !!workerData.avatar_url, action: '/profile' },
-                    { id: 2, title: 'Confirmar Email', xp: 100, done: !!user.email_confirmed_at, action: '/profile' },
-                    { id: 3, title: 'Adicionar Especialidades', xp: 75, done: (workerData.roles && workerData.roles.length > 0) || !!workerData.primary_role, action: '/profile' },
-                ];
-                setQuests(newQuests);
-            }
-
-            // 2. Fetch Next Scheduled Job
-            const { data: nextJobData } = await supabase
+    const { data: nextJob } = useQuery({
+        queryKey: ['nextJob'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+            const { data } = await supabase
                 .from('applications')
                 .select('status, job:jobs(*, company:companies(name))')
                 .eq('worker_id', user.id)
                 .in('status', ['approved', 'scheduled'])
-                // Removed complex sorting causing 406
                 .limit(1)
                 .maybeSingle();
+            return data as unknown as NextJobData;
+        },
+        enabled: !!worker
+    });
 
-            if (nextJobData) setNextJob(nextJobData);
-
-            // 3. Fetch Recent History
-            const { data: historyData } = await supabase
+    const { data: history = [] } = useQuery({
+        queryKey: ['workerHistory'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+            const { data } = await supabase
                 .from('applications')
                 .select('status, created_at, job:jobs(title)')
                 .eq('worker_id', user.id)
                 .in('status', ['completed', 'rejected', 'cancelled'])
                 .order('created_at', { ascending: false })
                 .limit(3);
+            return (data as unknown as HistoryItem[]) || [];
+        },
+        enabled: !!worker
+    });
 
-            if (historyData) setHistory(historyData);
-
-            // 4. Fetch Open Jobs for Feed
-            // First get applied job IDs to MARK them, not exclude them
-            const { data: appliedApps } = await supabase
-                .from('applications')
-                .select('job_id')
-                .eq('worker_id', user.id);
-
-            const fetchedAppliedIds = appliedApps?.map(a => a.job_id) || [];
-            setAppliedJobIds(fetchedAppliedIds);
-
-            let query = supabase
+    const { data: openJobs = [] } = useQuery({
+        queryKey: ['openJobs'],
+        queryFn: async () => {
+            const { data } = await supabase
                 .from('jobs')
                 .select('*, company:companies(name, logo_url)')
                 .eq('status', 'open')
+                .gte('start_date', new Date().toISOString())
                 .order('created_at', { ascending: false })
                 .limit(5);
+            return data || [];
+        }
+    });
 
-            // We do NOT exclude applied jobs anymore
+    const { data: appliedJobIds = [], refetch: refetchAppliedJobIds } = useQuery({
+        queryKey: ['appliedJobIds'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+            const { data } = await supabase.from('applications').select('job_id').eq('worker_id', user.id);
+            return data?.map(a => a.job_id) || [];
+        },
+        enabled: !!worker
+    });
 
-            const { data: jobsData } = await query;
-            if (jobsData) setOpenJobs(jobsData);
+    // Quests Logic (derived from worker data)
+    const quests = worker ? [
+        { id: 1, title: 'Adicionar Foto de Perfil', xp: 50, done: !!worker.avatar_url, action: '/profile' },
+        { id: 2, title: 'Confirmar Email', xp: 100, done: !!authUser?.email_confirmed_at, action: '/profile' },
+        { id: 3, title: 'Adicionar Especialidades', xp: 75, done: (worker.roles && worker.roles.length > 0) || !!worker.primary_role, action: '/profile' },
+    ] : [];
 
-            setLoading(false);
-        };
+    // Unified Loading State
+    const loading = isLoadingWorker;
 
-        fetchDashboardData();
-    }, [navigate]);
+    // Prefetching logic could go here, or just rely on the queries running
+    useEffect(() => {
+        if (!worker && !loading) {
+            // User not logged in handled by ProtectedRoute mostly, but good check
+            navigate('/login');
+        }
+    }, [worker, loading, navigate]);
 
-    const handleApplySuccess = (jobId: string) => {
-        setAppliedJobIds(prev => [...prev, jobId]);
-        // Ideally update openJobs state too if there's candidate count, but it's optional for dashboard feed
+    const handleApplySuccess = () => {
+        refetchAppliedJobIds();
     };
 
     if (loading) return (
@@ -297,7 +324,7 @@ export default function Dashboard() {
                                 key={job.id}
                                 job={job}
                                 isApplied={appliedJobIds.includes(job.id)}
-                                onApply={(id) => applyForJob(id, () => handleApplySuccess(id))}
+                                onApply={(id) => applyForJob(id, () => handleApplySuccess())}
                                 isApplying={applyingId === job.id}
                                 variant="feed"
                             />

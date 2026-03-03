@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { WalletService } from '../../services/walletService';
+import { useAsaasStatus } from '../../hooks/useAsaasStatus';
+import AsaasApprovalBanner from '../../components/AsaasApprovalBanner';
 import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap, Calendar, Clock, Globe, Wallet, AlertTriangle } from 'lucide-react';
 
 export default function CompanyCreateJob() {
@@ -14,6 +16,7 @@ export default function CompanyCreateJob() {
     const [categories, setCategories] = useState<{ name: string, slug: string }[]>([]);
     const [companyBalance, setCompanyBalance] = useState<number>(0);
     const [balanceLoading, setBalanceLoading] = useState(true);
+    const { isApproved: asaasApproved, loading: asaasLoading } = useAsaasStatus();
 
     const [formData, setFormData] = useState({
         title: '',
@@ -205,6 +208,9 @@ export default function CompanyCreateJob() {
 
     return (
         <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 pb-20">
+            {/* Asaas Approval Gate */}
+            <AsaasApprovalBanner action="criar vagas" className="mb-6" />
+
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
@@ -340,8 +346,8 @@ export default function CompanyCreateJob() {
                             {/* Balance Card */}
                             {!isEditing && (
                                 <div className={`p-4 rounded-xl border-2 flex items-center justify-between ${parseFloat(formData.budget || '0') > companyBalance
-                                        ? 'bg-red-50 border-red-300'
-                                        : 'bg-green-50 border-green-300'
+                                    ? 'bg-red-50 border-red-300'
+                                    : 'bg-green-50 border-green-300'
                                     }`}>
                                     <div className="flex items-center gap-3">
                                         <Wallet size={24} className={parseFloat(formData.budget || '0') > companyBalance ? 'text-red-500' : 'text-green-600'} />
@@ -481,7 +487,7 @@ export default function CompanyCreateJob() {
 
                         <button
                             onClick={step === 3 ? handleSubmit : handleNext}
-                            disabled={loading}
+                            disabled={loading || (step === 3 && !asaasApproved && !asaasLoading)}
                             className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-green-600 hover:scale-[1.02] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] disabled:opacity-50"
                         >
                             {loading ? 'Salvando...' : step === 3 ? (isEditing ? 'Salvar Alterações' : 'Publicar Vaga') : 'Próximo'}

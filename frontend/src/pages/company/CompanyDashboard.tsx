@@ -1,102 +1,79 @@
 import { useNavigate } from 'react-router-dom';
 import { Users, Briefcase, TrendingUp, Search, Filter, Loader2, Bell } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function CompanyDashboard() {
     const navigate = useNavigate();
-    const [jobs, setJobs] = useState<any[]>([]);
-    const [activities, setActivities] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({
-        activeJobs: 0,
-        totalCandidates: 0,
-        views: 0
-    });
-    const [companyName, setCompanyName] = useState('');
-
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
-
-    const fetchDashboardData = async () => {
-        try {
+    // React Query Hooks
+    const { data: company, isLoading: isLoadingCompany } = useQuery({
+        queryKey: ['companyProfile'],
+        queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) throw new Error('No user');
+            const { data } = await supabase.from('companies').select('name').eq('id', user.id).single();
+            return data;
+        }
+    });
 
-            // Fetch Company Details (Name)
-            const { data: companyData } = await supabase
-                .from('companies')
-                .select('name')
-                .eq('id', user.id)
-                .single();
-
-            // Fetch Jobs
-            const { data: jobsData } = await supabase
+    const { data: jobs = [] } = useQuery({
+        queryKey: ['companyJobs'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+            const { data } = await supabase
                 .from('jobs')
-                .select('*, views') // Ensure 'views' is selected
+                .select('*, views')
                 .eq('company_id', user.id)
                 .order('created_at', { ascending: false });
+            return data || [];
+        },
+        enabled: !!company
+    });
 
-            // Fetch Recent Applications (Activities)
-            // Note: This relies on the new 'applications' table. If empty, it won't crash.
-            const { data: appsData } = await supabase
+    const { data: applications = [] } = useQuery({
+        queryKey: ['companyApplications'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+            const { data } = await supabase
                 .from('applications')
                 .select('*, jobs!inner(title, company_id)')
                 .eq('jobs.company_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(5);
+            return data || [];
+        },
+        enabled: !!company
+    });
 
-            if (jobsData) {
-                setJobs(jobsData);
+    // Derived State
+    const companyName = company?.name || '';
+    const loading = isLoadingCompany;
 
-                // Calculate Stats
-                const active = jobsData.filter(j => j.status === 'open').length;
-                const candidates = jobsData.reduce((acc, job) => acc + (job.candidates_count || 0), 0); // Logic: job.candidates_count should be updated by a trigger or manually when app comes in
-                // For now we trust the column. If we switch to counting 'applications' table, we can do that too.
-                // Stick to candidates_count column for now, assuming another process updates it or we implement it later.
-
-                const views = jobsData.reduce((acc, job) => acc + (job.views || 0), 0);
-
-                setStats({
-                    activeJobs: active,
-                    totalCandidates: candidates,
-                    views: views
-                });
-
-                // Blend Activities (New Jobs + New Applications)
-                const jobActivities = jobsData.slice(0, 5).map(job => ({
-                    type: 'job_created',
-                    text: `Vaga criada: "${job.title}"`,
-                    time: job.created_at,
-                    id: job.id
-                }));
-
-                const appActivities = (appsData || []).map(app => ({
-                    type: 'application',
-                    text: `Novo candidato para "${app.jobs.title}"`,
-                    time: app.created_at,
-                    id: app.id
-                }));
-
-                const blended = [...jobActivities, ...appActivities]
-                    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-                    .slice(0, 5);
-
-                setActivities(blended);
-            }
-
-            if (companyData) {
-                setCompanyName(companyData.name);
-            }
-        } catch (error) {
-            console.error('Error fetching dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
+    const stats = {
+        activeJobs: jobs.filter(j => j.status === 'open').length,
+        totalCandidates: jobs.reduce((acc, job) => acc + (job.candidates_count || 0), 0),
+        views: jobs.reduce((acc, job) => acc + (job.views || 0), 0)
     };
+
+    // Blend Activities
+    const activities = [
+        ...jobs.slice(0, 5).map(job => ({
+            type: 'job_created',
+            text: `Vaga criada: "${job.title}"`,
+            time: job.created_at,
+            id: job.id
+        })),
+        ...applications.map(app => ({
+            type: 'application',
+            text: `Novo candidato para "${app.jobs.title}"`,
+            time: app.created_at,
+            id: app.id
+        }))
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
 
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">

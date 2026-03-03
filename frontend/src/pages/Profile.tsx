@@ -1,9 +1,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera } from 'lucide-react';
+import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
 export default function Profile() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -298,6 +297,23 @@ export default function Profile() {
                                 </span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Payments / Stripe */}
+                    <div className="bg-white p-6 rounded-2xl border-2 border-black shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-black uppercase flex items-center gap-2">
+                                <CreditCard size={20} /> Recebimento
+                            </h3>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-4">Gerencie sua conta de pagamento e receba pelos seus jobs.</p>
+
+                        <button
+                            onClick={() => navigate('/asaas-status')}
+                            className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-all flex justify-center items-center gap-2"
+                        >
+                            Ver Status da Conta de Recebimento
+                        </button>
                     </div>
 
                     {/* Contact Info */}
