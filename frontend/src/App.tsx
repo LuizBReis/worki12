@@ -44,6 +44,8 @@ const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Help = lazy(() => import('./pages/Help'));
 
 // Loading Component
 const PageLoader = () => (
@@ -106,9 +108,13 @@ function App() {
                   <Route path="/privacidade" element={<Privacy />} />
                   <Route path="/esqueci-senha" element={<ForgotPassword />} />
                   <Route path="/redefinir-senha" element={<ResetPassword />} />
+                  <Route path="/ajuda" element={<Help />} />
 
                   {/* Protected Routes */}
                   <Route element={<ProtectedRoute />}>
+
+                    {/* Admin Route - standalone layout */}
+                    <Route path="/admin" element={<Admin />} />
 
                     {/* Onboarding Routes - still protected as they need user session but not full layout yet if incomplete */}
                     <Route path="/company/onboarding" element={<CompanyOnboarding />} />
