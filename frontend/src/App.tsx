@@ -40,6 +40,8 @@ const CompanyMessages = lazy(() => import('./pages/company/CompanyMessages'));
 const CompanyWallet = lazy(() => import('./pages/company/CompanyWallet'));
 const WorkerPublicProfile = lazy(() => import('./pages/company/WorkerPublicProfile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
 
 // Loading Component
 const PageLoader = () => (
@@ -98,6 +100,8 @@ function App() {
                   {/* Public Routes */}
                   <Route path="/" element={<HomeRedirect />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/termos" element={<Terms />} />
+                  <Route path="/privacidade" element={<Privacy />} />
 
                   {/* Protected Routes */}
                   <Route element={<ProtectedRoute />}>
