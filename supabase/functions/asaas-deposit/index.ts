@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, ASAAS_API_URL, getAsaasHeaders } from '../_shared/asaas.ts';
+import { isRateLimited } from '../_shared/rate-limit.ts';
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -18,6 +19,12 @@ serve(async (req) => {
         const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) throw new Error('Invalid Token');
+
+        if (isRateLimited(user.id, 'deposit', 5, 60_000)) {
+            return new Response(JSON.stringify({ error: 'Muitas tentativas. Aguarde 1 minuto.' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429
+            });
+        }
 
         const { amount, name, cpfCnpj } = await req.json();
 
@@ -46,7 +53,10 @@ serve(async (req) => {
         // Create a customer on the master account if not exists
         if (!customerId) {
             const cleanDoc = cpfCnpj ? cpfCnpj.replace(/\D/g, '') : '';
-            const finalDoc = (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : '00000000000';
+            if (cleanDoc.length !== 11 && cleanDoc.length !== 14) {
+                throw new Error('CPF (11 digitos) ou CNPJ (14 digitos) é obrigatório para criar conta de pagamento.');
+            }
+            const finalDoc = cleanDoc;
 
             const customerPayload = {
                 name: name || 'Worki User',

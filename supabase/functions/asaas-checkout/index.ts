@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/asaas.ts';
+import { isRateLimited } from '../_shared/rate-limit.ts';
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -17,6 +18,12 @@ serve(async (req) => {
         if (!authHeader) throw new Error('Missing Authorization header');
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
         if (userError || !user) throw new Error('Invalid Token');
+
+        if (isRateLimited(user.id, 'checkout', 5, 60_000)) {
+            return new Response(JSON.stringify({ error: 'Muitas tentativas. Aguarde 1 minuto.' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429
+            });
+        }
 
         const { jobId, workerId } = await req.json();
 
