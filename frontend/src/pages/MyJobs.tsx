@@ -6,23 +6,47 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, isToday, parseISO, isWithinInterval, setHours, setMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import RateModal from '../components/RateModal';
+import { useToast } from '../contexts/ToastContext';
+
+interface JobApplication {
+    id: string;
+    job_id: string;
+    status: string;
+    title: string;
+    company_id: string;
+    company_name: string;
+    company_logo: string | null;
+    pay: number;
+    date: string;
+    raw_date: string | null;
+    time: string;
+    end_time: string | null;
+    location: string;
+    month: string;
+    day: number | string;
+    worker_checkin_at: string | null;
+    worker_checkout_at: string | null;
+    company_checkin_confirmed_at: string | null;
+    company_checkout_confirmed_at: string | null;
+}
 
 export default function MyJobs() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'applied' | 'in_progress' | 'scheduled' | 'history'>('scheduled');
     const [jobs, setJobs] = useState<{
-        applied: any[],
-        in_progress: any[],
-        scheduled: any[],
-        history: any[]
+        applied: JobApplication[],
+        in_progress: JobApplication[],
+        scheduled: JobApplication[],
+        history: JobApplication[]
     }>({ applied: [], in_progress: [], scheduled: [], history: [] });
 
     // Rating State
     const [rateModalOpen, setRateModalOpen] = useState(false);
-    const [selectedJobToRate, setSelectedJobToRate] = useState<any>(null);
+    const [selectedJobToRate, setSelectedJobToRate] = useState<JobApplication | null>(null);
     const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(new Set());
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const { addToast } = useToast();
 
     const fetchJobs = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -69,26 +93,50 @@ export default function MyJobs() {
         if (error) {
             console.error('Error fetching applications:', error);
         } else {
-            const applied: any[] = [];
-            const in_progress: any[] = [];
-            const scheduled: any[] = [];
-            const history: any[] = [];
+            const applied: JobApplication[] = [];
+            const in_progress: JobApplication[] = [];
+            const scheduled: JobApplication[] = [];
+            const history: JobApplication[] = [];
 
             const now = new Date();
 
-            data.forEach((app: any) => {
+            interface ApplicationRow {
+                id: string;
+                status: string;
+                created_at: string;
+                worker_checkin_at: string | null;
+                worker_checkout_at: string | null;
+                company_checkin_confirmed_at: string | null;
+                company_checkout_confirmed_at: string | null;
+                job: {
+                    id: string;
+                    title: string;
+                    budget: number;
+                    start_date: string | null;
+                    work_start_time: string | null;
+                    work_end_time: string | null;
+                    location: string | null;
+                    company: {
+                        id: string;
+                        name: string;
+                        logo_url: string | null;
+                    } | null;
+                } | null;
+            }
+
+            (data as unknown as ApplicationRow[]).forEach((app) => {
                 // Normalize app object for easier consumption
-                const application = {
+                const application: JobApplication = {
                     id: app.id,
-                    job_id: app.job?.id,
+                    job_id: app.job?.id || '',
                     status: app.status,
                     title: app.job?.title || 'Job Desconhecido',
-                    company_id: app.job?.company?.id,
+                    company_id: app.job?.company?.id || '',
                     company_name: app.job?.company?.name || 'Empresa Confidencial',
-                    company_logo: app.job?.company?.logo_url,
+                    company_logo: app.job?.company?.logo_url ?? null,
                     pay: app.job?.budget || 0,
                     date: app.job?.start_date ? new Date(app.job.start_date).toLocaleDateString('pt-BR') : 'Data a definir',
-                    raw_date: app.job?.start_date,
+                    raw_date: app.job?.start_date ?? null,
                     time: app.job?.work_start_time || 'Horário a definir',
                     end_time: app.job?.work_end_time || null,
                     location: app.job?.location || 'Local a definir',
@@ -123,15 +171,15 @@ export default function MyJobs() {
                     }
                 }
 
-                const isInProgress = (app.status === 'approved' || app.status === 'scheduled' || app.status === 'in_progress' || app.status === 'hired') && isJobToday && isWithinWorkHours;
+                const isInProgress = (app.status === 'hired' && isJobToday && isWithinWorkHours) || app.status === 'in_progress';
 
-                if (app.status === 'pending' || app.status === 'reviewing') {
+                if (app.status === 'pending' || app.status === 'reviewing' || app.status === 'interview') {
                     applied.push(application);
                 } else if (isInProgress) {
                     in_progress.push(application);
-                } else if (app.status === 'approved' || app.status === 'scheduled' || app.status === 'hired') {
+                } else if (app.status === 'hired') {
                     scheduled.push(application);
-                } else if (app.status === 'completed' || app.status === 'rejected' || app.status === 'cancelled') {
+                } else if (['completed', 'rejected', 'cancelled'].includes(app.status)) {
                     history.push(application);
                 }
             });
@@ -144,6 +192,25 @@ export default function MyJobs() {
     useEffect(() => {
         fetchJobs();
     }, [navigate]);
+
+    const handleCancelApplication = async (appId: string) => {
+        setActionLoading(appId);
+        try {
+            const { error } = await supabase
+                .from('applications')
+                .update({ status: 'cancelled' })
+                .eq('id', appId);
+
+            if (error) throw error;
+            addToast('Candidatura cancelada.', 'success');
+            await fetchJobs();
+        } catch (err) {
+            console.error('Error cancelling application:', err);
+            addToast('Erro ao cancelar candidatura. Tente novamente.', 'error');
+        } finally {
+            setActionLoading(null);
+        }
+    };
 
     const handleCheckin = async (appId: string) => {
         setActionLoading(appId);
@@ -160,7 +227,7 @@ export default function MyJobs() {
             await fetchJobs();
         } catch (err) {
             console.error('Error checking in:', err);
-            alert('Erro ao fazer check-in. Tente novamente.');
+            addToast('Erro ao fazer check-in. Tente novamente.', 'error');
         } finally {
             setActionLoading(null);
         }
@@ -178,13 +245,13 @@ export default function MyJobs() {
             await fetchJobs();
         } catch (err) {
             console.error('Error checking out:', err);
-            alert('Erro ao fazer check-out. Tente novamente.');
+            addToast('Erro ao fazer check-out. Tente novamente.', 'error');
         } finally {
             setActionLoading(null);
         }
     };
 
-    const handleOpenRateModal = (job: any) => {
+    const handleOpenRateModal = (job: JobApplication) => {
         setSelectedJobToRate(job);
         setRateModalOpen(true);
     };
@@ -207,10 +274,10 @@ export default function MyJobs() {
             if (error) throw error;
 
             setReviewedJobIds(prev => new Set(prev).add(selectedJobToRate.job_id));
-            alert('Avaliação enviada com sucesso!');
+            addToast('Avaliação enviada com sucesso!', 'success');
         } catch (error) {
             console.error('Error submitting review:', error);
-            alert('Erro ao enviar avaliação.');
+            addToast('Erro ao enviar avaliação.', 'error');
             throw error;
         }
     };
@@ -238,7 +305,7 @@ export default function MyJobs() {
                 ].map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
+                        onClick={() => setActiveTab(tab.id as typeof activeTab)}
                         className={`
                             px-6 py-2 rounded-t-xl font-bold uppercase transition-all whitespace-nowrap flex items-center gap-2
                             ${activeTab === tab.id
@@ -291,11 +358,16 @@ export default function MyJobs() {
                             <h3 className="font-black text-xl uppercase mb-1">{job.title}</h3>
                             <p className="text-sm font-bold text-gray-500">{job.company_name} • {job.location}</p>
                             <span className="inline-block mt-2 bg-yellow-100 text-yellow-700 text-xs font-black px-2 py-1 rounded-md uppercase">
-                                {job.status === 'pending' ? 'Aguardando' : 'Em Análise'}
+                                {job.status === 'pending' ? 'Aguardando' : job.status === 'interview' ? 'Em Entrevista' : 'Em Análise'}
                             </span>
                         </div>
-                        <button className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors self-end md:self-center" title="Cancelar Candidatura">
-                            <XCircle size={24} />
+                        <button
+                            onClick={() => handleCancelApplication(job.id)}
+                            disabled={actionLoading === job.id}
+                            className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors self-end md:self-center disabled:opacity-50"
+                            title="Cancelar Candidatura"
+                        >
+                            {actionLoading === job.id ? <Loader2 className="animate-spin" size={24} /> : <XCircle size={24} />}
                         </button>
                     </div>
                 ))}
@@ -419,7 +491,7 @@ export default function MyJobs() {
                                 <span className="block text-sm font-bold text-gray-400 uppercase">Receber</span>
                                 <span className="block text-2xl font-black text-primary">R$ {job.pay}</span>
                             </div>
-                            <span className="bg-green-100 text-green-700 text-xs font-black uppercase px-3 py-1 rounded-full border border-green-200">Confirmado</span>
+                            <span className="bg-green-100 text-green-700 text-xs font-black uppercase px-3 py-1 rounded-full border border-green-200">Contratado</span>
                         </div>
                     </div>
                 ))}
@@ -466,7 +538,7 @@ export default function MyJobs() {
                 onClose={() => setRateModalOpen(false)}
                 onSubmit={handleSubmitRate}
                 targetName={selectedJobToRate?.company_name || 'Empresa'}
-                targetPhotoUrl={selectedJobToRate?.company_logo}
+                targetPhotoUrl={selectedJobToRate?.company_logo ?? undefined}
                 title="Avaliar Empresa"
                 subtitle={selectedJobToRate?.title}
             />

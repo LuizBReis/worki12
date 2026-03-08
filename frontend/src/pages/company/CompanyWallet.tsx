@@ -111,7 +111,7 @@ export default function CompanyWallet() {
                     <div className="flex gap-4">
                         <button
                             className="flex-1 bg-white text-blue-600 py-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-y-1 transition-all flex items-center justify-center gap-2"
-                            onClick={() => navigate('/company/jobs/create')}
+                            onClick={() => navigate('/company/create')}
                         >
                             <DollarSign size={20} /> Criar Vaga
                         </button>
@@ -160,7 +160,7 @@ export default function CompanyWallet() {
                         <Lock size={20} /> Valores em Escrow
                     </h3>
                     <div className="space-y-3">
-                        {escrows.filter(e => e.status === 'reserved').map((escrow: any) => (
+                        {escrows.filter(e => e.status === 'reserved').map((escrow) => (
                             <div key={escrow.id} className="flex justify-between items-center bg-white p-4 rounded-xl border border-orange-200">
                                 <div>
                                     <h4 className="font-bold text-sm">{escrow.job?.title || 'Vaga'}</h4>

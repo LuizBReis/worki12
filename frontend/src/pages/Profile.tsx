@@ -3,14 +3,39 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
+
+interface WorkerProfile {
+    id: string;
+    full_name: string;
+    city: string;
+    phone: string;
+    bio: string;
+    pix_key: string;
+    primary_role: string;
+    roles: string[];
+    cover_url: string | null;
+    avatar_url: string | null;
+    verified_identity: boolean;
+    level: number | null;
+    xp: number | null;
+    rating_average: number | null;
+    completed_jobs_count: number | null;
+    earnings_total: number | null;
+    experience_years: string | null;
+    availability: string | string[] | null;
+    updated_at?: Date;
+}
+
 export default function Profile() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<WorkerProfile | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
+    const { addToast } = useToast();
 
     // Editing State
     const [formData, setFormData] = useState({
@@ -66,6 +91,7 @@ export default function Profile() {
     }, [navigate]);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
+        if (!profile) return;
         try {
             setUploading(true);
             if (!event.target.files || event.target.files.length === 0) {
@@ -73,6 +99,15 @@ export default function Profile() {
             }
 
             const file = event.target.files[0];
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                addToast('Formato não suportado. Use JPG, PNG, WebP ou GIF.', 'error');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                addToast('Arquivo muito grande. Máximo 5MB.', 'error');
+                return;
+            }
             const fileExt = file.name.split('.').pop();
             const fileName = `${profile.id}/${type}_${Date.now()}.${fileExt}`;
 
@@ -86,9 +121,9 @@ export default function Profile() {
 
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
 
-            const updates: any = {};
+            const updates: Partial<Pick<WorkerProfile, 'avatar_url' | 'cover_url'>> = {};
             if (type === 'avatar') updates.avatar_url = publicUrl;
-            else updates.cover_url = publicUrl; // Ensure this column exists or add it to workers table
+            else updates.cover_url = publicUrl;
 
             const { error: updateError } = await supabase
                 .from('workers')
@@ -97,10 +132,10 @@ export default function Profile() {
 
             if (updateError) throw updateError;
 
-            setProfile({ ...profile, ...updates });
-            alert(`${type === 'avatar' ? 'Foto de perfil' : 'Capa'} atualizada!`);
+            setProfile({ ...profile, ...updates } as WorkerProfile);
+            addToast(`${type === 'avatar' ? 'Foto de perfil' : 'Capa'} atualizada!`, 'success');
         } catch (error) {
-            alert('Erro ao fazer upload!');
+            addToast('Erro ao fazer upload!', 'error');
             console.error(error);
         } finally {
             setUploading(false);
@@ -108,6 +143,7 @@ export default function Profile() {
     };
 
     const handleSave = async () => {
+        if (!profile) return;
         try {
             setLoading(true);
             const rolesArray = formData.roles.split(',').map(r => r.trim()).filter(r => r.length > 0);
@@ -132,9 +168,9 @@ export default function Profile() {
 
             setProfile({ ...profile, ...updates });
             setIsEditing(false);
-            alert('Perfil atualizado com sucesso!');
+            addToast('Perfil atualizado com sucesso!', 'success');
         } catch (error) {
-            alert('Erro ao atualizar perfil!');
+            addToast('Erro ao atualizar perfil!', 'error');
             console.error(error);
         } finally {
             setLoading(false);
@@ -299,20 +335,20 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    {/* Payments / Stripe */}
+                    {/* Payments */}
                     <div className="bg-white p-6 rounded-2xl border-2 border-black shadow-sm">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-black uppercase flex items-center gap-2">
                                 <CreditCard size={20} /> Recebimento
                             </h3>
                         </div>
-                        <p className="text-sm text-gray-500 mb-4">Gerencie sua conta de pagamento e receba pelos seus jobs.</p>
+                        <p className="text-sm text-gray-500 mb-4">Gerencie seus ganhos e saques na sua carteira.</p>
 
                         <button
-                            onClick={() => navigate('/asaas-status')}
+                            onClick={() => navigate('/wallet')}
                             className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-all flex justify-center items-center gap-2"
                         >
-                            Ver Status da Conta de Recebimento
+                            Ir para Carteira
                         </button>
                     </div>
 
@@ -403,7 +439,7 @@ export default function Profile() {
                             </div>
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                                 <span className="block text-xs font-bold uppercase text-gray-400 mb-1">Disponibilidade</span>
-                                <span className="block text-lg font-black truncate" title={Array.isArray(profile.availability) ? profile.availability.join(', ') : profile.availability}>
+                                <span className="block text-lg font-black truncate" title={Array.isArray(profile.availability) ? profile.availability.join(', ') : profile.availability || undefined}>
                                     {Array.isArray(profile.availability) && profile.availability.length > 0 ? profile.availability[0] + (profile.availability.length > 1 ? ` +${profile.availability.length - 1}` : '') : (profile.availability || "N/A")}
                                 </span>
                             </div>

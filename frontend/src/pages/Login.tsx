@@ -57,12 +57,12 @@ export default function Login() {
                     if (userType === 'hire') {
                         navigate('/company/dashboard');
                     } else {
-                        navigate('/worker/onboarding'); // Redirect to onboarding first
+                        navigate('/dashboard');
                     }
                 }
             }
-        } catch (err: any) {
-            setError(err.message || 'Ocorreu um erro. Tente novamente.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.');
         } finally {
             setLoading(false);
         }

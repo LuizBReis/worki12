@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -22,13 +23,11 @@ const WorkerOnboarding = lazy(() => import('./pages/worker/WorkerOnboarding'));
 const WorkerDashboard = lazy(() => import('./pages/worker/WorkerDashboard'));
 const CompanyDashboard = lazy(() => import('./pages/company/CompanyDashboard'));
 const Jobs = lazy(() => import('./pages/Jobs'));
-const CreateJob = lazy(() => import('./pages/CreateJob'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const MyJobs = lazy(() => import('./pages/MyJobs'));
 const Wallet = lazy(() => import('./pages/Wallet'));
-const AsaasStatus = lazy(() => import('./pages/AsaasStatus'));
 
 // Company Pages
 const CompanyCreateJob = lazy(() => import('./pages/company/CompanyCreateJob'));
@@ -40,6 +39,7 @@ const CompanyJobCandidates = lazy(() => import('./pages/company/CompanyJobCandid
 const CompanyMessages = lazy(() => import('./pages/company/CompanyMessages'));
 const CompanyWallet = lazy(() => import('./pages/company/CompanyWallet'));
 const WorkerPublicProfile = lazy(() => import('./pages/company/WorkerPublicProfile'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading Component
 const PageLoader = () => (
@@ -56,9 +56,12 @@ function HomeRedirect() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        // Simple check: if metadata says company, go company, else worker dashboard
-        // For robustness we could check table specific data, but auth metadata or just default to dashboard is safer
-        navigate('/dashboard');
+        const userType = user.user_metadata?.user_type;
+        if (userType === 'hire') {
+          navigate('/company/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       }
       setChecking(false);
     });
@@ -84,6 +87,7 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <NotificationProvider>
@@ -111,8 +115,6 @@ function App() {
                       <Route path="wallet" element={<Wallet />} />
                       <Route path="profile" element={<Profile />} />
                       <Route path="messages" element={<Messages />} />
-                      <Route path="create" element={<CreateJob />} />
-                      <Route path="asaas-status" element={<AsaasStatus />} />
                       <Route path="worker/dashboard" element={<WorkerDashboard />} />
                     </Route>
 
@@ -129,10 +131,10 @@ function App() {
                       <Route path="messages" element={<CompanyMessages />} />
                       <Route path="wallet" element={<CompanyWallet />} />
                       <Route path="analytics" element={<CompanyAnalytics />} />
-                      <Route path="asaas-status" element={<AsaasStatus />} />
                     </Route>
 
                   </Route>
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </BrowserRouter>
@@ -140,6 +142,7 @@ function App() {
         </NotificationProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

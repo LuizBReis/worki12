@@ -3,9 +3,17 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { TrendingUp, Award, Clock, Star, Activity, BarChart2, Loader2, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
+
+interface CategoryDistItem {
+    label: string;
+    val: number;
+    color: string;
+}
 
 export default function Analytics() {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         rating: null as number | null,
@@ -13,8 +21,8 @@ export default function Analytics() {
         totalJobs: 0,
         totalEarnings: 0,
         hoursWorked: 0,
-        categoryDistribution: [] as any[],
-        marketValueHistory: [] as any[]
+        categoryDistribution: [] as CategoryDistItem[],
+        marketValueHistory: [] as number[]
     });
 
     useEffect(() => {
@@ -51,7 +59,18 @@ export default function Analytics() {
                         reliability = Math.round(((totalApps - failedApps) / totalApps) * 100);
                     }
 
-                    apps.forEach((app: any) => {
+                    interface AnalyticsApp {
+                        status: string;
+                        job: {
+                            title: string;
+                            budget: number;
+                            work_start_time: string | null;
+                            work_end_time: string | null;
+                            start_date: string | null;
+                        } | null;
+                    }
+
+                    (apps as unknown as AnalyticsApp[]).forEach((app) => {
                         if (app.status === 'completed') {
                             // Hours Estimate (Default 6h if null)
                             let duration = 6;
@@ -231,7 +250,7 @@ export default function Analytics() {
                         <h3 className="text-2xl font-black uppercase text-primary mb-2">Dica do Worki</h3>
                         <p className="font-medium max-w-xl">Trabalhadores com cursos de <span className="text-primary underline">Mixologia</span> ganham em média 30% a mais por hora. Que tal se especializar?</p>
                     </div>
-                    <button className="bg-white text-black px-6 py-3 rounded-xl font-black uppercase hover:scale-105 transition-transform" onClick={() => alert('Feature em breve!')}>
+                    <button className="bg-white text-black px-6 py-3 rounded-xl font-black uppercase hover:scale-105 transition-transform" onClick={() => addToast('Feature em breve!', 'info')}>
                         Ver Cursos
                     </button>
                 </div>

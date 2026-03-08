@@ -48,7 +48,7 @@ export default function CompanyProfile() {
                 if (data) {
                     setCompany(data);
                 }
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error('Error loading profile:', error);
                 addToast('Erro ao carregar perfil.', 'error');
             } finally {
@@ -78,7 +78,7 @@ export default function CompanyProfile() {
             if (error) throw error;
             addToast('Perfil atualizado com sucesso!', 'success');
             setIsEditing(false);
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error updating profile:', error);
             addToast('Erro ao atualizar perfil.', 'error');
         } finally {
@@ -94,6 +94,17 @@ export default function CompanyProfile() {
         if (!e.target.files || !e.target.files[0] || !userId) return;
 
         const file = e.target.files[0];
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            addToast('Formato não suportado. Use JPG, PNG, WebP ou GIF.', 'error');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            addToast('Arquivo muito grande. Máximo 5MB.', 'error');
+            return;
+        }
+
         setUploading(type);
 
         try {
@@ -127,7 +138,7 @@ export default function CompanyProfile() {
 
             addToast(`${type === 'logo' ? 'Logo' : 'Capa'} atualizada com sucesso!`, 'success');
 
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error uploading image:', error);
             addToast('Erro ao fazer upload da imagem.', 'error');
         } finally {

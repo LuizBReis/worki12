@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders, ASAAS_API_URL, getAsaasHeaders } from '../_shared/asaas.ts';
+import { corsHeaders } from '../_shared/asaas.ts';
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -24,84 +24,58 @@ serve(async (req) => {
             throw new Error('jobId and workerId are required');
         }
 
-        // 1. Get escrow transaction
-        const { data: escrow } = await supabaseAdmin
-            .from('escrow_transactions')
-            .select('*')
+        // 1. Verify caller is the job owner
+        const { data: job, error: jobError } = await supabaseAdmin
+            .from('jobs')
+            .select('company_id')
+            .eq('id', jobId)
+            .single();
+
+        if (jobError || !job) throw new Error('Job not found');
+        if (job.company_id !== user.id) throw new Error('Not authorized');
+
+        // 2. Verify workerId has a hired/completed application for this job
+        const { data: app, error: appError } = await supabaseAdmin
+            .from('applications')
+            .select('worker_id')
             .eq('job_id', jobId)
-            .eq('status', 'reserved')
+            .eq('worker_id', workerId)
+            .in('status', ['hired', 'in_progress', 'completed'])
             .single();
 
-        if (!escrow) throw new Error('No reserved escrow found for this job');
+        if (appError || !app) throw new Error('No valid application found');
 
-        const amount = Number(escrow.amount);
-        const companyWalletId = escrow.company_wallet_id;
-
-        // 2. Get the actual wallets: Company to get API key, Worker to get wallet_id
-        const { data: companyWallet } = await supabaseAdmin
+        // Get or create worker wallet
+        let { data: workerWallet } = await supabaseAdmin
             .from('wallets')
-            .select('asaas_api_key')
-            .eq('id', companyWalletId)
-            .single();
-
-        const { data: workerWallet } = await supabaseAdmin
-            .from('wallets')
-            .select('id, asaas_wallet_id, balance')
+            .select('id')
             .eq('user_id', workerId)
             .single();
 
-        if (!companyWallet?.asaas_api_key) throw new Error('Company wallet has no Asaas API key');
-        if (!workerWallet?.asaas_wallet_id) throw new Error('Worker wallet has no Asaas wallet ID');
+        if (!workerWallet) {
+            // Auto-create wallet for worker if missing (legacy users)
+            const { data: newWallet, error: createError } = await supabaseAdmin
+                .from('wallets')
+                .insert({ user_id: workerId, balance: 0, user_type: 'worker' })
+                .select('id')
+                .single();
 
-        // 3. Initiate Transfer in Asaas from Company -> Worker
-        const transferPayload = {
-            value: amount,
-            walletId: workerWallet.asaas_wallet_id,
-            description: `Pagamento pela Vaga ${jobId}`
-        };
-
-        const asaasRes = await fetch(`${ASAAS_API_URL}/transfers`, {
-            method: 'POST',
-            headers: getAsaasHeaders(companyWallet.asaas_api_key),
-            body: JSON.stringify(transferPayload)
-        });
-
-        const asaasData = await asaasRes.json();
-        if (!asaasRes.ok) {
-            console.error('Transfer Error:', asaasData);
-            throw new Error(asaasData.errors?.[0]?.description || 'Failed to transfer funds in Asaas');
+            if (createError || !newWallet) throw new Error('Failed to create worker wallet');
+            workerWallet = newWallet;
         }
 
-        // 4. Update Database
-        // Release escrow
-        await supabaseAdmin
-            .from('escrow_transactions')
-            .update({
-                status: 'released',
-                released_at: new Date().toISOString(),
-                worker_wallet_id: workerWallet.id
-            })
-            .eq('id', escrow.id);
+        // Use atomic RPC - prevents double-release via UPDATE ... WHERE status='reserved'
+        const { data, error: rpcError } = await supabaseAdmin.rpc('release_escrow', {
+            p_job_id: jobId,
+            p_worker_wallet_id: workerWallet.id
+        });
 
-        // Credit Worker Wallet
-        const newBalance = Number(workerWallet.balance) + amount;
-        await supabaseAdmin
-            .from('wallets')
-            .update({ balance: newBalance })
-            .eq('id', workerWallet.id);
+        if (rpcError) {
+            console.error('release_escrow RPC error:', rpcError);
+            throw new Error(rpcError.message || 'Failed to release escrow');
+        }
 
-        // Log Wallet Transaction
-        await supabaseAdmin
-            .from('wallet_transactions')
-            .insert({
-                wallet_id: workerWallet.id,
-                amount: amount,
-                type: 'escrow_release',
-                description: `Pagamento recebido pela vaga`,
-                reference_id: jobId
-            });
-
-        return new Response(JSON.stringify({ success: true, transferId: asaasData.id }), {
+        return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200
         });

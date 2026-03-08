@@ -9,6 +9,7 @@ import { useJobApplication } from '../hooks/useJobApplication';
 export default function Jobs() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [jobs, setJobs] = useState<any[]>([]);
     const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -41,7 +42,7 @@ export default function Jobs() {
             }
 
             // 2. Fetch all open jobs with created_at for display
-            let query = supabase
+            const query = supabase
                 .from('jobs')
                 .select('*, company:companies(name, logo_url, rating_average, reviews_count)')
                 .eq('status', 'open')

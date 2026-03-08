@@ -5,19 +5,47 @@ import { WalletService } from '../../services/walletService';
 import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, MessageSquare, Play, Square, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function CompanyJobCandidates() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [candidates, setCandidates] = useState<any[]>([]);
+    interface WorkerProfile {
+        id: string;
+        full_name: string;
+        avatar_url?: string;
+        city?: string;
+        level?: number;
+        rating_average?: number;
+        reviews_count?: number;
+        tags?: string[];
+    }
+
+    interface Application {
+        id: string;
+        job_id: string;
+        worker_id: string;
+        status: string;
+        cover_letter?: string;
+        created_at: string;
+        worker?: WorkerProfile;
+        job?: { title: string };
+        worker_checkin_at?: string;
+        worker_checkout_at?: string;
+        company_checkin_confirmed_at?: string;
+        company_checkout_confirmed_at?: string;
+    }
+
+    const [candidates, setCandidates] = useState<Application[]>([]);
     const [jobTitle, setJobTitle] = useState('');
     const [loading, setLoading] = useState(true);
     const [ratingModalOpen, setRatingModalOpen] = useState(false);
-    const [selectedApp, setSelectedApp] = useState<any>(null);
+    const [selectedApp, setSelectedApp] = useState<Application | null>(null);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
     const [confirmingCheckin, setConfirmingCheckin] = useState<string | null>(null);
+    const { addToast } = useToast();
 
     useEffect(() => {
         if (id) fetchCandidates();
@@ -25,9 +53,13 @@ export default function CompanyJobCandidates() {
 
     const fetchCandidates = async () => {
         try {
-            // Fetch Job Title
-            const { data: job } = await supabase.from('jobs').select('title').eq('id', id).single();
-            if (job) setJobTitle(job.title);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { navigate('/login'); return; }
+
+            // Fetch Job Title (only if owned by this company)
+            const { data: job, error: jobError } = await supabase.from('jobs').select('title').eq('id', id).eq('company_id', user.id).single();
+            if (jobError || !job) { navigate('/company/jobs'); return; }
+            setJobTitle(job.title);
 
             // Fetch Applications with Worker Profile (using 'workers' table now)
             const { data, error } = await supabase
@@ -66,7 +98,7 @@ export default function CompanyJobCandidates() {
 
         if (!error) {
             if (newStatus === 'hired') {
-                alert('Candidato contratado! O job agora está em andamento.');
+                addToast('Candidato contratado! O job agora está em andamento.', 'success');
             }
             fetchCandidates();
         }
@@ -80,7 +112,28 @@ export default function CompanyJobCandidates() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // 1. Create Review
+            // 1. Release Escrow Payment FIRST (most critical operation)
+            const escrowResult = await WalletService.releaseEscrow(
+                selectedApp.job_id,
+                selectedApp.id,
+                selectedApp.worker_id
+            );
+
+            if (!escrowResult.success) {
+                throw new Error(escrowResult.error || 'Falha ao liberar pagamento. Tente novamente.');
+            }
+
+            // 2. Update Application Status (escrow already released, safe to mark completed)
+            const { error: appError } = await supabase
+                .from('applications')
+                .update({ status: 'completed' })
+                .eq('id', selectedApp.id);
+
+            if (appError) {
+                console.error('App status update failed after escrow release:', appError);
+            }
+
+            // 3. Create Review (non-critical, best-effort)
             const { error: reviewError } = await supabase.from('reviews').insert({
                 job_id: selectedApp.job_id,
                 reviewer_id: user.id,
@@ -90,29 +143,11 @@ export default function CompanyJobCandidates() {
                 created_at: new Date().toISOString()
             });
 
-            if (reviewError) throw reviewError;
-
-            // 2. Update Application Status
-            const { error: appError } = await supabase
-                .from('applications')
-                .update({ status: 'completed' })
-                .eq('id', selectedApp.id);
-
-            if (appError) throw appError;
-
-            // 3. Release Escrow Payment to Freelancer
-            const escrowResult = await WalletService.releaseEscrow(
-                selectedApp.job_id,
-                selectedApp.id,
-                selectedApp.worker_id
-            );
-
-            if (escrowResult.success) {
-                alert('Avaliação enviada, job finalizado e pagamento liberado!');
-            } else {
-                console.warn('Escrow release warning:', escrowResult.error);
-                alert('Avaliação enviada e job finalizado! (Pagamento será processado em breve)');
+            if (reviewError) {
+                console.error('Review insert failed:', reviewError);
             }
+
+            addToast('Job finalizado e pagamento liberado!', 'success');
 
             setRatingModalOpen(false);
             setRating(5);
@@ -121,13 +156,13 @@ export default function CompanyJobCandidates() {
 
         } catch (error) {
             console.error('Error submitting review:', error);
-            alert('Erro ao enviar avaliação.');
+            addToast('Erro ao enviar avaliação.', 'error');
         } finally {
             setSubmittingReview(false);
         }
     };
 
-    const handleChat = async (app: any) => {
+    const handleChat = async (app: Application) => {
         try {
             // Check if conversation exists
             const { data: existingConvs } = await supabase
@@ -154,7 +189,7 @@ export default function CompanyJobCandidates() {
             }
         } catch (error) {
             console.error('Error starting chat:', error);
-            alert('Erro ao iniciar conversa.');
+            addToast('Erro ao iniciar conversa.', 'error');
         }
     };
 
@@ -170,7 +205,7 @@ export default function CompanyJobCandidates() {
             fetchCandidates();
         } catch (error) {
             console.error('Error confirming check-in:', error);
-            alert('Erro ao confirmar check-in.');
+            addToast('Erro ao confirmar check-in.', 'error');
         } finally {
             setConfirmingCheckin(null);
         }
@@ -188,7 +223,7 @@ export default function CompanyJobCandidates() {
             fetchCandidates();
         } catch (error) {
             console.error('Error confirming check-out:', error);
-            alert('Erro ao confirmar check-out.');
+            addToast('Erro ao confirmar check-out.', 'error');
         } finally {
             setConfirmingCheckin(null);
         }
@@ -241,7 +276,7 @@ export default function CompanyJobCandidates() {
                                                 <span className="bg-black text-white text-[10px] px-2 py-0.5 rounded-full uppercase">Lvl {app.worker?.level || 1}</span>
                                             </h3>
                                             <div className="flex items-center gap-4 text-xs font-bold text-gray-500 mt-1">
-                                                <span className="flex items-center gap-1"><MapPin size={12} /> {app.worker?.location || 'Não informado'}</span>
+                                                <span className="flex items-center gap-1"><MapPin size={12} /> {app.worker?.city || 'Não informado'}</span>
                                                 <span className="flex items-center gap-1">
                                                     <Star size={12} className="text-yellow-500 fill-yellow-500" />
                                                     {app.worker?.rating_average ? Number(app.worker.rating_average).toFixed(1) : '5.0'}
@@ -277,11 +312,12 @@ export default function CompanyJobCandidates() {
                                             {app.status !== 'pending' && (
                                                 <div className="flex items-center gap-2">
                                                     <span className={`text-xs font-black uppercase px-3 py-1 rounded-lg border-2 ${app.status === 'hired' ? 'bg-green-100 border-green-200 text-green-700' :
+                                                        app.status === 'in_progress' ? 'bg-orange-100 border-orange-200 text-orange-700' :
                                                         app.status === 'completed' ? 'bg-blue-100 border-blue-200 text-blue-700' :
                                                             app.status === 'rejected' ? 'bg-red-50 border-red-100 text-red-500' :
                                                                 'bg-blue-50 border-blue-100 text-blue-600'
                                                         }`}>
-                                                        {app.status === 'interview' ? 'Em Entrevista' : app.status === 'hired' ? 'Contratado' : app.status === 'completed' ? 'Finalizado' : 'Descartado'}
+                                                        {app.status === 'interview' ? 'Em Entrevista' : app.status === 'hired' ? 'Contratado' : app.status === 'in_progress' ? 'Em Andamento' : app.status === 'completed' ? 'Finalizado' : 'Descartado'}
                                                     </span>
 
                                                     {app.status === 'interview' && (
@@ -301,7 +337,7 @@ export default function CompanyJobCandidates() {
                                                         </>
                                                     )}
 
-                                                    {app.status === 'hired' && (
+                                                    {(app.status === 'hired' || app.status === 'in_progress') && (
                                                         <>
                                                             {/* Show check-in status */}
                                                             {app.worker_checkin_at && !app.company_checkin_confirmed_at && (

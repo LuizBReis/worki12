@@ -5,13 +5,36 @@ import { ArrowLeft, MapPin, Clock, Users, Briefcase, Eye, MoreHorizontal, Edit2,
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WalletService } from '../../services/walletService';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function CompanyJobDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [job, setJob] = useState<any>(null);
+    interface JobDetails {
+        id: string;
+        title: string;
+        description: string;
+        requirements: string;
+        category: string;
+        type: string;
+        location?: string;
+        budget: number;
+        budget_type: string;
+        scope: string;
+        status: string;
+        created_at: string;
+        views?: number;
+        work_start_time?: string;
+        work_end_time?: string;
+        has_lunch?: boolean;
+        candidates_count?: number;
+    }
+
+    const [job, setJob] = useState<JobDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [openMenu, setOpenMenu] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const { addToast } = useToast();
 
     useEffect(() => {
         if (id) fetchJobDetails();
@@ -19,10 +42,14 @@ export default function CompanyJobDetails() {
 
     const fetchJobDetails = async () => {
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { navigate('/login'); return; }
+
             const { data, error } = await supabase
                 .from('jobs')
                 .select('*')
                 .eq('id', id)
+                .eq('company_id', user.id)
                 .single();
 
             if (error) throw error;
@@ -51,18 +78,40 @@ export default function CompanyJobDetails() {
     const handleDelete = async () => {
         if (!id) return;
 
-        // 1. First refund any pending escrow back to the company wallet
+        // 1. Cancel hired workers' applications
+        await supabase.from('applications').update({ status: 'cancelled' }).eq('job_id', id).in('status', ['hired', 'in_progress']);
+
+        // 2. First refund any pending escrow back to the company wallet
         await WalletService.refundEscrow(id, 'Dinheiro retornado do escrow - vaga deletada');
 
-        // 2. Then mark the job as deleted
+        // 3. Then mark the job as deleted
         const { error } = await supabase.from('jobs').update({ status: 'deleted' }).eq('id', id);
-        if (!error) navigate('/company/jobs');
+        if (!error) {
+            addToast('Vaga excluída com sucesso.', 'success');
+            navigate('/company/jobs');
+        } else {
+            addToast('Erro ao excluir vaga.', 'error');
+        }
+        setShowDeleteConfirm(false);
     };
 
     if (loading) return <div className="p-8 text-center"><div className="animate-spin inline-block w-6 h-6 border-2 border-black border-t-transparent rounded-full"></div></div>;
     if (!job) return null;
 
     return (
+        <>
+        {showDeleteConfirm && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-sm p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                    <h3 className="text-xl font-black uppercase mb-2">Excluir Vaga</h3>
+                    <p className="text-sm text-gray-600 mb-6">Tem certeza? O escrow será reembolsado e workers contratados serão notificados.</p>
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-3 rounded-xl border-2 border-black font-bold uppercase text-sm hover:bg-gray-50">Cancelar</button>
+                        <button onClick={handleDelete} className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-bold uppercase text-sm hover:bg-red-700">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        )}
         <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
@@ -93,7 +142,7 @@ export default function CompanyJobDetails() {
                                 {job.status === 'open' ? 'Pausar' : 'Reativar'}
                             </button>
                             <button
-                                onClick={() => { if (confirm('Excluir vaga?')) handleDelete(); }}
+                                onClick={() => { setOpenMenu(false); setShowDeleteConfirm(true); }}
                                 className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 font-bold text-sm flex items-center gap-2 border-t border-gray-100"
                             >
                                 <Trash2 size={16} /> Excluir
@@ -175,5 +224,6 @@ export default function CompanyJobDetails() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

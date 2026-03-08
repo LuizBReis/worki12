@@ -5,7 +5,9 @@ const MOBILE_BREAKPOINT = 768;
 const TABLET_BREAKPOINT = 1024;
 
 export function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT) {
-    const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined);
+    const [isMobile, setIsMobile] = useState<boolean>(
+        () => window.innerWidth < breakpoint
+    );
 
     useEffect(() => {
         const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
@@ -15,16 +17,17 @@ export function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT) {
         };
 
         mql.addEventListener("change", onChange);
-        setIsMobile(window.innerWidth < breakpoint);
 
         return () => mql.removeEventListener("change", onChange);
     }, [breakpoint]);
 
-    return !!isMobile;
+    return isMobile;
 }
 
 export function useIsTablet() {
-    const [isTablet, setIsTablet] = useState<boolean | undefined>(undefined);
+    const [isTablet, setIsTablet] = useState<boolean>(
+        () => window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT
+    );
 
     useEffect(() => {
         const mqlMobile = window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT}px)`);
@@ -37,19 +40,19 @@ export function useIsTablet() {
         mqlMobile.addEventListener("change", onChange);
         mqlDesktop.addEventListener("change", onChange);
 
-        setIsTablet(window.innerWidth >= MOBILE_BREAKPOINT && window.innerWidth < TABLET_BREAKPOINT);
-
         return () => {
             mqlMobile.removeEventListener("change", onChange);
             mqlDesktop.removeEventListener("change", onChange);
         };
     }, []);
 
-    return !!isTablet;
+    return isTablet;
 }
 
 export function useIsDesktop() {
-    const [isDesktop, setIsDesktop] = useState<boolean | undefined>(undefined);
+    const [isDesktop, setIsDesktop] = useState<boolean>(
+        () => window.innerWidth >= TABLET_BREAKPOINT
+    );
 
     useEffect(() => {
         const mql = window.matchMedia(`(min-width: ${TABLET_BREAKPOINT}px)`);
@@ -59,12 +62,11 @@ export function useIsDesktop() {
         };
 
         mql.addEventListener("change", onChange);
-        setIsDesktop(window.innerWidth >= TABLET_BREAKPOINT);
 
         return () => mql.removeEventListener("change", onChange);
     }, []);
 
-    return !!isDesktop;
+    return isDesktop;
 }
 
 export function useDevice() {

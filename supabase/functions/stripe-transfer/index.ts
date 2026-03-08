@@ -10,22 +10,33 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing Authorization header')
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+    if (userError || !user) throw new Error('Unauthorized')
 
     const { jobId, applicationId, workerId } = await req.json()
 
+    if (!jobId || !workerId) throw new Error('jobId and workerId are required')
+
+    // 0. Verify caller is the job owner (authorization check)
+    const { data: job } = await supabaseAdmin
+      .from('jobs')
+      .select('company_id')
+      .eq('id', jobId)
+      .single()
+
+    if (!job) throw new Error('Job not found')
+    if (job.company_id !== user.id) throw new Error('Not authorized to release payment for this job')
+
     // 1. Validate Escrow
-    const { data: escrow } = await supabase
+    const { data: escrow } = await supabaseAdmin
       .from('escrow_transactions')
       .select('*')
       .eq('job_id', jobId)
@@ -37,7 +48,7 @@ serve(async (req) => {
     }
 
     // 2. Get Worker Stripe Account
-    const { data: worker } = await supabase
+    const { data: worker } = await supabaseAdmin
       .from('workers')
       .select('stripe_account_id, id')
       .eq('id', workerId)
@@ -66,9 +77,9 @@ serve(async (req) => {
 
     // 5. Update Database
     // 5.1. Update Escrow
-    const workerWalletId = (await supabase.from('wallets').select('id').eq('user_id', workerId).single()).data?.id
+    const workerWalletId = (await supabaseAdmin.from('wallets').select('id').eq('user_id', workerId).single()).data?.id
 
-    await supabase
+    await supabaseAdmin
       .from('escrow_transactions')
       .update({
         status: 'released',
@@ -80,7 +91,7 @@ serve(async (req) => {
 
     // 5.2. Log Transaction for Worker (Virtual Record)
     if (workerWalletId) {
-        await supabase.from('wallet_transactions').insert({
+        await supabaseAdmin.from('wallet_transactions').insert({
             wallet_id: workerWalletId,
             amount: amount - fee, // Record net amount
             type: 'escrow_release',
@@ -88,20 +99,19 @@ serve(async (req) => {
             reference_id: transfer.id
         })
         
-        // Optionally update balance if you want to show "Lifetime Earnings" or similar
-        // But since money is in Stripe, maybe just tracking earnings_total in 'workers' table is enough
-        const { data: currentWorker } = await supabase
-            .from('workers')
-            .select('earnings_total')
-            .eq('id', workerId)
-            .single()
-
-        await supabase
-            .from('workers')
-            .update({
-                earnings_total: (currentWorker?.earnings_total || 0) + (amount - fee)
-            })
-            .eq('id', workerId)
+        // Atomically increment earnings_total using RPC to avoid race conditions
+        await supabaseAdmin.rpc('increment_earnings', {
+            p_worker_id: workerId,
+            p_amount: amount - fee
+        }).then(({ error }) => {
+            // Fallback to direct update if RPC not available
+            if (error) {
+                return supabaseAdmin
+                    .from('workers')
+                    .update({ earnings_total: amount - fee })
+                    .eq('id', workerId)
+            }
+        })
     }
 
     return new Response(

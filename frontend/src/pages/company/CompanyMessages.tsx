@@ -4,6 +4,7 @@ import { MessageSquare, Send, ArrowLeft, User, Loader2, Clock, CheckCheck, Brief
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ConversationItem {
     id: string;
@@ -37,6 +38,7 @@ export default function CompanyMessages() {
     const [selectedConversation, setSelectedConversation] = useState<ConversationItem | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
+    const { addToast } = useToast();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +95,28 @@ export default function CompanyMessages() {
         }
 
         // Filter to only show conversations for jobs belonging to any of the user's companies
-        const myConversations = (convData || []).filter((c: any) => {
+        interface ConversationData {
+            id: string;
+            application_uuid: string;
+            createdat: string;
+            islocked: boolean;
+            application?: {
+                id: string;
+                status: string;
+                worker?: {
+                    id: string;
+                    full_name: string;
+                    avatar_url?: string;
+                };
+                job?: {
+                    id: string;
+                    title: string;
+                    company_id: string;
+                };
+            };
+        }
+
+        const myConversations = ((convData || []) as unknown as ConversationData[]).filter((c) => {
             if (!c.application || !c.application.job) {
                 return false; // Skip malformed data
             }
@@ -103,7 +126,7 @@ export default function CompanyMessages() {
         });
 
         // Fetch all unread messages for these conversations
-        const conversationIds = myConversations.map((c: any) => c.id);
+        const conversationIds = myConversations.map((c) => c.id);
         let unreadCounts: Record<string, number> = {};
 
         if (conversationIds.length > 0) {
@@ -115,14 +138,14 @@ export default function CompanyMessages() {
                 .is('read_at', null);     // That are NOT read
 
             if (unreadData) {
-                unreadCounts = unreadData.reduce((acc: any, curr: any) => {
+                unreadCounts = unreadData.reduce((acc: Record<string, number>, curr) => {
                     acc[curr.conversationid] = (acc[curr.conversationid] || 0) + 1;
                     return acc;
-                }, {});
+                }, {} as Record<string, number>);
             }
         }
 
-        const convList: ConversationItem[] = myConversations.map((c: any) => ({
+        const convList: ConversationItem[] = myConversations.map((c) => ({
             id: c.id,
             application_uuid: c.application_uuid,
             worker_name: c.application?.worker?.full_name || 'Candidato Desconhecido',
@@ -164,6 +187,7 @@ export default function CompanyMessages() {
     // Load data on mount and refresh
     useEffect(() => {
         loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate, selectedConversationId, refreshTrigger]);
 
     // Realtime subscription for list updates
@@ -220,7 +244,7 @@ export default function CompanyMessages() {
                 table: 'Message',
                 filter: `conversationid=eq.${selectedConversation.id}`
             }, (payload) => {
-                const newMsg = payload.new as any;
+                const newMsg = payload.new as { id: string; content: string; senderid: string; createdat: string };
                 const isMine = newMsg.senderid === currentUser;
 
                 setMessages(prev => [...prev, {
@@ -260,7 +284,7 @@ export default function CompanyMessages() {
         if (error) {
             console.error('Error sending message:', error);
             setNewMessage(messageContent);
-            alert('Erro ao enviar mensagem. Tente novamente.');
+            addToast('Erro ao enviar mensagem. Tente novamente.', 'error');
         }
 
         setSending(false);

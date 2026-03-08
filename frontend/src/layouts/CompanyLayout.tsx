@@ -24,6 +24,12 @@ export default function CompanyLayout() {
                 return;
             }
 
+            // Block workers from accessing company routes
+            if (user.user_metadata?.user_type !== 'hire') {
+                navigate('/dashboard');
+                return;
+            }
+
             // Check if user has a company profile
             const { data: company, error } = await supabase
                 .from('companies')
@@ -33,8 +39,6 @@ export default function CompanyLayout() {
 
             // If no company record OR onboarding not completed
             if (error || !company || !company.onboarding_completed) {
-                // If we are NOT already on the onboarding page, redirect.
-                // Note: Onboarding route is distinct in App.tsx, so hitting /company/* should trigger this.
                 navigate('/company/onboarding');
             }
         } catch (err) {

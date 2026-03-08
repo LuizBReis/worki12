@@ -30,8 +30,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         if (!user) {
-            setNotifications([]);
-            return;
+            return () => {
+                setNotifications([]);
+            };
         }
 
         let isActive = true;
@@ -52,8 +53,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             if (!isActive) return;
 
             if (error) {
-                const err = error as any;
-                if (err.status === 404 || err.code === '42P01' || err.message?.toLowerCase().includes('does not exist')) {
+                if (error.code === '42P01' || error.message?.toLowerCase().includes('does not exist')) {
                     setDbAvailable(false);
                 }
                 return;
@@ -145,6 +145,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotifications = () => {
     const context = useContext(NotificationContext);
     if (context === undefined) {

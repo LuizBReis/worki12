@@ -26,19 +26,6 @@ export function useJobApplication() {
             return;
         }
 
-        // Check Asaas approval status
-        const { data: wallet } = await supabase
-            .from('wallets')
-            .select('asaas_account_status')
-            .eq('user_id', user.id)
-            .single();
-
-        const asaasStatus = wallet?.asaas_account_status as any;
-        if (!asaasStatus || asaasStatus.general !== 'APPROVED') {
-            addToast('Sua conta de pagamento precisa estar aprovada para se candidatar. Verifique o status da sua conta.', 'error');
-            return;
-        }
-
         setApplyingId(jobId);
 
         try {
@@ -116,10 +103,10 @@ export function useJobApplication() {
             addToast('Candidatura enviada com sucesso! Boa sorte!', 'success');
             if (onSuccess) onSuccess();
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error applying:', err);
 
-            const message = err.message || 'Ocorreu um erro ao aplicar. Tente novamente.';
+            const message = err instanceof Error ? err.message : 'Ocorreu um erro ao aplicar. Tente novamente.';
 
             // Avoid "Object" or generic messages if possible
             if (message.includes('JSON')) {

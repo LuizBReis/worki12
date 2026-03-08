@@ -8,9 +8,42 @@ import { ptBR } from 'date-fns/locale';
 export default function WorkerPublicProfile() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [profile, setProfile] = useState<any>(null);
-    const [reviews, setReviews] = useState<any[]>([]);
-    const [history, setHistory] = useState<any[]>([]);
+    interface WorkerProfileData {
+        id: string;
+        full_name: string;
+        bio?: string;
+        city?: string;
+        level?: number;
+        xp?: number;
+        completed_jobs_count?: number;
+        recommendation_score?: number;
+        tags?: string[];
+        created_at: string;
+        avatar_url?: string;
+        location?: string;
+        joined_at?: string;
+        photo_url?: string;
+        completed_jobs?: number;
+    }
+
+    interface ReviewData {
+        id: string;
+        rating: number;
+        comment: string;
+        reviewer_id: string;
+        created_at: string;
+        company?: { name: string };
+    }
+
+    interface HistoryItem {
+        id: string;
+        status: string;
+        job?: { title: string; company?: { name: string } };
+    }
+
+    const [profile, setProfile] = useState<WorkerProfileData | null>(null);
+    const [reviews, setReviews] = useState<ReviewData[]>([]);
+    const [history, setHistory] = useState<HistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -130,7 +163,7 @@ export default function WorkerPublicProfile() {
 
                         <div className="flex items-center gap-6 mt-4 text-sm font-bold text-gray-600">
                             <span className="flex items-center gap-2"><MapPin size={18} /> {profile.location || 'Localização não definida'}</span>
-                            <span className="flex items-center gap-2"><Calendar size={18} /> Desde {format(new Date(profile.joined_at), 'MMMM yyyy', { locale: ptBR })}</span>
+                            <span className="flex items-center gap-2"><Calendar size={18} /> Desde {profile.joined_at ? format(new Date(profile.joined_at), 'MMMM yyyy', { locale: ptBR }) : 'N/A'}</span>
                         </div>
                     </div>
 
@@ -146,7 +179,7 @@ export default function WorkerPublicProfile() {
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-100">
                             <div className="flex items-center gap-2 text-gray-400 font-bold mb-1 text-xs uppercase"><Star size={14} /> Avaliação</div>
-                            <div className="text-2xl font-black text-yellow-500">{profile.recommendation_score > 0 ? (profile.recommendation_score / 20).toFixed(1) : 'N/A'}</div>
+                            <div className="text-2xl font-black text-yellow-500">{(profile.recommendation_score ?? 0) > 0 ? ((profile.recommendation_score ?? 0) / 20).toFixed(1) : 'N/A'}</div>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-100">
                             <div className="flex items-center gap-2 text-gray-400 font-bold mb-1 text-xs uppercase"><Award size={14} /> XP Total</div>
@@ -173,7 +206,7 @@ export default function WorkerPublicProfile() {
                 <div>
                     <h3 className="text-xl font-black uppercase mb-4 flex items-center gap-2"><Briefcase size={20} /> Histórico Recente</h3>
                     <div className="space-y-4">
-                        {history.length > 0 ? history.map((h: any) => (
+                        {history.length > 0 ? history.map((h) => (
                             <div key={h.id} className="bg-white p-4 rounded-xl border-2 border-gray-100 flex justify-between items-center bg-gray-50/50">
                                 <div>
                                     <h4 className="font-bold">{h.job?.title}</h4>
@@ -191,7 +224,7 @@ export default function WorkerPublicProfile() {
                 <div>
                     <h3 className="text-xl font-black uppercase mb-4 flex items-center gap-2"><MessageSquare size={20} /> Comentários</h3>
                     <div className="space-y-4">
-                        {reviews.length > 0 ? reviews.map((r: any) => (
+                        {reviews.length > 0 ? reviews.map((r) => (
                             <div key={r.id} className="bg-white p-4 rounded-xl border-2 border-gray-100">
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="font-bold text-sm">{r.company?.name || 'Empresa Confidencial'}</span>

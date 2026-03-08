@@ -5,6 +5,7 @@ import { MessageSquare, Send, ArrowLeft, Briefcase, Loader2, Clock, CheckCheck }
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '../contexts/ToastContext';
 
 interface ConversationItem {
     id: string;
@@ -38,8 +39,22 @@ export default function Messages() {
     const [selectedConversation, setSelectedConversation] = useState<ConversationItem | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
+    const { addToast } = useToast();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const markAsRead = async (conversationId: string, userId: string) => {
+        setConversations(prev => prev.map(c =>
+            c.id === conversationId ? { ...c, unread_count: 0 } : c
+        ));
+
+        await supabase
+            .from('Message')
+            .update({ read_at: new Date().toISOString() })
+            .eq('conversationid', conversationId)
+            .neq('senderid', userId)
+            .is('read_at', null);
+    };
 
     // Scroll to bottom when messages change
     useEffect(() => {
@@ -82,13 +97,33 @@ export default function Messages() {
                 return;
             }
 
+            // Define the shape of conversation data from Supabase query
+            interface ConversationRow {
+                id: string;
+                application_uuid: string;
+                createdat: string;
+                islocked: boolean;
+                application: {
+                    id: string;
+                    status: string;
+                    worker_id: string;
+                    job: {
+                        title: string;
+                        company: {
+                            name: string;
+                            logo_url: string | null;
+                        } | null;
+                    } | null;
+                } | null;
+            }
+
             // Filter to only show conversations for applications by this user
-            const myConversations = (convData || []).filter((c: any) =>
+            const myConversations = ((convData || []) as unknown as ConversationRow[]).filter((c) =>
                 c.application?.worker_id === user.id
             );
 
             // Fetch all unread messages for these conversations
-            const conversationIds = myConversations.map((c: any) => c.id);
+            const conversationIds = myConversations.map((c) => c.id);
             let unreadCounts: Record<string, number> = {};
 
             if (conversationIds.length > 0) {
@@ -100,7 +135,7 @@ export default function Messages() {
                     .is('read_at', null);     // That are NOT read
 
                 if (unreadData) {
-                    unreadCounts = unreadData.reduce((acc: any, curr: any) => {
+                    unreadCounts = unreadData.reduce((acc: Record<string, number>, curr: { conversationid: string }) => {
                         acc[curr.conversationid] = (acc[curr.conversationid] || 0) + 1;
                         return acc;
                     }, {});
@@ -108,12 +143,12 @@ export default function Messages() {
             }
 
             // Transform data
-            const convList: ConversationItem[] = myConversations.map((c: any) => ({
+            const convList: ConversationItem[] = myConversations.map((c) => ({
                 id: c.id,
                 application_uuid: c.application_uuid,
                 job_title: c.application?.job?.title || 'Vaga',
                 company_name: c.application?.job?.company?.name || 'Empresa',
-                company_logo: c.application?.job?.company?.logo_url,
+                company_logo: c.application?.job?.company?.logo_url ?? undefined,
                 status: c.application?.status || 'pending',
                 last_message: undefined,
                 last_message_at: c.createdat,
@@ -136,20 +171,6 @@ export default function Messages() {
 
         loadData();
     }, [navigate, selectedConversationId]);
-
-    const markAsRead = async (conversationId: string, userId: string) => {
-        // Optimistic update
-        setConversations(prev => prev.map(c =>
-            c.id === conversationId ? { ...c, unread_count: 0 } : c
-        ));
-
-        await supabase
-            .from('Message')
-            .update({ read_at: new Date().toISOString() })
-            .eq('conversationid', conversationId)
-            .neq('senderid', userId)
-            .is('read_at', null);
-    };
 
     // Load messages when conversation is selected
     useEffect(() => {
@@ -187,7 +208,7 @@ export default function Messages() {
                 table: 'Message',
                 filter: `conversationid=eq.${selectedConversation.id}`
             }, (payload) => {
-                const newMsg = payload.new as any;
+                const newMsg = payload.new as { id: string; content: string; senderid: string; createdat: string };
                 const isMine = newMsg.senderid === currentUser;
 
                 setMessages(prev => [...prev, {
@@ -227,7 +248,7 @@ export default function Messages() {
         if (error) {
             console.error('Error sending message:', error);
             setNewMessage(messageContent); // Restore message on error
-            alert('Erro ao enviar mensagem. Tente novamente.');
+            addToast('Erro ao enviar mensagem. Tente novamente.', 'error');
         }
 
         setSending(false);

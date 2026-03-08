@@ -1,1 +1,13 @@
 node_modules
+dist
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/dist
+supabase/.env
+
+# Ralph logs (config files ARE committed)
+.ralph/logs/
+.ralph/session_*

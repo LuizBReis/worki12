@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function ProtectedRoute() {
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<{ id: string } | null>(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {

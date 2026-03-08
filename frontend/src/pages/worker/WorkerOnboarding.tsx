@@ -2,16 +2,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Loader2, ArrowRight, ArrowLeft, User, Briefcase, Star, Clock, Target, DollarSign, Home } from 'lucide-react';
+import { Loader2, ArrowRight, ArrowLeft, User, Briefcase, Star, Clock, Target } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import { WalletService } from '../../services/walletService';
 
 export default function WorkerOnboarding() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const { addToast } = useToast();
     const [step, setStep] = useState(1);
     const [userId, setUserId] = useState<string | null>(null);
-    const [cepLoading, setCepLoading] = useState(false);
 
-    const TOTAL_STEPS = 5;
+    const TOTAL_STEPS = 3;
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -23,12 +25,6 @@ export default function WorkerOnboarding() {
         roles: [] as string[],
         experienceYears: '',
         bio: '',
-        postalCode: '',
-        address: '',
-        addressNumber: '',
-        province: '',
-        complement: '',
-        incomeValue: '',
         availability: [] as string[],
         goal: '',
     });
@@ -40,14 +36,6 @@ export default function WorkerOnboarding() {
 
     const availabilityOptions = [
         'Manhã', 'Tarde', 'Noite', 'Madrugada', 'Fim de Semana'
-    ];
-
-    const incomeOptions = [
-        { label: 'Até R$ 1.500', value: '1500' },
-        { label: 'R$ 1.500 - R$ 3.000', value: '3000' },
-        { label: 'R$ 3.000 - R$ 5.000', value: '5000' },
-        { label: 'R$ 5.000 - R$ 10.000', value: '10000' },
-        { label: 'Acima de R$ 10.000', value: '15000' },
     ];
 
     useEffect(() => {
@@ -95,30 +83,6 @@ export default function WorkerOnboarding() {
         });
     };
 
-    // CEP auto-fill via ViaCEP
-    const handleCepBlur = async () => {
-        const cep = formData.postalCode.replace(/\D/g, '');
-        if (cep.length !== 8) return;
-
-        setCepLoading(true);
-        try {
-            const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-            const data = await res.json();
-            if (!data.erro) {
-                setFormData(prev => ({
-                    ...prev,
-                    address: data.logradouro || prev.address,
-                    province: data.bairro || prev.province,
-                    city: data.localidade || prev.city,
-                }));
-            }
-        } catch (e) {
-            console.error('CEP lookup failed:', e);
-        } finally {
-            setCepLoading(false);
-        }
-    };
-
     // CPF mask
     const formatCpf = (value: string) => {
         const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -126,12 +90,6 @@ export default function WorkerOnboarding() {
             .replace(/(\d{3})(\d)/, '$1.$2')
             .replace(/(\d{3})(\d)/, '$1.$2')
             .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    };
-
-    // CEP mask
-    const formatCep = (value: string) => {
-        const digits = value.replace(/\D/g, '').slice(0, 8);
-        return digits.replace(/(\d{5})(\d)/, '$1-$2');
     };
 
     // Phone mask
@@ -145,11 +103,9 @@ export default function WorkerOnboarding() {
 
     const canProceed = () => {
         switch (step) {
-            case 1: return formData.fullName && formData.phone && formData.cpf.replace(/\D/g, '').length === 11 && formData.birthDate;
+            case 1: return formData.fullName && formData.phone && formData.cpf.replace(/\D/g, '').length === 11 && formData.birthDate && formData.city;
             case 2: return formData.roles.length > 0 && formData.experienceYears;
-            case 3: return formData.postalCode.replace(/\D/g, '').length === 8 && formData.address && formData.addressNumber && formData.province;
-            case 4: return !!formData.incomeValue;
-            case 5: return true;
+            case 3: return formData.availability.length > 0;
             default: return true;
         }
     };
@@ -168,7 +124,6 @@ export default function WorkerOnboarding() {
 
         setLoading(true);
         try {
-            // 1. Save worker profile to Supabase
             const { error } = await supabase
                 .from('workers')
                 .upsert({
@@ -178,11 +133,6 @@ export default function WorkerOnboarding() {
                     city: formData.city,
                     cpf: formData.cpf.replace(/\D/g, ''),
                     birth_date: formData.birthDate,
-                    postal_code: formData.postalCode.replace(/\D/g, ''),
-                    address: formData.address,
-                    address_number: formData.addressNumber,
-                    province: formData.province,
-                    income_value: parseFloat(formData.incomeValue),
                     roles: formData.roles,
                     experience_years: formData.experienceYears,
                     bio: formData.bio,
@@ -193,48 +143,19 @@ export default function WorkerOnboarding() {
 
             if (error) throw error;
 
-            // 2. Create Asaas subaccount with REAL data
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                try {
-                    const { data: asaasResult, error: asaasError } = await supabase.functions.invoke('asaas-onboard', {
-                        headers: { Authorization: `Bearer ${session.access_token}` },
-                        body: {
-                            name: formData.fullName,
-                            cpfCnpj: formData.cpf.replace(/\D/g, ''),
-                            phone: formData.phone,
-                            type: 'worker',
-                            birthDate: formData.birthDate,
-                            postalCode: formData.postalCode.replace(/\D/g, ''),
-                            address: formData.address,
-                            addressNumber: formData.addressNumber,
-                            province: formData.province,
-                            incomeValue: parseFloat(formData.incomeValue),
-                        }
-                    });
+            // Create wallet for the worker
+            await WalletService.getOrCreateWallet(userId, 'worker');
 
-                    if (asaasError) {
-                        console.error('Asaas onboard error:', asaasError);
-                    } else {
-                        console.log('Asaas onboard success:', asaasResult);
-                    }
-                } catch (asaasErr) {
-                    console.error('Asaas onboard exception:', asaasErr);
-                    // Don't block onboarding if Asaas fails
-                }
-            }
-
-            // 3. Navigate to Asaas status page to handle documents
-            navigate('/asaas-status');
-        } catch (err) {
+            navigate('/dashboard');
+        } catch (err: unknown) {
             console.error('Error saving worker profile:', err);
-            alert('Erro ao salvar perfil. Tente novamente.');
+            addToast(err instanceof Error ? err.message : 'Erro ao salvar perfil. Tente novamente.', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const stepLabels = ['Dados', 'Profissão', 'Endereço', 'Financeiro', 'Objetivos'];
+    const stepLabels = ['Dados', 'Profissão', 'Objetivos'];
 
     return (
         <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center p-6 font-sans text-accent">
@@ -311,16 +232,29 @@ export default function WorkerOnboarding() {
                                             />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase mb-1">Celular / WhatsApp *</label>
-                                        <input
-                                            type="tel"
-                                            required
-                                            value={formData.phone}
-                                            onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
-                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                            placeholder="(00) 00000-0000"
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase mb-1">Celular / WhatsApp *</label>
+                                            <input
+                                                type="tel"
+                                                required
+                                                value={formData.phone}
+                                                onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                                                className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
+                                                placeholder="(00) 00000-0000"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase mb-1">Cidade *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={formData.city}
+                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                                className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
+                                                placeholder="Ex: São Paulo"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -384,122 +318,8 @@ export default function WorkerOnboarding() {
                             </div>
                         )}
 
-                        {/* Step 3: Address */}
+                        {/* Step 3: Goals & Availability */}
                         {step === 3 && (
-                            <div className="space-y-6 animate-in slide-in-from-right duration-500">
-                                <h2 className="text-2xl font-black uppercase flex items-center gap-2">
-                                    <Home className="text-orange-500" /> Endereço
-                                </h2>
-                                <p className="text-gray-500 font-medium text-sm">Necessário para verificação da sua conta de pagamento.</p>
-
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase mb-1">CEP *</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={formData.postalCode}
-                                                    onChange={e => setFormData({ ...formData, postalCode: formatCep(e.target.value) })}
-                                                    onBlur={handleCepBlur}
-                                                    className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                                    placeholder="00000-000"
-                                                />
-                                                {cepLoading && <Loader2 className="absolute right-3 top-3 animate-spin text-gray-400" size={20} />}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase mb-1">Cidade</label>
-                                            <input
-                                                type="text"
-                                                value={formData.city}
-                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                                className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                                placeholder="Preenchido pelo CEP"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase mb-1">Rua / Logradouro *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.address}
-                                            onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                            placeholder="Ex: Rua das Flores"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase mb-1">Número *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.addressNumber}
-                                                onChange={e => setFormData({ ...formData, addressNumber: e.target.value })}
-                                                className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                                placeholder="123"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase mb-1">Bairro *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.province}
-                                                onChange={e => setFormData({ ...formData, province: e.target.value })}
-                                                className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                                placeholder="Centro"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase mb-1">Complemento (Opcional)</label>
-                                        <input
-                                            type="text"
-                                            value={formData.complement}
-                                            onChange={e => setFormData({ ...formData, complement: e.target.value })}
-                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
-                                            placeholder="Apto, Bloco..."
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Step 4: Financial */}
-                        {step === 4 && (
-                            <div className="space-y-6 animate-in slide-in-from-right duration-500">
-                                <h2 className="text-2xl font-black uppercase flex items-center gap-2">
-                                    <DollarSign className="text-green-600" /> Dados Financeiros
-                                </h2>
-                                <p className="text-gray-500 font-medium text-sm">Necessário para ativar seus pagamentos na plataforma.</p>
-
-                                <div>
-                                    <label className="block text-xs font-bold uppercase mb-3">Renda Mensal Estimada *</label>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        {incomeOptions.map(opt => (
-                                            <label key={opt.value} className={`border-2 rounded-xl p-4 cursor-pointer transition-all flex items-center gap-3 font-bold ${formData.incomeValue === opt.value ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 hover:border-black'}`}>
-                                                <input
-                                                    type="radio"
-                                                    name="income"
-                                                    value={opt.value}
-                                                    checked={formData.incomeValue === opt.value}
-                                                    onChange={e => setFormData({ ...formData, incomeValue: e.target.value })}
-                                                    className="accent-black w-5 h-5"
-                                                />
-                                                {opt.label}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Step 5: Goals */}
-                        {step === 5 && (
                             <div className="space-y-6 animate-in slide-in-from-right duration-500">
                                 <h2 className="text-2xl font-black uppercase flex items-center gap-2">
                                     <Target className="text-red-500" /> Objetivos

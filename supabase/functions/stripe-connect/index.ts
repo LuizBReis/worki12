@@ -10,17 +10,16 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing Authorization header')
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+    if (userError || !user) throw new Error('Unauthorized')
 
     const { 
       firstName, 
@@ -40,7 +39,7 @@ serve(async (req) => {
     } = await req.json()
 
     // 1. Check if user already has a Stripe Account ID
-    const { data: worker } = await supabase
+    const { data: worker } = await supabaseAdmin
       .from('workers')
       .select('stripe_account_id')
       .eq('id', user.id)
@@ -99,7 +98,7 @@ serve(async (req) => {
       accountId = account.id
 
       // Save ID to DB
-      await supabase
+      await supabaseAdmin
         .from('workers')
         .update({ stripe_account_id: accountId })
         .eq('id', user.id)
@@ -181,7 +180,7 @@ serve(async (req) => {
     })
     
     // Mark as completed in DB
-    await supabase
+    await supabaseAdmin
         .from('workers')
         .update({ stripe_onboarding_completed: true })
         .eq('id', user.id)

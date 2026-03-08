@@ -76,7 +76,7 @@ export const AnalyticsService = {
     /**
      * Tracks a generic event.
      */
-    async trackEvent(eventType: string, metadata: any = {}) {
+    async trackEvent(eventType: string, metadata: Record<string, unknown> = {}) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;

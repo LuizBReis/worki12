@@ -11,7 +11,15 @@ interface SidebarProps {
 export default function Sidebar({ type = 'worker' }: SidebarProps) {
     const [name, setName] = useState('');
     const [isVerified, setIsVerified] = useState(false);
-    const [workerData, setWorkerData] = useState<any>(null); // Store full worker data
+    interface WorkerData {
+        full_name: string;
+        level?: number;
+        xp?: number;
+        avatar_url?: string;
+        verified_identity?: boolean;
+    }
+
+    const [workerData, setWorkerData] = useState<WorkerData | null>(null);
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -70,7 +78,7 @@ export default function Sidebar({ type = 'worker' }: SidebarProps) {
     const isCompany = type === 'company';
 
     return (
-        <aside className="hidden md:flex flex-col w-72 h-[calc(100vh-32px)] m-4 sticky top-4 
+        <aside aria-label="Menu lateral" className="hidden md:flex flex-col w-72 h-[calc(100vh-32px)] m-4 sticky top-4 
                       bg-white border-2 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] 
                       overflow-hidden z-50 transition-all hover:translate-y-[-2px] hover:shadow-[10px_10px_0px_0px_rgba(0,166,81,1)]">
 

@@ -11,7 +11,13 @@ export default function CompanyAnalytics() {
         hires: 0,
         conversionRate: 0
     });
-    const [chartData, setChartData] = useState<any[]>([]);
+    interface ChartDataPoint {
+        date: Date;
+        label: string;
+        value: number;
+    }
+
+    const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
     useEffect(() => {
         fetchAnalytics();

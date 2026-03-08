@@ -15,103 +15,42 @@ serve(async (req) => {
 
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) throw new Error('Missing Authorization header');
-        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) throw new Error('Invalid Token');
 
-        const { amount, name, cpfCnpj, email } = await req.json();
+        const { amount, name, cpfCnpj } = await req.json();
 
-        if (!amount || amount < 5) {
+        if (!amount || typeof amount !== 'number' || amount < 5) {
             throw new Error('Minimum deposit amount is R$ 5.00');
         }
+        if (amount > 50000) {
+            throw new Error('Maximum deposit amount is R$ 50,000.00');
+        }
+        // Ensure 2 decimal places precision
+        const sanitizedAmount = Math.round(amount * 100) / 100;
 
-        const generateCpf = () => {
-            const random = (n: number) => Math.floor(Math.random() * n);
-            const mod = (dividendo: number, divisor: number) => Math.round(dividendo - (Math.floor(dividendo / divisor) * divisor));
-            const n = 9;
-            const n1 = random(n), n2 = random(n), n3 = random(n), n4 = random(n), n5 = random(n), n6 = random(n), n7 = random(n), n8 = random(n), n9 = random(n);
-            let d1 = n9 * 2 + n8 * 3 + n7 * 4 + n6 * 5 + n5 * 6 + n4 * 7 + n3 * 8 + n2 * 9 + n1 * 10;
-            d1 = 11 - (mod(d1, 11));
-            if (d1 >= 10) d1 = 0;
-            let d2 = d1 * 2 + n9 * 3 + n8 * 4 + n7 * 5 + n6 * 6 + n5 * 7 + n4 * 8 + n3 * 9 + n2 * 10 + n1 * 11;
-            d2 = 11 - (mod(d2, 11));
-            if (d2 >= 10) d2 = 0;
-            return `${n1}${n2}${n3}${n4}${n5}${n6}${n7}${n8}${n9}${d1}${d2}`;
-        };
-
-        // Get company wallet
+        // Ensure wallet exists
         const { data: wallet } = await supabaseAdmin
             .from('wallets')
-            .select('asaas_wallet_id, asaas_customer_id')
+            .select('id, asaas_customer_id')
             .eq('user_id', user.id)
             .single();
 
-        let asaasWalletId = wallet?.asaas_wallet_id;
-        let customerId = wallet?.asaas_customer_id;
-
-        if (!asaasWalletId) {
-            // Automatic Onboarding
-            // Fetch company details
-            const { data: company } = await supabaseAdmin.from('companies').select('*').eq('id', user.id).single();
-            if (!company) throw new Error('Company profile not found');
-
-            const validCpf = generateCpf();
-            const document = cpfCnpj || company.cnpj;
-            // If length isn't 11 or 14 (CPF/CNPJ), it's likely invalid for Asaas, so fallback to algo
-            const cleanDoc = document ? document.replace(/\D/g, '') : '';
-            const isCpf = cleanDoc.length === 11;
-            const finalDoc = (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : validCpf;
-
-            const uniqueEmail = `wki-${user.id}@worki.com.br`;
-
-            const payload: any = {
-                name: company.name || name || 'Worki Company',
-                email: uniqueEmail,
-                loginEmail: uniqueEmail,
-                cpfCnpj: finalDoc,
-                companyType: isCpf ? undefined : 'LIMITED',
-                mobilePhone: '11987654321',
-                incomeValue: 25000,
-                address: 'Av. Paulista',
-                addressNumber: '100',
-                province: 'Centro',
-                postalCode: '01310-100',
-            };
-
-            if (isCpf || finalDoc.length === 11) {
-                payload.birthDate = '1990-01-01';
-            }
-
-            const asaasRes = await fetch(`${ASAAS_API_URL}/accounts`, {
-                method: 'POST',
-                headers: getAsaasHeaders(),
-                body: JSON.stringify(payload)
-            });
-            const asaasData = await asaasRes.json();
-
-            if (!asaasRes.ok) {
-                console.error('Auto-Onboard Error:', asaasData);
-                throw new Error(asaasData.errors?.[0]?.description || 'Failed to auto-onboard Asaas subaccount');
-            }
-
-            asaasWalletId = asaasData.walletId;
-
-            await supabaseAdmin.from('wallets').upsert({
-                user_id: user.id,
-                user_type: 'company',
-                asaas_wallet_id: asaasWalletId,
-                asaas_api_key: asaasData.apiKey
-            }, { onConflict: 'user_id' }).throwOnError();
+        if (!wallet) {
+            throw new Error('Wallet not found. Please complete onboarding first.');
         }
 
-        // Create a customer if it doesn't exist yet on the Master account
+        let customerId = wallet.asaas_customer_id;
+
+        // Create a customer on the master account if not exists
         if (!customerId) {
-            const document = cpfCnpj;
-            const cleanDoc = document ? document.replace(/\D/g, '') : '';
-            const finalDoc = (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : generateCpf();
+            const cleanDoc = cpfCnpj ? cpfCnpj.replace(/\D/g, '') : '';
+            const finalDoc = (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : '00000000000';
 
             const customerPayload = {
                 name: name || 'Worki User',
-                cpfCnpj: finalDoc // Algorithmic fallback
+                cpfCnpj: finalDoc
             };
 
             const customerRes = await fetch(`${ASAAS_API_URL}/customers`, {
@@ -131,27 +70,17 @@ serve(async (req) => {
             await supabaseAdmin.from('wallets').update({ asaas_customer_id: customerId }).eq('user_id', user.id).throwOnError();
         }
 
-        // Settings for the platform
-        // Let's say we charge 5% of the split on deposit inside the platform
-        const PLATFORM_FEE_PERCENTAGE = 0; // Keeping at 0 initially as per standard Escrow? Actually user said "cobramos na hora nossa taxa", let's use 5% as example value, or just fixed if they have config. I'll put a default of 5%.
-        const splitFee = 5;
-
+        // Create PIX charge on master account - NO split, all money stays in master wallet
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 1); // due tomorrow
+        dueDate.setDate(dueDate.getDate() + 1);
 
         const paymentPayload = {
             customer: customerId,
             billingType: "PIX",
-            value: amount,
+            value: sanitizedAmount,
             dueDate: dueDate.toISOString().split('T')[0],
-            description: `Depósito de Créditos - Worki`,
+            description: `Deposito de Creditos - Worki`,
             externalReference: user.id,
-            split: [
-                {
-                    walletId: asaasWalletId,
-                    percentualValue: 100 - splitFee // % goes to Company Subaccount, the rest stays on Master Account
-                }
-            ]
         };
 
         const paymentRes = await fetch(`${ASAAS_API_URL}/payments`, {

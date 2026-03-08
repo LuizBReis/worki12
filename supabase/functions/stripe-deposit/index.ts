@@ -10,17 +10,16 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing Authorization header')
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+    if (userError || !user) throw new Error('Unauthorized')
 
     const { amount } = await req.json()
 
@@ -29,7 +28,7 @@ serve(async (req) => {
     }
 
     // 1. Get company
-    const { data: company } = await supabase
+    const { data: company } = await supabaseAdmin
       .from('companies')
       .select('id, stripe_customer_id, name, email')
       .eq('id', user.id)
@@ -54,7 +53,7 @@ serve(async (req) => {
       })
       customerId = customer.id
       
-      await supabase
+      await supabaseAdmin
         .from('companies')
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id)
@@ -71,7 +70,7 @@ serve(async (req) => {
       metadata: {
         type: 'deposit',
         user_id: user.id,
-        wallet_id: (await supabase.from('wallets').select('id').eq('user_id', user.id).single()).data?.id
+        wallet_id: (await supabaseAdmin.from('wallets').select('id').eq('user_id', user.id).single()).data?.id
       }
     })
 

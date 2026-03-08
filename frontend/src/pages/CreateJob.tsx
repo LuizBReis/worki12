@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, DollarSign, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 export default function CreateJob() {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
@@ -63,7 +65,7 @@ export default function CreateJob() {
             navigate('/company/dashboard');
         } catch (error) {
             console.error('Error creating job:', error);
-            alert('Erro ao criar vaga. Verifique os dados.');
+            addToast('Erro ao criar vaga. Verifique os dados.', 'error');
         } finally {
             setLoading(false);
         }

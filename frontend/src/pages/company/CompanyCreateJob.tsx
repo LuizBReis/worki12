@@ -2,22 +2,20 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { WalletService } from '../../services/walletService';
-import { useAsaasStatus } from '../../hooks/useAsaasStatus';
-import AsaasApprovalBanner from '../../components/AsaasApprovalBanner';
 import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap, Calendar, Clock, Globe, Wallet, AlertTriangle } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function CompanyCreateJob() {
     const navigate = useNavigate();
     const { id } = useParams(); // Add useParams
     const isEditing = !!id;
+    const { addToast } = useToast();
 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<{ name: string, slug: string }[]>([]);
     const [companyBalance, setCompanyBalance] = useState<number>(0);
     const [balanceLoading, setBalanceLoading] = useState(true);
-    const { isApproved: asaasApproved, loading: asaasLoading } = useAsaasStatus();
-
     const [formData, setFormData] = useState({
         title: '',
         category: '',
@@ -84,10 +82,14 @@ export default function CompanyCreateJob() {
 
     const fetchJobData = async () => {
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { navigate('/login'); return; }
+
             const { data, error } = await supabase
                 .from('jobs')
                 .select('*')
                 .eq('id', id)
+                .eq('company_id', user.id)
                 .single();
 
             if (error) throw error;
@@ -147,13 +149,13 @@ export default function CompanyCreateJob() {
             // For new jobs, verify balance and reserve escrow
             if (!isEditing) {
                 if (budgetAmount <= 0) {
-                    alert('Por favor, defina um valor para a vaga.');
+                    addToast('Por favor, defina um valor para a vaga.', 'error');
                     setLoading(false);
                     return;
                 }
 
                 if (companyBalance < budgetAmount) {
-                    alert(`Saldo insuficiente. Você tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${budgetAmount.toFixed(2)}.`);
+                    addToast(`Saldo insuficiente. Você tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${budgetAmount.toFixed(2)}.`, 'error');
                     setLoading(false);
                     return;
                 }
@@ -198,9 +200,9 @@ export default function CompanyCreateJob() {
             }
 
             navigate('/company/dashboard');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error saving job:', error);
-            alert(error.message || 'Erro ao salvar vaga. Verifique os dados.');
+            addToast(error instanceof Error ? error.message : 'Erro ao salvar vaga. Verifique os dados.', 'error');
         } finally {
             setLoading(false);
         }
@@ -208,9 +210,6 @@ export default function CompanyCreateJob() {
 
     return (
         <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 pb-20">
-            {/* Asaas Approval Gate */}
-            <AsaasApprovalBanner action="criar vagas" className="mb-6" />
-
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
@@ -386,12 +385,18 @@ export default function CompanyCreateJob() {
                                         <span className="absolute left-4 top-3.5 font-black text-gray-400">R$</span>
                                         <input
                                             type="number"
-                                            className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold text-lg placeholder:text-gray-300 transition-all"
+                                            className={`w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold text-lg placeholder:text-gray-300 transition-all ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             placeholder="0,00"
                                             value={formData.budget}
                                             onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                                            disabled={isEditing}
                                         />
                                     </div>
+                                    {isEditing && (
+                                        <p className="text-xs text-orange-600 font-bold mt-1">
+                                            O valor não pode ser alterado após a criação.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -487,7 +492,7 @@ export default function CompanyCreateJob() {
 
                         <button
                             onClick={step === 3 ? handleSubmit : handleNext}
-                            disabled={loading || (step === 3 && !asaasApproved && !asaasLoading)}
+                            disabled={loading}
                             className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-green-600 hover:scale-[1.02] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] disabled:opacity-50"
                         >
                             {loading ? 'Salvando...' : step === 3 ? (isEditing ? 'Salvar Alterações' : 'Publicar Vaga') : 'Próximo'}

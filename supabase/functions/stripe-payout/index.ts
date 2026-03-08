@@ -10,22 +10,21 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('Missing Authorization header')
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+    if (userError || !user) throw new Error('Unauthorized')
 
     const { amount } = await req.json()
 
     // 1. Get Worker Stripe Account
-    const { data: worker } = await supabase
+    const { data: worker } = await supabaseAdmin
       .from('workers')
       .select('stripe_account_id, id')
       .eq('id', user.id)
@@ -56,10 +55,10 @@ serve(async (req) => {
     })
 
     // 4. Log Transaction (Debit)
-    const workerWalletId = (await supabase.from('wallets').select('id').eq('user_id', user.id).single()).data?.id
+    const workerWalletId = (await supabaseAdmin.from('wallets').select('id').eq('user_id', user.id).single()).data?.id
 
     if (workerWalletId) {
-        await supabase.from('wallet_transactions').insert({
+        await supabaseAdmin.from('wallet_transactions').insert({
             wallet_id: workerWalletId,
             amount: -amount,
             type: 'debit',
@@ -67,13 +66,11 @@ serve(async (req) => {
             reference_id: payout.id
         })
         
-        // Update local wallet balance to reflect withdrawal
-        // Note: The money was already in Stripe Account, but we mirror it in 'wallets' table for UI consistency if needed.
-        // If your 'wallets' table tracks "Platform Balance", then we deduct here.
-        const { data: wallet } = await supabase.from('wallets').select('balance').eq('id', workerWalletId).single()
-        if (wallet) {
-             await supabase.from('wallets').update({ balance: wallet.balance - amount }).eq('id', workerWalletId)
-        }
+        // Atomically deduct from local wallet balance
+        await supabaseAdmin.rpc('update_wallet_balance', {
+            p_wallet_id: workerWalletId,
+            p_amount: -amount
+        })
     }
 
     return new Response(

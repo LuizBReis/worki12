@@ -26,12 +26,13 @@ export default function BottomNav({ type = 'worker' }: BottomNavProps) {
     const isCompany = type === 'company';
 
     return (
-        <nav className={`md:hidden fixed bottom-0 left-0 w-full bg-white border-t-2 border-black pb-safe z-50 ${isCompany ? 'border-b-4 border-b-blue-600' : 'border-b-4 border-b-primary'}`}>
+        <nav aria-label="Menu de navegacao" className={`md:hidden fixed bottom-0 left-0 w-full bg-white border-t-2 border-black pb-safe z-50 ${isCompany ? 'border-b-4 border-b-blue-600' : 'border-b-4 border-b-primary'}`}>
             <div className="flex justify-around items-center h-16 px-1">
                 {navItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
+                        aria-label={item.label}
                         className={({ isActive }) => `
                  flex flex-col items-center justify-center w-full h-full gap-1 p-2
                  ${isActive

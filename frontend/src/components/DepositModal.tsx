@@ -19,8 +19,8 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
     const handleInitiate = async () => {
         const value = parseFloat(amount.replace(',', '.'));
-        if (!value || value <= 0) {
-            addToast('Insira um valor válido', 'error');
+        if (!value || value < 5) {
+            addToast('O valor mínimo para depósito é R$ 5,00', 'error');
             return;
         }
 
@@ -80,13 +80,8 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                             </div>
                             <p className="text-xs font-semibold text-gray-500 mt-3 flex items-start gap-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
                                 <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0"></span>
-                                <span>A plataforma debita automaticamente uma <strong>taxa de conveniência de 5%</strong> do valor depositado.</span>
+                                <span>O valor total depositado sera adicionado ao seu saldo. A taxa da plataforma e cobrada apenas no momento do saque.</span>
                             </p>
-                            {amount && parseFloat(amount) > 0 && (
-                                <p className="text-xs font-bold text-center text-blue-600 mt-2">
-                                    Saldo Líquido que entrará na conta: R$ {(parseFloat(amount) * 0.95).toFixed(2).replace('.', ',')}
-                                </p>
-                            )}
                         </div>
                         <button
                             onClick={handleInitiate}

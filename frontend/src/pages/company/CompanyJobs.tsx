@@ -5,14 +5,28 @@ import { supabase } from '../../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WalletService } from '../../services/walletService';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function CompanyJobs() {
     const navigate = useNavigate();
-    const [jobs, setJobs] = useState<any[]>([]);
+    interface Job {
+        id: string;
+        title: string;
+        type: string;
+        status: string;
+        location?: string;
+        created_at: string;
+        views?: number;
+        candidates_count?: number;
+    }
+
+    const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
     const [search, setSearch] = useState('');
     const [openMenu, setOpenMenu] = useState<string | null>(null);
+    const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
+    const { addToast } = useToast();
 
     useEffect(() => {
         fetchJobs();
@@ -56,15 +70,22 @@ export default function CompanyJobs() {
         if (!error) fetchJobs();
     };
 
-    const handleDelete = async (id: string) => {
-        setOpenMenu(null);
+    const handleDelete = async (jobId: string) => {
+        // 1. Cancel hired workers
+        await supabase.from('applications').update({ status: 'cancelled' }).eq('job_id', jobId).in('status', ['hired', 'in_progress']);
 
-        // 1. First refund any pending escrow back to the company wallet
-        await WalletService.refundEscrow(id, 'Dinheiro retornado do escrow - vaga deletada');
+        // 2. Refund escrow
+        await WalletService.refundEscrow(jobId, 'Dinheiro retornado do escrow - vaga deletada');
 
-        // 2. Then mark the job as deleted
-        const { error } = await supabase.from('jobs').update({ status: 'deleted' }).eq('id', id);
-        if (!error) fetchJobs();
+        // 3. Mark deleted
+        const { error } = await supabase.from('jobs').update({ status: 'deleted' }).eq('id', jobId);
+        if (!error) {
+            addToast('Vaga excluída com sucesso.', 'success');
+            fetchJobs();
+        } else {
+            addToast('Erro ao excluir vaga.', 'error');
+        }
+        setDeleteJobId(null);
     };
 
     const filteredJobs = jobs.filter(job => {
@@ -78,6 +99,19 @@ export default function CompanyJobs() {
     });
 
     return (
+        <>
+        {deleteJobId && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-sm p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                    <h3 className="text-xl font-black uppercase mb-2">Excluir Vaga</h3>
+                    <p className="text-sm text-gray-600 mb-6">Tem certeza? O escrow será reembolsado e workers contratados serão notificados.</p>
+                    <div className="flex gap-3">
+                        <button onClick={() => setDeleteJobId(null)} className="flex-1 px-4 py-3 rounded-xl border-2 border-black font-bold uppercase text-sm hover:bg-gray-50">Cancelar</button>
+                        <button onClick={() => handleDelete(deleteJobId)} className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-bold uppercase text-sm hover:bg-red-700">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        )}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-8">
                 <div>
@@ -216,7 +250,8 @@ export default function CompanyJobs() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (confirm('Tem certeza que deseja excluir esta vaga?')) handleDelete(job.id);
+                                                        setOpenMenu(null);
+                                                        setDeleteJobId(job.id);
                                                     }}
                                                     className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 font-bold text-sm flex items-center gap-2 border-t border-gray-100"
                                                 >
@@ -233,5 +268,6 @@ export default function CompanyJobs() {
                 )}
             </div>
         </div>
+        </>
     );
 }
