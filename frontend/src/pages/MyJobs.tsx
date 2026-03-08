@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { MapPin, CheckCircle2, Clock, XCircle, Loader2, DollarSign, Star, Play, Square, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -48,7 +48,7 @@ export default function MyJobs() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const { addToast } = useToast();
 
-    const fetchJobs = async () => {
+    const fetchJobs = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return navigate('/login');
 
@@ -187,11 +187,11 @@ export default function MyJobs() {
             setJobs({ applied, in_progress, scheduled, history });
         }
         setLoading(false);
-    };
+    }, [navigate]);
 
     useEffect(() => {
         fetchJobs();
-    }, [navigate]);
+    }, [fetchJobs]);
 
     const handleCancelApplication = async (appId: string) => {
         setActionLoading(appId);

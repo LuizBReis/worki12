@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { WalletService } from '../services/walletService';
 import type { WalletTransaction } from '../services/walletService';
@@ -19,7 +19,7 @@ export default function Wallet() {
     const [pixKeyType, setPixKeyType] = useState('CPF');
     const { addToast } = useToast();
 
-    const fetchWalletData = async () => {
+    const fetchWalletData = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return navigate('/login');
 
@@ -53,23 +53,22 @@ export default function Wallet() {
         setStats({ income, pending });
 
         setLoading(false);
-    };
+    }, [navigate]);
 
     useEffect(() => {
         let isMounted = true;
         const init = async () => {
-            await fetchWalletData(); // Load local data fast
+            await fetchWalletData();
 
-            // Background sync with Asaas silently
             const res = await WalletService.syncBalance();
             if (isMounted && res.success && res.hasUpdates) {
-                await fetchWalletData(); // Refresh UI with new Asaas data if updates found
+                await fetchWalletData();
             }
         };
 
         init();
         return () => { isMounted = false; };
-    }, [navigate]);
+    }, [fetchWalletData]);
 
     const handleWithdraw = async () => {
         const amount = parseFloat(withdrawAmount);

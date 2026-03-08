@@ -49,6 +49,7 @@ export default function CompanyJobCandidates() {
 
     useEffect(() => {
         if (id) fetchCandidates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchCandidates = async () => {

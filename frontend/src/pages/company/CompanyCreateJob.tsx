@@ -78,6 +78,7 @@ export default function CompanyCreateJob() {
         if (isEditing) {
             fetchJobData();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchJobData = async () => {

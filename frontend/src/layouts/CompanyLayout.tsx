@@ -3,18 +3,14 @@ import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
 import { supabase } from '../lib/supabase';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 export default function CompanyLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        checkCompanyStatus();
-    }, [location.pathname]);
-
-    const checkCompanyStatus = async () => {
+    const checkCompanyStatus = useCallback(async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
@@ -46,7 +42,11 @@ export default function CompanyLayout() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        checkCompanyStatus();
+    }, [location.pathname, checkCompanyStatus]);
 
     if (loading) {
         return (

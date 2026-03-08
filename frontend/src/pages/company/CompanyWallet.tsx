@@ -61,6 +61,7 @@ export default function CompanyWallet() {
 
         init();
         return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate]);
 
     const formatDate = (dateStr: string) => {

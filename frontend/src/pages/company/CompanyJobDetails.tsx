@@ -38,6 +38,7 @@ export default function CompanyJobDetails() {
 
     useEffect(() => {
         if (id) fetchJobDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchJobDetails = async () => {
