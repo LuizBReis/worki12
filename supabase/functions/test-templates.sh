@@ -54,19 +54,4 @@ curl -s -w "\nStatus: %{http_code}" -X POST "$BASE_URL/asaas-webhook" \
   -d '{"event": "PAYMENT_RECEIVED", "payment": {"id": "test"}}'
 echo ""
 
-# Test 7: Stripe Webhook - Without signature (should return 400)
-echo -e "\n--- Test: stripe-webhook without signature (expect 400) ---"
-curl -s -w "\nStatus: %{http_code}" -X POST "$BASE_URL/stripe-webhook" \
-  -H "Content-Type: application/json" \
-  -d '{"type": "payment_intent.succeeded"}'
-echo ""
-
-# Test 8: Asaas Account Status
-echo -e "\n--- Test: asaas-account-status with auth ---"
-curl -s -w "\nStatus: %{http_code}" -X POST "$BASE_URL/asaas-account-status" \
-  -H "Authorization: Bearer $USER_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-echo ""
-
 echo -e "\n=== Tests Complete ==="

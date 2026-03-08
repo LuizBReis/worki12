@@ -66,7 +66,7 @@ cp .env.example .env
 - **Frontend:** React 19 + Vite + TypeScript + TailwindCSS
 - **Backend:** Supabase Edge Functions (Deno)
 - **Database:** Supabase PostgreSQL with RLS
-- **Payments:** Asaas (BR) + Stripe
+- **Payments:** Asaas (BR, central wallet)
 - **Auth:** Supabase Auth
 - **Realtime:** Supabase Realtime (notifications, messages)
 

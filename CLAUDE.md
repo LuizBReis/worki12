@@ -1,13 +1,13 @@
 # Worki - Claude Code Project Instructions
 
 ## Project Overview
-Worki is a freelance marketplace platform (React 19 + TypeScript + Supabase + Asaas/Stripe payments).
+Worki is a freelance marketplace platform (React 19 + TypeScript + Supabase + Asaas payments).
 
 ## Stack
 - **Frontend:** React 19, Vite, TypeScript, TailwindCSS, React Router DOM v7, TanStack React Query
 - **Backend:** Supabase Edge Functions (Deno runtime)
 - **Database:** Supabase PostgreSQL with RLS
-- **Payments:** Asaas (Brazilian market) + Stripe
+- **Payments:** Asaas (Brazilian market, central wallet, no subaccounts)
 - **Auth:** Supabase Auth
 
 ## Build Commands
@@ -34,7 +34,7 @@ frontend/src/hooks/          # Custom hooks
 frontend/src/services/       # Business logic (walletService, analytics)
 frontend/src/lib/            # Config (supabase client, gamification)
 supabase/functions/          # Deno edge functions
-supabase/functions/_shared/  # Shared utils (asaas.ts, stripe.ts)
+supabase/functions/_shared/  # Shared utils (asaas.ts)
 supabase/migrations/         # SQL migrations
 ```
 
