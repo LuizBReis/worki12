@@ -21,7 +21,8 @@ serve(async (req) => {
 
         const { amount, pixKey, pixKeyType } = await req.json();
 
-        if (!amount || amount < 5) throw new Error('Minimum withdrawal amount is R$ 5.00');
+        if (!amount || typeof amount !== 'number' || amount < 5) throw new Error('Minimum withdrawal amount is R$ 5.00');
+        if (amount > 50000) throw new Error('Maximum withdrawal amount is R$ 50,000.00');
         if (!pixKey) throw new Error('Pix Key is required');
 
         // 1. Get user wallet (virtual balance)
