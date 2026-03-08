@@ -1,73 +1,145 @@
-# React + TypeScript + Vite
+# Worki - Marketplace de Freelancers
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma que conecta empresas a trabalhadores freelancers no mercado brasileiro.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend:** React 19 + Vite + TypeScript + TailwindCSS
+- **Backend:** Supabase Edge Functions (Deno)
+- **Database:** Supabase PostgreSQL com RLS
+- **Pagamentos:** Asaas (PIX, wallet central)
+- **Auth:** Supabase Auth
+- **Realtime:** Supabase Realtime (mensagens, notificacoes)
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# 1. Clone e instale
+cd frontend
+cp .env.example .env  # preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
+npm install
 
-## Expanding the ESLint configuration
+# 2. Dev server
+npm run dev  # http://localhost:5173
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+# 3. Build de producao
+npm run build
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 4. Testes
+npm run test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Estrutura
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```
+frontend/src/
+  pages/           # Paginas (worker/, company/, shared)
+  components/      # Componentes reutilizaveis
+  contexts/        # Auth, Notification, Toast
+  hooks/           # useJobApplication, use-mobile
+  services/        # walletService, analytics, api
+  lib/             # supabase client, gamification
+  types/           # Interfaces TypeScript centralizadas
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+supabase/
+  functions/       # Edge Functions (Deno)
+    asaas-deposit/     # Gerar cobranca PIX
+    asaas-withdraw/    # Saque via PIX
+    asaas-checkout/    # Liberar escrow para worker
+    asaas-sync/        # Sync manual de depositos
+    asaas-webhook/     # Webhook de pagamentos
+    jobs-api/          # CRUD de vagas
+    applications-api/  # CRUD de candidaturas
+    profiles-api/      # CRUD de perfis
+    _shared/asaas.ts   # Client Asaas compartilhado
+  migrations/      # SQL migrations
+```
+
+## Fluxo de Pagamento
+
+```
+Empresa deposita via PIX → Saldo na wallet central
+    ↓
+Empresa cria vaga → Escrow reservado (atomico)
+    ↓
+Worker contratado → Check-in/Check-out bidirecional
+    ↓
+Empresa finaliza → Escrow liberado para worker (atomico)
+    ↓
+Worker saca via PIX → Taxa 5% da plataforma
+```
+
+## Edge Functions (Asaas)
+
+| Funcao | Metodo | Descricao |
+|--------|--------|-----------|
+| `asaas-deposit` | POST | Cria cobranca PIX no master account. Body: `{ amount, name?, cpfCnpj? }` |
+| `asaas-withdraw` | POST | Transfere via PIX para worker. Body: `{ amount, pixKey, pixKeyType }` |
+| `asaas-checkout` | POST | Libera escrow para worker. Body: `{ jobId, workerId }` |
+| `asaas-sync` | POST | Sincroniza depositos pendentes do Asaas. Body: `{}` |
+| `asaas-webhook` | POST | Recebe webhooks Asaas (IP whitelist + token). Body: evento Asaas |
+
+Auth: todas exigem `Authorization: Bearer <jwt>` (exceto webhook que usa IP + token).
+
+## Database Schema
+
+### Tabelas principais
+
+| Tabela | Descricao |
+|--------|-----------|
+| `workers` | Perfis de trabalhadores |
+| `companies` | Perfis de empresas |
+| `jobs` | Vagas (status: open, paused, deleted) |
+| `applications` | Candidaturas (pending → interview → hired → in_progress → completed) |
+| `wallets` | Carteiras (balance, user_type) |
+| `escrow_transactions` | Escrow (reserved → released / refunded) |
+| `wallet_transactions` | Log de transacoes |
+| `Conversation` | Conversas entre worker e empresa |
+| `messages` | Mensagens de chat |
+| `notifications` | Notificacoes do sistema |
+| `reviews` | Avaliacoes pos-job |
+| `analytics_events` | Eventos de analytics |
+
+### RPCs atomicas
+
+| Funcao | Descricao |
+|--------|-----------|
+| `reserve_escrow` | Reserva escrow com lock FOR UPDATE |
+| `release_escrow` | Libera escrow para worker |
+| `refund_escrow` | Reembolsa escrow para empresa |
+| `credit_deposit` | Credita deposito com dedup por reference_id |
+| `update_wallet_balance` | Incremento/decremento atomico |
+
+### Seguranca
+
+- RLS habilitado em todas as tabelas
+- CHECK constraint `balance >= 0` previne saldo negativo
+- UNIQUE partial index previne escrow duplicado por vaga
+- Webhook Asaas validado por IP whitelist + token
+- Service role key nunca exposta no frontend
+
+## Env Variables
+
+### Frontend (.env)
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### Edge Functions (Supabase Secrets)
+```
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+ASAAS_API_KEY
+ASAAS_ENVIRONMENT=sandbox|production
+ASAAS_WEBHOOK_TOKEN
+```
+
+## Deploy
+
+Frontend configurado para Vercel (`vercel.json` com SPA rewrites).
+
+```bash
+cd frontend && npm run build
+# Output: frontend/dist/
 ```
