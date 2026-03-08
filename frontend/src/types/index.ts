@@ -33,8 +33,6 @@ export interface WorkerProfile {
   joined_at?: string;
   created_at?: string;
   updated_at?: string;
-  stripe_account_id?: string;
-  stripe_onboarding_completed?: boolean;
   onboarding_completed?: boolean;
 }
 
@@ -50,7 +48,6 @@ export interface CompanyProfile {
   cover_url?: string;
   rating_average?: number;
   reviews_count?: number;
-  stripe_customer_id?: string;
   onboarding_completed?: boolean;
   owner_id?: string;
 }
