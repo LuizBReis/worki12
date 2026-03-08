@@ -160,6 +160,14 @@ export default function Login() {
                                 </>
                             )}
                         </button>
+
+                        {!isSignUp && (
+                            <div className="text-center mt-3">
+                                <a href="/esqueci-senha" className="text-sm font-bold text-gray-500 hover:text-black transition-colors">
+                                    Esqueci minha senha
+                                </a>
+                            </div>
+                        )}
                     </form>
 
                     <div className="mt-8 text-center text-sm font-medium">

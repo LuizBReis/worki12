@@ -42,6 +42,8 @@ const WorkerPublicProfile = lazy(() => import('./pages/company/WorkerPublicProfi
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // Loading Component
 const PageLoader = () => (
@@ -102,6 +104,8 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/termos" element={<Terms />} />
                   <Route path="/privacidade" element={<Privacy />} />
+                  <Route path="/esqueci-senha" element={<ForgotPassword />} />
+                  <Route path="/redefinir-senha" element={<ResetPassword />} />
 
                   {/* Protected Routes */}
                   <Route element={<ProtectedRoute />}>
