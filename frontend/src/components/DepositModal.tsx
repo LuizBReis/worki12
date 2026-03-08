@@ -23,6 +23,10 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
             addToast('O valor mínimo para depósito é R$ 5,00', 'error');
             return;
         }
+        if (value > 50000) {
+            addToast('O valor máximo para depósito é R$ 50.000,00', 'error');
+            return;
+        }
 
         setLoading(true);
         // Calls the backend to generate the Asaas PIX charge and split

@@ -77,6 +77,10 @@ export default function Wallet() {
             addToast('Valor mínimo para saque: R$ 5,00', 'error');
             return;
         }
+        if (amount > 50000) {
+            addToast('Valor máximo para saque: R$ 50.000,00', 'error');
+            return;
+        }
         if (amount > balance) {
             addToast('Saldo insuficiente.', 'error');
             return;
