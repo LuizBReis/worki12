@@ -1,49 +1,67 @@
-# Worki - Ralph Fix Plan (MVP Sprint)
+# Worki - Production Readiness Plan
 
-## Phase 1: STRIPE-* (Remover Stripe completamente)
+## Phase 1: INFRA-* (Infraestrutura de producao)
 
-- [x] **STRIPE-01**: Deletar todas as edge functions Stripe (`stripe-connect/`, `stripe-deposit/`, `stripe-payout/`, `stripe-transfer/`, `stripe-webhook/`) e o client shared (`_shared/stripe.ts`)
-- [x] **STRIPE-02**: Remover pacotes `@stripe/react-stripe-js` e `@stripe/stripe-js` do `frontend/package.json` e rodar `npm install`
-- [x] **STRIPE-03**: Remover campos Stripe dos types (`stripe_account_id`, `stripe_onboarding_completed`, `stripe_customer_id` em `frontend/src/types/index.ts`)
-- [x] **STRIPE-04**: Criar migration para DROP colunas Stripe do banco (`workers.stripe_account_id`, `workers.stripe_onboarding_completed`, `companies.stripe_customer_id`) e remover indexes
-- [x] **STRIPE-05**: Remover referências Stripe de docs/config (`CLAUDE.md`, `.ralph/PROMPT.md`, `.ralph/AGENT.md`, `test-templates.sh`, `.env.example`)
-- [x] **STRIPE-06**: Deletar edge functions stub deprecated (`asaas-onboard/`, `asaas-account-status/`) e remover referências em `test-templates.sh`
+- [x] **INFRA-01**: Linkar projeto Supabase e fazer push das migrations
+- [x] **INFRA-02**: Corrigir CORS em `_shared/asaas.ts` - exigir `CORS_ORIGIN` em producao
+- [x] **INFRA-03**: Corrigir fallback CPF fake no `asaas-deposit` - exigir CPF/CNPJ valido
+- [x] **INFRA-04**: Adicionar rate limiting basico nas edge functions criticas
+- [x] **INFRA-05**: Configurar `ASAAS_ENVIRONMENT` toggle para facil troca sandbox→production
+- [x] **INFRA-06**: Criar script de deploy com checklist de env vars
 
-## Phase 2: ASAAS-* (Validar fluxo de pagamento completo)
+## Phase 2: AUTH-* (Autenticacao e seguranca)
 
-- [x] **ASAAS-01**: Auditar `asaas-deposit` - verificar que cria customer no master account, gera cobrança PIX, salva `asaas_customer_id` na wallet
-- [x] **ASAAS-02**: Auditar `asaas-webhook` - verificar IP whitelist, token validation, `credit_deposit` RPC com deduplicação
-- [x] **ASAAS-03**: Auditar `asaas-checkout` - verificar que chama `release_escrow` RPC atomicamente, credita worker
-- [x] **ASAAS-04**: Auditar `asaas-withdraw` - verificar dedução atômica de saldo, chamada `/transfers` Asaas, rollback em caso de falha
-- [x] **ASAAS-05**: Auditar `asaas-sync` - verificar sync manual de depósitos pendentes
-- [x] **ASAAS-06**: Verificar consistência de validação de valores (min/max) entre deposit, withdraw e frontend
+- [x] **AUTH-01**: Criar pagina "Esqueci minha senha"
+- [x] **AUTH-02**: Criar pagina de redefinicao de senha
+- [x] **AUTH-03**: Adicionar rotas `/esqueci-senha` e `/redefinir-senha` no App.tsx
+- [ ] **AUTH-04**: Habilitar confirmacao de email no Supabase (config manual)
+- [x] **AUTH-05**: Adicionar link "Esqueci minha senha" na pagina de Login
 
-## Phase 3: MVP-* (Funcionalidades faltantes para lançamento)
+## Phase 3: MONITOR-* (Monitoramento e erros)
 
-- [x] **MVP-01**: Verificar fluxo completo de job: criar → aplicar → contratar → completar → pagar → avaliar (testar cada transição de status)
-- [x] **MVP-02**: Verificar que tabela `notifications` existe e NotificationContext funciona sem fallback silencioso
-- [x] **MVP-03**: Remover saldo inicial de teste R$500 da migration `001_create_wallet_escrow_tables.sql` (ou criar migration corretiva)
-- [x] **MVP-04**: Adicionar validação de input em todos os formulários críticos (valores monetários, campos obrigatórios)
-- [x] **MVP-05**: Verificar que todas as RLS policies permitem operações legítimas (não bloqueiam fluxos normais)
-- [x] **MVP-06**: Adicionar páginas de Termos de Uso e Política de Privacidade (placeholder)
-- [x] **MVP-07**: Adicionar meta tags SEO básicas e favicon correto
-- [x] **MVP-08**: Criar config de deploy (`vercel.json` ou equivalente) com redirects SPA
+- [x] **MONITOR-01**: Instalar `@sentry/react` no frontend
+- [x] **MONITOR-02**: Configurar Sentry no `main.tsx` com DSN via env var
+- [x] **MONITOR-03**: Integrar ErrorBoundary com Sentry
+- [x] **MONITOR-04**: Adicionar Sentry em catch blocks criticos
 
-## Phase 4: QUALITY-* (Qualidade e testes)
+## Phase 4: EMAIL-* (Notificacoes por email)
 
-- [ ] **QUALITY-01**: Expandir testes do walletService (mock Supabase, testar deposit/withdraw/escrow flows)
-- [ ] **QUALITY-02**: Adicionar testes para fluxo de job (useJobApplication hook)
-- [x] **QUALITY-03**: Verificar que `npm run build` e `npm run lint` passam limpos após todas mudanças
-- [x] **QUALITY-04**: Limpar warnings restantes de `react-hooks/exhaustive-deps`
+- [x] **EMAIL-01**: Criar edge function `send-notification`
+- [x] **EMAIL-02**: Disparar email quando worker e contratado
+- [x] **EMAIL-03**: Disparar email quando pagamento e recebido
+- [x] **EMAIL-04**: Disparar email quando deposito e confirmado
+- [x] **EMAIL-05**: Adicionar `RESEND_API_KEY` ao `.env.example`
 
-## Phase 5: DOC-* (Documentação)
+## Phase 5: ADMIN-* (Painel administrativo)
 
-- [x] **DOC-01**: Atualizar README.md com arquitetura atual e instruções de setup
-- [x] **DOC-02**: Documentar todos os endpoints de edge functions (método, params, resposta)
-- [x] **DOC-03**: Documentar schema do banco e relacionamentos
+- [x] **ADMIN-01**: Criar pagina `/admin` com autenticacao por email whitelist
+- [x] **ADMIN-02**: Dashboard admin: total usuarios, total jobs, total transacoes, saldo plataforma
+- [x] **ADMIN-03**: Lista de transacoes recentes com filtro por tipo/status
+- [ ] **ADMIN-04**: Lista de usuarios (workers + companies) - requer admin API/edge function
+- [ ] **ADMIN-05**: Lista de escrows pendentes - requer admin API/edge function
+
+## Phase 6: UX-* (Experiencia do usuario)
+
+- [x] **UX-01**: Criar pagina de Ajuda/Suporte com FAQ basico e link de contato
+- [x] **UX-02**: Adicionar rota `/ajuda` no App.tsx
+- [x] **UX-03**: Melhorar Termos de Uso com clausulas completas (escrow, taxas, disputas, LGPD)
+- [x] **UX-04**: Melhorar Politica de Privacidade com detalhes de retencao e direitos LGPD
+
+## Phase 7: QUALITY-* (Testes finais)
+
+- [x] **QUALITY-01**: Expandir testes do walletService com mocks (18 testes passando)
+- [ ] **QUALITY-02**: Adicionar testes para paginas de auth
+- [x] **QUALITY-03**: Build + lint limpos apos todas mudancas
+- [x] **QUALITY-04**: Verificar TODAS as rotas (31 testes passando, build limpo)
 
 ## Notes
-- Sempre verificar `npm run build` após cada mudança
-- Commits em português, sem Co-Authored-By
-- Foco: remover Stripe primeiro, depois validar Asaas, depois MVP features
-- Cada loop deve completar UMA task
+- NAO alterar nada relacionado a Asaas API/endpoints (apenas CORS e validacao)
+- Asaas permanece em sandbox ate config final
+- Commits em portugues, sem Co-Authored-By
+- Push cada commit imediatamente
+- Verificar build apos cada mudanca
+
+## Items requiring manual config (not code):
+- AUTH-04: Habilitar confirmacao de email no painel Supabase
+- ADMIN-04/05: Requerem edge function admin com service_role key
+- QUALITY-04: Checklist manual de rotas
