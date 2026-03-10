@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock } from 'lucide-react';
 import { invokeFunction } from '../services/api';
 
-const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br'];
+const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
 
 interface Stats {
     totalWorkers: number;

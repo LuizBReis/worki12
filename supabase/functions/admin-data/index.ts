@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/asaas.ts';
 
-const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br'];
+const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
