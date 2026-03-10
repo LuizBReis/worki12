@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/asaas.ts';
+import { corsHeaders, ASAAS_API_URL, getAsaasHeaders } from '../_shared/asaas.ts';
 
 const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
 
@@ -126,6 +126,24 @@ serve(async (req) => {
         }
 
         if (action === 'stats') {
+            // Fetch Asaas real balance in parallel with DB queries
+            let asaasBalance = null;
+            try {
+                const asaasRes = await fetch(`${ASAAS_API_URL}/finance/balance`, {
+                    headers: getAsaasHeaders(),
+                });
+                if (asaasRes.ok) {
+                    const asaasData = await asaasRes.json();
+                    asaasBalance = {
+                        currentBalance: asaasData.balance ?? 0,
+                        pendingBalance: asaasData.statistics?.pending ?? 0,
+                        totalBalance: (asaasData.balance ?? 0) + (asaasData.statistics?.pending ?? 0),
+                    };
+                }
+            } catch (e) {
+                console.error('Failed to fetch Asaas balance:', e);
+            }
+
             const [workersRes, companiesRes, jobsRes, escrowReserved, escrowReleased, walletsRes, txRes] = await Promise.all([
                 supabaseAdmin.from('workers').select('id', { count: 'exact', head: true }),
                 supabaseAdmin.from('companies').select('id', { count: 'exact', head: true }),
@@ -141,7 +159,9 @@ serve(async (req) => {
 
             const reservedTotal = (escrowReserved.data || []).reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
             const releasedTotal = (escrowReleased.data || []).reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
-            const platformBalance = (walletsRes.data || []).reduce((s: number, w: { balance: number }) => s + Number(w.balance), 0);
+            const dbTotalBalance = (walletsRes.data || []).reduce((s: number, w: { balance: number }) => s + Number(w.balance), 0);
+            const workerBalances = (walletsRes.data || []).filter((w: { user_type: string }) => w.user_type === 'worker').reduce((s: number, w: { balance: number }) => s + Number(w.balance), 0);
+            const companyBalances = (walletsRes.data || []).filter((w: { user_type: string }) => w.user_type === 'company').reduce((s: number, w: { balance: number }) => s + Number(w.balance), 0);
 
             // Enrich transactions with user email/name
             const walletMap = await buildWalletUserMap();
@@ -158,7 +178,10 @@ serve(async (req) => {
                     totalJobs: jobsRes.count || 0,
                     totalEscrowReserved: reservedTotal,
                     totalEscrowReleased: releasedTotal,
-                    platformBalance,
+                    dbTotalBalance,
+                    workerBalances,
+                    companyBalances,
+                    asaas: asaasBalance,
                 },
                 transactions: enrichedTx,
             }), {

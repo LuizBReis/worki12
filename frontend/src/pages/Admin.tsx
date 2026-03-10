@@ -7,13 +7,22 @@ import { invokeFunction } from '../services/api';
 
 const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
 
+interface AsaasBalance {
+    currentBalance: number;
+    pendingBalance: number;
+    totalBalance: number;
+}
+
 interface Stats {
     totalWorkers: number;
     totalCompanies: number;
     totalJobs: number;
     totalEscrowReserved: number;
     totalEscrowReleased: number;
-    platformBalance: number;
+    dbTotalBalance: number;
+    workerBalances: number;
+    companyBalances: number;
+    asaas: AsaasBalance | null;
 }
 
 interface UserInfo {
@@ -332,13 +341,49 @@ function DashboardTab({ stats, transactions }: { stats: Stats | null; transactio
 
     return (
         <>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            {/* Wallet Central Asaas - Fluxo de Caixa Real */}
+            <div className="bg-white border-2 border-black rounded-2xl p-6 mb-6">
+                <h2 className="text-lg font-black uppercase mb-4">Wallet Central Asaas (Dinheiro Real)</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-xl border-2 bg-green-50 border-green-300">
+                        <p className="text-[10px] font-bold uppercase text-green-600 mb-1">Saldo Disponivel</p>
+                        <p className="text-2xl font-black text-green-800">{formatMoney(stats?.asaas?.currentBalance || 0)}</p>
+                        <p className="text-[10px] text-green-600 mt-1">Dinheiro real na conta Asaas</p>
+                    </div>
+                    <div className="p-4 rounded-xl border-2 bg-yellow-50 border-yellow-300">
+                        <p className="text-[10px] font-bold uppercase text-yellow-600 mb-1">Saldo Pendente</p>
+                        <p className="text-2xl font-black text-yellow-800">{formatMoney(stats?.asaas?.pendingBalance || 0)}</p>
+                        <p className="text-[10px] text-yellow-600 mt-1">Pagamentos aguardando confirmacao</p>
+                    </div>
+                    <div className="p-4 rounded-xl border-2 bg-gray-100 border-gray-400">
+                        <p className="text-[10px] font-bold uppercase text-gray-600 mb-1">Total Asaas</p>
+                        <p className="text-2xl font-black text-gray-800">{formatMoney(stats?.asaas?.totalBalance || 0)}</p>
+                        <p className="text-[10px] text-gray-500 mt-1">Disponivel + Pendente</p>
+                    </div>
+                </div>
+                {!stats?.asaas && (
+                    <p className="text-xs text-red-500 mt-3 font-bold">Nao foi possivel consultar o saldo do Asaas. Verifique a ASAAS_API_KEY.</p>
+                )}
+            </div>
+
+            {/* Saldos Internos (DB) */}
+            <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 mb-6">
+                <h2 className="text-lg font-black uppercase mb-4">Saldos Internos (Livro Contabil)</h2>
+                <p className="text-[10px] text-gray-500 mb-3">Saldos rastreados pelo sistema. Devem bater com o Asaas em producao.</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard icon={<DollarSign size={18} />} label="Saldo Empresas" value={formatMoney(stats?.companyBalances || 0)} color="blue" />
+                    <StatCard icon={<DollarSign size={18} />} label="Saldo Workers" value={formatMoney(stats?.workerBalances || 0)} color="green" />
+                    <StatCard icon={<Lock size={18} />} label="Em Escrow" value={formatMoney(stats?.totalEscrowReserved || 0)} color="orange" />
+                    <StatCard icon={<DollarSign size={18} />} label="Total DB" value={formatMoney(stats?.dbTotalBalance || 0)} color="gray" />
+                </div>
+            </div>
+
+            {/* Plataforma */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <StatCard icon={<Users size={20} />} label="Workers" value={stats?.totalWorkers || 0} color="green" />
                 <StatCard icon={<Briefcase size={20} />} label="Empresas" value={stats?.totalCompanies || 0} color="blue" />
                 <StatCard icon={<Briefcase size={20} />} label="Vagas" value={stats?.totalJobs || 0} color="purple" />
-                <StatCard icon={<DollarSign size={20} />} label="Escrow Reservado" value={formatMoney(stats?.totalEscrowReserved || 0)} color="orange" />
                 <StatCard icon={<DollarSign size={20} />} label="Escrow Liberado" value={formatMoney(stats?.totalEscrowReleased || 0)} color="green" />
-                <StatCard icon={<DollarSign size={20} />} label="Saldo Total Plataforma" value={formatMoney(stats?.platformBalance || 0)} color="gray" />
             </div>
 
             <div className="bg-white border-2 border-black rounded-2xl p-6">
