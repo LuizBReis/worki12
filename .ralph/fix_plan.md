@@ -14,7 +14,7 @@
 - [x] **AUTH-01**: Criar pagina "Esqueci minha senha"
 - [x] **AUTH-02**: Criar pagina de redefinicao de senha
 - [x] **AUTH-03**: Adicionar rotas `/esqueci-senha` e `/redefinir-senha` no App.tsx
-- [ ] **AUTH-04**: Habilitar confirmacao de email no Supabase (config manual)
+- [x] **AUTH-04**: Habilitar confirmacao de email no Supabase (config manual - feito pelo usuario)
 - [x] **AUTH-05**: Adicionar link "Esqueci minha senha" na pagina de Login
 
 ## Phase 3: MONITOR-* (Monitoramento e erros)
@@ -37,8 +37,8 @@
 - [x] **ADMIN-01**: Criar pagina `/admin` com autenticacao por email whitelist
 - [x] **ADMIN-02**: Dashboard admin: total usuarios, total jobs, total transacoes, saldo plataforma
 - [x] **ADMIN-03**: Lista de transacoes recentes com filtro por tipo/status
-- [ ] **ADMIN-04**: Lista de usuarios (workers + companies) - requer admin API/edge function
-- [ ] **ADMIN-05**: Lista de escrows pendentes - requer admin API/edge function
+- [x] **ADMIN-04**: Lista de usuarios (workers + companies) via edge function admin-data
+- [x] **ADMIN-05**: Lista de escrows pendentes via edge function admin-data
 
 ## Phase 6: UX-* (Experiencia do usuario)
 
@@ -61,7 +61,5 @@
 - Push cada commit imediatamente
 - Verificar build apos cada mudanca
 
-## Items requiring manual config (not code):
-- AUTH-04: Habilitar confirmacao de email no painel Supabase
-- ADMIN-04/05: Requerem edge function admin com service_role key
-- QUALITY-04: Checklist manual de rotas
+## Remaining:
+- QUALITY-02: Testes de paginas auth (nice-to-have)
