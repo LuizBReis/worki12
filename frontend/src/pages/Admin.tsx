@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock, LogIn } from 'lucide-react';
+import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock, LogIn, RefreshCw } from 'lucide-react';
 import { invokeFunction } from '../services/api';
 
 const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
@@ -16,12 +16,22 @@ interface Stats {
     platformBalance: number;
 }
 
-interface RecentTransaction {
+interface UserInfo {
+    user_id: string;
+    email: string;
+    user_type: string;
+    name: string;
+}
+
+interface RichTransaction {
     id: string;
+    wallet_id: string;
     amount: number;
     type: string;
     description: string | null;
+    reference_id: string | null;
     created_at: string;
+    user_info: UserInfo | null;
 }
 
 interface AdminUser {
@@ -33,16 +43,22 @@ interface AdminUser {
     email_confirmed_at: string | null;
     last_sign_in_at: string | null;
     profile: Record<string, unknown> | null;
+    balance: number;
 }
 
-interface EscrowItem {
+interface RichEscrow {
     id: string;
     job_id: string;
+    application_id: string | null;
     amount: number;
     status: string;
     created_at: string;
     released_at: string | null;
+    company_wallet_id: string;
+    worker_wallet_id: string | null;
     job?: { title: string; company_id: string } | null;
+    company_info: UserInfo | null;
+    worker_info: UserInfo | null;
 }
 
 type Tab = 'dashboard' | 'users' | 'escrows';
@@ -58,14 +74,15 @@ export default function Admin() {
     const [password, setPassword] = useState('');
     const [tab, setTab] = useState<Tab>('dashboard');
     const [stats, setStats] = useState<Stats | null>(null);
-    const [transactions, setTransactions] = useState<RecentTransaction[]>([]);
+    const [transactions, setTransactions] = useState<RichTransaction[]>([]);
     const [users, setUsers] = useState<AdminUser[]>([]);
-    const [escrows, setEscrows] = useState<EscrowItem[]>([]);
+    const [escrows, setEscrows] = useState<RichEscrow[]>([]);
     const [loadingTab, setLoadingTab] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     const loadDashboard = useCallback(async () => {
         try {
-            const data = await invokeFunction<{ stats: Stats; transactions: RecentTransaction[] }>('admin-data', { action: 'stats' });
+            const data = await invokeFunction<{ stats: Stats; transactions: RichTransaction[] }>('admin-data', { action: 'stats' });
             setStats(data.stats);
             setTransactions(data.transactions);
         } catch (err) {
@@ -87,13 +104,21 @@ export default function Admin() {
     const loadEscrows = useCallback(async () => {
         setLoadingTab(true);
         try {
-            const data = await invokeFunction<{ escrows: EscrowItem[] }>('admin-data', { action: 'escrows' });
+            const data = await invokeFunction<{ escrows: RichEscrow[] }>('admin-data', { action: 'escrows' });
             setEscrows(data.escrows);
         } catch (err) {
             console.error('Failed to load escrows:', err);
         }
         setLoadingTab(false);
     }, []);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        if (tab === 'dashboard') await loadDashboard();
+        if (tab === 'users') await loadUsers();
+        if (tab === 'escrows') await loadEscrows();
+        setRefreshing(false);
+    };
 
     const checkAuth = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -208,14 +233,24 @@ export default function Admin() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-6xl mx-auto">
-                <div className="flex items-center gap-4 mb-6">
-                    <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-200 rounded-lg">
-                        <ArrowLeft size={20} />
+        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-200 rounded-lg">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <ShieldCheck size={28} className="text-red-600" />
+                        <h1 className="text-2xl md:text-3xl font-black uppercase">Admin Panel</h1>
+                    </div>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase border-2 border-gray-300 rounded-lg hover:border-black disabled:opacity-50"
+                    >
+                        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                        Atualizar
                     </button>
-                    <ShieldCheck size={28} className="text-red-600" />
-                    <h1 className="text-3xl font-black uppercase">Admin Panel</h1>
                 </div>
 
                 {/* Tabs */}
@@ -249,51 +284,119 @@ function TabLoader() {
     );
 }
 
-function DashboardTab({ stats, transactions }: { stats: Stats | null; transactions: RecentTransaction[] }) {
+function formatDate(d: string) {
+    return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatMoney(v: number) {
+    return `R$ ${Math.abs(v).toFixed(2)}`;
+}
+
+const TYPE_LABELS: Record<string, string> = {
+    credit: 'Credito',
+    debit: 'Debito',
+    escrow_reserve: 'Reserva Escrow',
+    escrow_release: 'Liberacao Escrow',
+    initial_balance: 'Saldo Inicial',
+};
+
+const TYPE_COLORS: Record<string, string> = {
+    credit: 'bg-green-100 text-green-800',
+    debit: 'bg-red-100 text-red-800',
+    escrow_reserve: 'bg-orange-100 text-orange-800',
+    escrow_release: 'bg-blue-100 text-blue-800',
+    initial_balance: 'bg-gray-100 text-gray-800',
+};
+
+function UserBadge({ info }: { info: UserInfo | null }) {
+    if (!info) return <span className="text-gray-300 text-xs">-</span>;
+    return (
+        <div className="flex flex-col">
+            <span className="text-xs font-bold">{info.name}</span>
+            <span className="text-[10px] text-gray-500 font-mono">{info.email}</span>
+            <span className={`text-[10px] font-bold w-fit px-1 rounded mt-0.5 ${
+                info.user_type === 'worker' ? 'bg-green-100 text-green-700' :
+                info.user_type === 'company' ? 'bg-blue-100 text-blue-700' :
+                'bg-gray-100 text-gray-600'
+            }`}>{info.user_type}</span>
+        </div>
+    );
+}
+
+function DashboardTab({ stats, transactions }: { stats: Stats | null; transactions: RichTransaction[] }) {
+    const [filterType, setFilterType] = useState<string>('all');
+
+    const filtered = filterType === 'all'
+        ? transactions
+        : transactions.filter(tx => tx.type === filterType);
+
     return (
         <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
                 <StatCard icon={<Users size={20} />} label="Workers" value={stats?.totalWorkers || 0} color="green" />
                 <StatCard icon={<Briefcase size={20} />} label="Empresas" value={stats?.totalCompanies || 0} color="blue" />
                 <StatCard icon={<Briefcase size={20} />} label="Vagas" value={stats?.totalJobs || 0} color="purple" />
-                <StatCard icon={<DollarSign size={20} />} label="Escrow Reservado" value={`R$ ${(stats?.totalEscrowReserved || 0).toFixed(2)}`} color="orange" />
-                <StatCard icon={<DollarSign size={20} />} label="Escrow Liberado" value={`R$ ${(stats?.totalEscrowReleased || 0).toFixed(2)}`} color="green" />
-                <StatCard icon={<DollarSign size={20} />} label="Saldo Total" value={`R$ ${(stats?.platformBalance || 0).toFixed(2)}`} color="gray" />
+                <StatCard icon={<DollarSign size={20} />} label="Escrow Reservado" value={formatMoney(stats?.totalEscrowReserved || 0)} color="orange" />
+                <StatCard icon={<DollarSign size={20} />} label="Escrow Liberado" value={formatMoney(stats?.totalEscrowReleased || 0)} color="green" />
+                <StatCard icon={<DollarSign size={20} />} label="Saldo Total Plataforma" value={formatMoney(stats?.platformBalance || 0)} color="gray" />
             </div>
 
             <div className="bg-white border-2 border-black rounded-2xl p-6">
-                <h2 className="text-xl font-black uppercase mb-4">Transacoes Recentes</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-black uppercase">Transacoes ({filtered.length})</h2>
+                    <select
+                        value={filterType}
+                        onChange={e => setFilterType(e.target.value)}
+                        className="text-xs font-bold border-2 border-gray-300 rounded-lg px-2 py-1 focus:border-black focus:outline-none"
+                    >
+                        <option value="all">Todos</option>
+                        <option value="credit">Credito</option>
+                        <option value="debit">Debito</option>
+                        <option value="escrow_reserve">Reserva Escrow</option>
+                        <option value="escrow_release">Liberacao Escrow</option>
+                        <option value="initial_balance">Saldo Inicial</option>
+                    </select>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b-2 border-black">
-                                <th className="text-left py-2 font-black uppercase">Tipo</th>
-                                <th className="text-left py-2 font-black uppercase">Valor</th>
-                                <th className="text-left py-2 font-black uppercase">Descricao</th>
-                                <th className="text-left py-2 font-black uppercase">Data</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Data</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Tipo</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Usuario</th>
+                                <th className="text-right py-2 font-black uppercase text-xs">Valor</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Descricao</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Ref</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {transactions.length === 0 && (
-                                <tr><td colSpan={4} className="py-4 text-center text-gray-400">Nenhuma transacao</td></tr>
+                            {filtered.length === 0 && (
+                                <tr><td colSpan={6} className="py-4 text-center text-gray-400">Nenhuma transacao</td></tr>
                             )}
-                            {transactions.map(tx => (
-                                <tr key={tx.id} className="border-b border-gray-100">
+                            {filtered.map(tx => (
+                                <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="py-2 text-xs text-gray-500 whitespace-nowrap">
+                                        {formatDate(tx.created_at)}
+                                    </td>
                                     <td className="py-2">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                            tx.type === 'credit' || tx.type === 'escrow_release' ? 'bg-green-100 text-green-700' :
-                                            tx.type === 'debit' || tx.type === 'escrow_reserve' ? 'bg-red-100 text-red-700' :
-                                            'bg-gray-100 text-gray-700'
-                                        }`}>
-                                            {tx.type}
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${TYPE_COLORS[tx.type] || 'bg-gray-100 text-gray-700'}`}>
+                                            {TYPE_LABELS[tx.type] || tx.type}
                                         </span>
                                     </td>
-                                    <td className={`py-2 font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        R$ {Math.abs(tx.amount).toFixed(2)}
+                                    <td className="py-2">
+                                        <UserBadge info={tx.user_info} />
                                     </td>
-                                    <td className="py-2 text-gray-600">{tx.description || '-'}</td>
-                                    <td className="py-2 text-gray-400">
-                                        {new Date(tx.created_at).toLocaleDateString('pt-BR')}
+                                    <td className={`py-2 text-right font-bold whitespace-nowrap ${
+                                        tx.type === 'credit' || tx.type === 'escrow_release' || tx.type === 'initial_balance' ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                        {tx.type === 'debit' || tx.type === 'escrow_reserve' ? '- ' : '+ '}
+                                        {formatMoney(tx.amount)}
+                                    </td>
+                                    <td className="py-2 text-xs text-gray-600 max-w-[200px] truncate">
+                                        {tx.description || '-'}
+                                    </td>
+                                    <td className="py-2 text-[10px] text-gray-400 font-mono max-w-[100px] truncate">
+                                        {tx.reference_id || '-'}
                                     </td>
                                 </tr>
                             ))}
@@ -306,49 +409,76 @@ function DashboardTab({ stats, transactions }: { stats: Stats | null; transactio
 }
 
 function UsersTab({ users }: { users: AdminUser[] }) {
+    const [filter, setFilter] = useState<string>('all');
+
+    const filtered = filter === 'all'
+        ? users
+        : users.filter(u => u.user_type === filter);
+
+    const totalBalance = filtered.reduce((s, u) => s + Number(u.balance), 0);
+
     return (
         <div className="bg-white border-2 border-black rounded-2xl p-6">
-            <h2 className="text-xl font-black uppercase mb-4">Usuarios ({users.length})</h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-black uppercase">Usuarios ({filtered.length})</h2>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">Saldo total: <strong className="text-black">{formatMoney(totalBalance)}</strong></span>
+                    <select
+                        value={filter}
+                        onChange={e => setFilter(e.target.value)}
+                        className="text-xs font-bold border-2 border-gray-300 rounded-lg px-2 py-1 focus:border-black focus:outline-none"
+                    >
+                        <option value="all">Todos</option>
+                        <option value="worker">Workers</option>
+                        <option value="company">Empresas</option>
+                        <option value="hire">Hire</option>
+                    </select>
+                </div>
+            </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b-2 border-black">
-                            <th className="text-left py-2 font-black uppercase">Email</th>
-                            <th className="text-left py-2 font-black uppercase">Tipo</th>
-                            <th className="text-left py-2 font-black uppercase">Nome</th>
-                            <th className="text-left py-2 font-black uppercase">Email Confirmado</th>
-                            <th className="text-left py-2 font-black uppercase">Ultimo Login</th>
-                            <th className="text-left py-2 font-black uppercase">Cadastro</th>
+                            <th className="text-left py-2 font-black uppercase text-xs">Email</th>
+                            <th className="text-left py-2 font-black uppercase text-xs">Tipo</th>
+                            <th className="text-left py-2 font-black uppercase text-xs">Nome</th>
+                            <th className="text-right py-2 font-black uppercase text-xs">Saldo</th>
+                            <th className="text-left py-2 font-black uppercase text-xs">Email OK</th>
+                            <th className="text-left py-2 font-black uppercase text-xs">Ultimo Login</th>
+                            <th className="text-left py-2 font-black uppercase text-xs">Cadastro</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {users.length === 0 && (
-                            <tr><td colSpan={6} className="py-4 text-center text-gray-400">Nenhum usuario</td></tr>
+                        {filtered.length === 0 && (
+                            <tr><td colSpan={7} className="py-4 text-center text-gray-400">Nenhum usuario</td></tr>
                         )}
-                        {users.map(u => (
-                            <tr key={u.id} className="border-b border-gray-100">
+                        {filtered.map(u => (
+                            <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
                                 <td className="py-2 font-mono text-xs">{u.email}</td>
                                 <td className="py-2">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                         u.user_type === 'worker' ? 'bg-green-100 text-green-700' :
-                                        u.user_type === 'company' ? 'bg-blue-100 text-blue-700' :
+                                        u.user_type === 'company' || u.user_type === 'hire' ? 'bg-blue-100 text-blue-700' :
                                         'bg-gray-100 text-gray-700'
                                     }`}>
                                         {u.user_type}
                                     </span>
                                 </td>
-                                <td className="py-2">{u.full_name || '-'}</td>
+                                <td className="py-2 text-xs">{u.full_name || '-'}</td>
+                                <td className="py-2 text-right font-bold text-xs">
+                                    {formatMoney(u.balance)}
+                                </td>
                                 <td className="py-2">
                                     {u.email_confirmed_at
-                                        ? <span className="text-green-600 font-bold text-xs">Sim</span>
-                                        : <span className="text-red-500 font-bold text-xs">Nao</span>
+                                        ? <span className="text-green-600 font-bold text-[10px] bg-green-50 px-1.5 py-0.5 rounded">Sim</span>
+                                        : <span className="text-red-500 font-bold text-[10px] bg-red-50 px-1.5 py-0.5 rounded">Nao</span>
                                     }
                                 </td>
-                                <td className="py-2 text-gray-400 text-xs">
-                                    {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('pt-BR') : '-'}
+                                <td className="py-2 text-gray-400 text-xs whitespace-nowrap">
+                                    {u.last_sign_in_at ? formatDate(u.last_sign_in_at) : '-'}
                                 </td>
-                                <td className="py-2 text-gray-400 text-xs">
-                                    {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                                <td className="py-2 text-gray-400 text-xs whitespace-nowrap">
+                                    {formatDate(u.created_at)}
                                 </td>
                             </tr>
                         ))}
@@ -359,54 +489,87 @@ function UsersTab({ users }: { users: AdminUser[] }) {
     );
 }
 
-function EscrowsTab({ escrows }: { escrows: EscrowItem[] }) {
+function EscrowsTab({ escrows }: { escrows: RichEscrow[] }) {
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+
+    const filtered = filterStatus === 'all'
+        ? escrows
+        : escrows.filter(e => e.status === filterStatus);
+
     const reserved = escrows.filter(e => e.status === 'reserved');
     const released = escrows.filter(e => e.status === 'released');
     const refunded = escrows.filter(e => e.status === 'refunded');
+    const reservedTotal = reserved.reduce((s, e) => s + Number(e.amount), 0);
+    const releasedTotal = released.reduce((s, e) => s + Number(e.amount), 0);
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-                <StatCard icon={<Lock size={20} />} label="Reservados" value={reserved.length} color="orange" />
-                <StatCard icon={<DollarSign size={20} />} label="Liberados" value={released.length} color="green" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard icon={<Lock size={20} />} label="Reservados" value={`${reserved.length} (${formatMoney(reservedTotal)})`} color="orange" />
+                <StatCard icon={<DollarSign size={20} />} label="Liberados" value={`${released.length} (${formatMoney(releasedTotal)})`} color="green" />
                 <StatCard icon={<ArrowLeft size={20} />} label="Reembolsados" value={refunded.length} color="gray" />
+                <StatCard icon={<DollarSign size={20} />} label="Total Escrows" value={escrows.length} color="blue" />
             </div>
 
             <div className="bg-white border-2 border-black rounded-2xl p-6">
-                <h2 className="text-xl font-black uppercase mb-4">Escrows ({escrows.length})</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-black uppercase">Escrows ({filtered.length})</h2>
+                    <select
+                        value={filterStatus}
+                        onChange={e => setFilterStatus(e.target.value)}
+                        className="text-xs font-bold border-2 border-gray-300 rounded-lg px-2 py-1 focus:border-black focus:outline-none"
+                    >
+                        <option value="all">Todos</option>
+                        <option value="reserved">Reservados</option>
+                        <option value="released">Liberados</option>
+                        <option value="refunded">Reembolsados</option>
+                    </select>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b-2 border-black">
-                                <th className="text-left py-2 font-black uppercase">Vaga</th>
-                                <th className="text-left py-2 font-black uppercase">Valor</th>
-                                <th className="text-left py-2 font-black uppercase">Status</th>
-                                <th className="text-left py-2 font-black uppercase">Criado</th>
-                                <th className="text-left py-2 font-black uppercase">Liberado</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Data</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Vaga</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Empresa (pagou)</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Worker (recebe)</th>
+                                <th className="text-right py-2 font-black uppercase text-xs">Valor</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Status</th>
+                                <th className="text-left py-2 font-black uppercase text-xs">Liberado em</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {escrows.length === 0 && (
-                                <tr><td colSpan={5} className="py-4 text-center text-gray-400">Nenhum escrow</td></tr>
+                            {filtered.length === 0 && (
+                                <tr><td colSpan={7} className="py-4 text-center text-gray-400">Nenhum escrow</td></tr>
                             )}
-                            {escrows.map(e => (
-                                <tr key={e.id} className="border-b border-gray-100">
-                                    <td className="py-2">{e.job?.title || e.job_id.slice(0, 8)}</td>
-                                    <td className="py-2 font-bold">R$ {Number(e.amount).toFixed(2)}</td>
+                            {filtered.map(e => (
+                                <tr key={e.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="py-2 text-xs text-gray-500 whitespace-nowrap">
+                                        {formatDate(e.created_at)}
+                                    </td>
+                                    <td className="py-2 text-xs font-medium">
+                                        {e.job?.title || e.job_id.slice(0, 8)}
+                                    </td>
                                     <td className="py-2">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                            e.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
-                                            e.status === 'released' ? 'bg-green-100 text-green-700' :
-                                            'bg-gray-100 text-gray-700'
+                                        <UserBadge info={e.company_info} />
+                                    </td>
+                                    <td className="py-2">
+                                        <UserBadge info={e.worker_info} />
+                                    </td>
+                                    <td className="py-2 text-right font-bold whitespace-nowrap">
+                                        {formatMoney(e.amount)}
+                                    </td>
+                                    <td className="py-2">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            e.status === 'reserved' ? 'bg-orange-100 text-orange-800' :
+                                            e.status === 'released' ? 'bg-green-100 text-green-800' :
+                                            'bg-gray-100 text-gray-800'
                                         }`}>
-                                            {e.status}
+                                            {e.status === 'reserved' ? 'Reservado' : e.status === 'released' ? 'Liberado' : 'Reembolsado'}
                                         </span>
                                     </td>
-                                    <td className="py-2 text-gray-400 text-xs">
-                                        {new Date(e.created_at).toLocaleDateString('pt-BR')}
-                                    </td>
-                                    <td className="py-2 text-gray-400 text-xs">
-                                        {e.released_at ? new Date(e.released_at).toLocaleDateString('pt-BR') : '-'}
+                                    <td className="py-2 text-xs text-gray-400 whitespace-nowrap">
+                                        {e.released_at ? formatDate(e.released_at) : '-'}
                                     </td>
                                 </tr>
                             ))}
@@ -428,8 +591,8 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
     };
     return (
         <div className={`p-4 rounded-xl border-2 ${colors[color] || colors.gray}`}>
-            <div className="flex items-center gap-2 mb-1">{icon} <span className="text-xs font-bold uppercase">{label}</span></div>
-            <p className="text-2xl font-black">{value}</p>
+            <div className="flex items-center gap-2 mb-1">{icon} <span className="text-[10px] font-bold uppercase">{label}</span></div>
+            <p className="text-xl font-black">{value}</p>
         </div>
     );
 }

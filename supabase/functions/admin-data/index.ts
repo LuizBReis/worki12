@@ -10,7 +10,6 @@ serve(async (req) => {
     }
 
     try {
-        // Verify the caller is authenticated
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -18,7 +17,6 @@ serve(async (req) => {
             });
         }
 
-        // Create anon client to verify the user's JWT
         const supabaseAnon = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -32,7 +30,6 @@ serve(async (req) => {
             });
         }
 
-        // Admin client with service_role to bypass RLS
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -40,19 +37,53 @@ serve(async (req) => {
 
         const { action } = await req.json();
 
+        // Helper: build a map of wallet_id → { user_id, email, user_type, name }
+        async function buildWalletUserMap() {
+            const { data: wallets } = await supabaseAdmin.from('wallets').select('id, user_id, user_type');
+            if (!wallets || wallets.length === 0) return new Map();
+
+            const userIds = [...new Set(wallets.map((w: { user_id: string }) => w.user_id))];
+
+            // Get auth users for emails
+            const { data: { users: authUsers } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
+            const authMap = new Map(authUsers.map(u => [u.id, u]));
+
+            // Get worker/company profiles for names
+            const [workersRes, companiesRes] = await Promise.all([
+                supabaseAdmin.from('workers').select('user_id, full_name').in('user_id', userIds),
+                supabaseAdmin.from('companies').select('user_id, company_name, contact_name').in('user_id', userIds),
+            ]);
+            const workersMap = new Map((workersRes.data || []).map((w: { user_id: string; full_name: string }) => [w.user_id, w]));
+            const companiesMap = new Map((companiesRes.data || []).map((c: { user_id: string; company_name: string; contact_name: string }) => [c.user_id, c]));
+
+            const result = new Map();
+            for (const w of wallets) {
+                const authUser = authMap.get(w.user_id);
+                const worker = workersMap.get(w.user_id);
+                const company = companiesMap.get(w.user_id);
+                result.set(w.id, {
+                    user_id: w.user_id,
+                    email: authUser?.email || 'unknown',
+                    user_type: w.user_type,
+                    name: worker?.full_name || company?.company_name || company?.contact_name || authUser?.user_metadata?.full_name || '-',
+                });
+            }
+            return result;
+        }
+
         if (action === 'users') {
-            // List auth users
             const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 100 });
             if (error) throw error;
 
-            // Get worker/company profiles for enrichment
-            const [workersRes, companiesRes] = await Promise.all([
+            const [workersRes, companiesRes, walletsRes] = await Promise.all([
                 supabaseAdmin.from('workers').select('user_id, full_name, skills, city, state'),
                 supabaseAdmin.from('companies').select('user_id, company_name, contact_name, sector'),
+                supabaseAdmin.from('wallets').select('user_id, balance, user_type'),
             ]);
 
             const workersMap = new Map((workersRes.data || []).map(w => [w.user_id, w]));
             const companiesMap = new Map((companiesRes.data || []).map(c => [c.user_id, c]));
+            const walletsMap = new Map((walletsRes.data || []).map(w => [w.user_id, w]));
 
             const enrichedUsers = users.map(u => ({
                 id: u.id,
@@ -63,6 +94,7 @@ serve(async (req) => {
                 email_confirmed_at: u.email_confirmed_at,
                 last_sign_in_at: u.last_sign_in_at,
                 profile: workersMap.get(u.id) || companiesMap.get(u.id) || null,
+                balance: walletsMap.get(u.id)?.balance || 0,
             }));
 
             return new Response(JSON.stringify({ users: enrichedUsers }), {
@@ -79,7 +111,16 @@ serve(async (req) => {
 
             if (error) throw error;
 
-            return new Response(JSON.stringify({ escrows: data }), {
+            // Enrich with wallet owner info
+            const walletMap = await buildWalletUserMap();
+
+            const enriched = (data || []).map(e => ({
+                ...e,
+                company_info: walletMap.get(e.company_wallet_id) || null,
+                worker_info: e.worker_wallet_id ? walletMap.get(e.worker_wallet_id) || null : null,
+            }));
+
+            return new Response(JSON.stringify({ escrows: enriched }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
@@ -92,12 +133,23 @@ serve(async (req) => {
                 supabaseAdmin.from('escrow_transactions').select('amount').eq('status', 'reserved'),
                 supabaseAdmin.from('escrow_transactions').select('amount').eq('status', 'released'),
                 supabaseAdmin.from('wallets').select('balance, user_type'),
-                supabaseAdmin.from('wallet_transactions').select('*').order('created_at', { ascending: false }).limit(20),
+                supabaseAdmin.from('wallet_transactions')
+                    .select('*, wallet:wallets(user_id, user_type)')
+                    .order('created_at', { ascending: false })
+                    .limit(50),
             ]);
 
             const reservedTotal = (escrowReserved.data || []).reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
             const releasedTotal = (escrowReleased.data || []).reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
             const platformBalance = (walletsRes.data || []).reduce((s: number, w: { balance: number }) => s + Number(w.balance), 0);
+
+            // Enrich transactions with user email/name
+            const walletMap = await buildWalletUserMap();
+
+            const enrichedTx = (txRes.data || []).map(tx => ({
+                ...tx,
+                user_info: walletMap.get(tx.wallet_id) || null,
+            }));
 
             return new Response(JSON.stringify({
                 stats: {
@@ -108,7 +160,7 @@ serve(async (req) => {
                     totalEscrowReleased: releasedTotal,
                     platformBalance,
                 },
-                transactions: txRes.data || [],
+                transactions: enrichedTx,
             }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
