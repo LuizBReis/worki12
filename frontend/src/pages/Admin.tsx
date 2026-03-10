@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
+import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock } from 'lucide-react';
+import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock, LogIn } from 'lucide-react';
 import { invokeFunction } from '../services/api';
 
 const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
@@ -50,6 +51,11 @@ export default function Admin() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [authorized, setAuthorized] = useState(false);
+    const [needsLogin, setNeedsLogin] = useState(false);
+    const [loginError, setLoginError] = useState('');
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [tab, setTab] = useState<Tab>('dashboard');
     const [stats, setStats] = useState<Stats | null>(null);
     const [transactions, setTransactions] = useState<RecentTransaction[]>([]);
@@ -91,14 +97,45 @@ export default function Admin() {
 
     const checkAuth = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user || !ADMIN_EMAILS.includes(user.email || '')) {
-            navigate('/');
+        if (!user) {
+            setNeedsLogin(true);
+            setLoading(false);
+            return;
+        }
+        if (!ADMIN_EMAILS.includes(user.email || '')) {
+            setLoginError('Acesso negado. Este email nao tem permissao de administrador.');
+            setNeedsLogin(true);
+            setLoading(false);
             return;
         }
         setAuthorized(true);
         await loadDashboard();
         setLoading(false);
-    }, [navigate, loadDashboard]);
+    }, [loadDashboard]);
+
+    const handleLogin = async (e: FormEvent) => {
+        e.preventDefault();
+        setLoginError('');
+        setLoginLoading(true);
+
+        if (!ADMIN_EMAILS.includes(email)) {
+            setLoginError('Este email nao tem permissao de administrador.');
+            setLoginLoading(false);
+            return;
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            setLoginError(error.message);
+            setLoginLoading(false);
+            return;
+        }
+
+        setNeedsLogin(false);
+        setAuthorized(true);
+        await loadDashboard();
+        setLoginLoading(false);
+    };
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -122,7 +159,53 @@ export default function Admin() {
         </div>
     );
 
-    if (!authorized) return null;
+    if (needsLogin && !authorized) return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+            <div className="w-full max-w-sm">
+                <div className="bg-white border-2 border-black rounded-2xl p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <ShieldCheck size={28} className="text-red-600" />
+                        <h1 className="text-2xl font-black uppercase">Admin</h1>
+                    </div>
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Email</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-black focus:outline-none"
+                                placeholder="admin@email.com"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase mb-1">Senha</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-black focus:outline-none"
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+                        {loginError && (
+                            <p className="text-red-500 text-xs font-bold">{loginError}</p>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={loginLoading}
+                            className="w-full py-3 bg-black text-white font-bold uppercase rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {loginLoading ? <Loader2 className="animate-spin" size={16} /> : <LogIn size={16} />}
+                            Entrar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
