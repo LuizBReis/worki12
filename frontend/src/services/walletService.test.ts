@@ -11,8 +11,8 @@ const mockRpc = vi.fn()
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    from: (...args: unknown[]) => mockFrom(...args),
-    rpc: (...args: unknown[]) => mockRpc(...args),
+    from: mockFrom,
+    rpc: mockRpc,
   }
 }))
 
