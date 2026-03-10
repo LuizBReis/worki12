@@ -17,17 +17,26 @@ serve(async (req) => {
             });
         }
 
-        const supabaseAnon = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            { global: { headers: { Authorization: authHeader } } }
-        );
+        // Allow service_role JWT OR admin user email
+        const token = authHeader.replace('Bearer ', '');
+        let isServiceRole = false;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            isServiceRole = payload.role === 'service_role';
+        } catch { /* not a valid JWT, continue with user auth */ }
 
-        const { data: { user }, error: authError } = await supabaseAnon.auth.getUser();
-        if (authError || !user || !ADMIN_EMAILS.includes(user.email || '')) {
-            return new Response(JSON.stringify({ error: 'Forbidden' }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403
-            });
+        if (!isServiceRole) {
+            const supabaseAnon = createClient(
+                Deno.env.get('SUPABASE_URL') ?? '',
+                Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+                { global: { headers: { Authorization: authHeader } } }
+            );
+            const { data: { user }, error: authError } = await supabaseAnon.auth.getUser();
+            if (authError || !user || !ADMIN_EMAILS.includes(user.email || '')) {
+                return new Response(JSON.stringify({ error: 'Forbidden' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403
+                });
+            }
         }
 
         const supabaseAdmin = createClient(
@@ -35,7 +44,8 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        const { action } = await req.json();
+        const body = await req.json();
+        const { action } = body;
 
         // Helper: build a map of wallet_id → { user_id, email, user_type, name }
         async function buildWalletUserMap() {
@@ -187,6 +197,70 @@ serve(async (req) => {
             }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
+        }
+
+        // Admin: create PIX deposit on Asaas for any user
+        if (action === 'create_deposit') {
+            const { user_id, amount } = body;
+            if (!user_id || !amount) throw new Error('user_id and amount required');
+
+            const { data: wallet } = await supabaseAdmin
+                .from('wallets').select('id, asaas_customer_id').eq('user_id', user_id).single();
+            if (!wallet) throw new Error('Wallet not found for user');
+
+            if (!wallet.asaas_customer_id) throw new Error('User has no Asaas customer ID. They need to deposit via frontend first to register CPF.');
+
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 1);
+
+            const paymentRes = await fetch(`${ASAAS_API_URL}/payments`, {
+                method: 'POST',
+                headers: getAsaasHeaders(),
+                body: JSON.stringify({
+                    customer: wallet.asaas_customer_id,
+                    billingType: 'PIX',
+                    value: Math.round(amount * 100) / 100,
+                    dueDate: dueDate.toISOString().split('T')[0],
+                    description: 'Deposito de Creditos - Worki (Admin)',
+                    externalReference: user_id,
+                }),
+            });
+            const paymentData = await paymentRes.json();
+            if (!paymentRes.ok) throw new Error(paymentData.errors?.[0]?.description || 'Asaas error');
+
+            return new Response(JSON.stringify({
+                success: true,
+                paymentId: paymentData.id,
+                invoiceUrl: paymentData.invoiceUrl,
+                value: paymentData.value,
+                status: paymentData.status,
+            }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        // Admin: manually credit a wallet (simulate webhook for testing)
+        if (action === 'admin_credit') {
+            const { user_id, amount, payment_id } = body;
+            if (!user_id || !amount) throw new Error('user_id and amount required');
+
+            const refId = payment_id || `admin-credit-${Date.now()}`;
+            const { data, error } = await supabaseAdmin.rpc('credit_deposit', {
+                p_user_id: user_id,
+                p_amount: amount,
+                p_payment_id: refId,
+                p_description: 'Deposito via Pix (Admin)',
+            });
+            if (error) throw error;
+
+            // Get updated balance
+            const { data: wallet } = await supabaseAdmin
+                .from('wallets').select('balance').eq('user_id', user_id).single();
+
+            return new Response(JSON.stringify({
+                success: true,
+                credited: data,
+                new_balance: wallet?.balance || 0,
+                reference_id: refId,
+            }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
