@@ -200,6 +200,7 @@ export default function CompanyCreateJob() {
                 setCompanyBalance(prev => prev - budgetAmount);
             }
 
+            addToast(isEditing ? 'Vaga atualizada com sucesso!' : 'Vaga criada com sucesso!', 'success');
             navigate('/company/dashboard');
         } catch (error: unknown) {
             console.error('Error saving job:', error);

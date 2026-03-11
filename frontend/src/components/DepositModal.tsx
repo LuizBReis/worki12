@@ -35,7 +35,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
         if (result.pixQrCodeUrl) {
             setPixUrl(result.pixQrCodeUrl);
-            addToast('Cobrança gerada com sucesso!', 'success');
+            addToast('Depósito iniciado! Abra a fatura para pagar.', 'success');
         } else {
             addToast(result.error || 'Erro ao iniciar depósito', 'error');
         }
