@@ -20,6 +20,7 @@ function getPasswordStrength(pw: string): { label: string; color: string; width:
 export default function Login() {
     const [searchParams] = useSearchParams();
     const type = searchParams.get('type') || 'work'; // 'work' or 'hire'
+    const reason = searchParams.get('reason');
     const navigate = useNavigate();
 
     const [isSignUp, setIsSignUp] = useState(false);
@@ -121,6 +122,12 @@ export default function Login() {
                                 : (isHire ? 'Acesse 10k+ profissionais avaliados.' : 'Ganhe dinheiro no seu próprio horário.')}
                         </p>
                     </div>
+
+                    {reason === 'session_expired' && !error && !successMessage && (
+                        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-xl text-sm font-medium">
+                            Sua sessao expirou. Faca login novamente para continuar.
+                        </div>
+                    )}
 
                     {error && (
                         <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-xl text-sm font-medium">
