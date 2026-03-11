@@ -3,6 +3,53 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, ASAAS_API_URL, getAsaasHeaders } from '../_shared/asaas.ts';
 import { isRateLimited } from '../_shared/rate-limit.ts';
 
+function validateCPF(cpf: string): boolean {
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+    const digits = cpf.split('').map(Number);
+    // First check digit
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += digits[i] * (10 - i);
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10) remainder = 0;
+    if (remainder !== digits[9]) return false;
+
+    // Second check digit
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += digits[i] * (11 - i);
+    remainder = (sum * 10) % 11;
+    if (remainder === 10) remainder = 0;
+    if (remainder !== digits[10]) return false;
+
+    return true;
+}
+
+function validateCNPJ(cnpj: string): boolean {
+    if (cnpj.length !== 14) return false;
+    if (/^(\d)\1{13}$/.test(cnpj)) return false;
+
+    const digits = cnpj.split('').map(Number);
+    const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+    // First check digit
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += digits[i] * weights1[i];
+    let remainder = sum % 11;
+    const check1 = remainder < 2 ? 0 : 11 - remainder;
+    if (check1 !== digits[12]) return false;
+
+    // Second check digit
+    sum = 0;
+    for (let i = 0; i < 13; i++) sum += digits[i] * weights2[i];
+    remainder = sum % 11;
+    const check2 = remainder < 2 ? 0 : 11 - remainder;
+    if (check2 !== digits[13]) return false;
+
+    return true;
+}
+
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
@@ -53,8 +100,16 @@ serve(async (req) => {
         // Create a customer on the master account if not exists
         if (!customerId) {
             const cleanDoc = cpfCnpj ? cpfCnpj.replace(/\D/g, '') : '';
-            if (cleanDoc.length !== 11 && cleanDoc.length !== 14) {
-                throw new Error('CPF (11 digitos) ou CNPJ (14 digitos) é obrigatório para criar conta de pagamento.');
+            if (cleanDoc.length === 11) {
+                if (!validateCPF(cleanDoc)) {
+                    throw new Error('CPF inválido. Verifique os dígitos e tente novamente.');
+                }
+            } else if (cleanDoc.length === 14) {
+                if (!validateCNPJ(cleanDoc)) {
+                    throw new Error('CNPJ inválido. Verifique os dígitos e tente novamente.');
+                }
+            } else {
+                throw new Error('CPF (11 dígitos) ou CNPJ (14 dígitos) é obrigatório para criar conta de pagamento.');
             }
             const finalDoc = cleanDoc;
 

@@ -13,3 +13,42 @@ Started: 2026-03-11
 - Toast notifications via ToastContext
 - Sentry para error tracking em producao
 ---
+
+## 2026-03-11 - SEC-01
+- Corrigido verificacao JWT no admin-data: substituido parsing manual (atob/split) por comparacao direta com SUPABASE_SERVICE_ROLE_KEY
+- Arquivos modificados: supabase/functions/admin-data/index.ts
+- **Aprendizados para proximas iteracoes:**
+  - admin-data deploy com --no-verify-jwt (Asaas e admin-data tem auth propria)
+  - service_role key eh estatica, comparacao direta eh mais segura que parsing JWT sem verificacao de assinatura
+  - CWD pode estar em frontend/, usar caminhos absolutos ou cd para root ao commitar
+---
+
+## 2026-03-11 - SEC-02
+- Criada migration para restringir UPDATE de wallets com GRANT de coluna
+- Removida politica RLS com subquery confusa, substituida por REVOKE UPDATE + GRANT UPDATE (asaas_customer_id) TO authenticated
+- Arquivos modificados: supabase/migrations/20260311300000_restrict_wallet_update_columns.sql
+- **Aprendizados para proximas iteracoes:**
+  - GRANT de coluna eh mais explicito e seguro que subquery em WITH CHECK
+  - service_role precisa manter GRANT UPDATE total para RPCs funcionarem
+  - Sempre DROP POLICY IF EXISTS antes de recriar
+---
+
+## 2026-03-11 - SEC-03
+- Adicionado status em wallet_transactions (pending_transfer, completed, failed)
+- Fluxo de saque agora: debit balance → insert pending_transfer → call Asaas → update completed/failed
+- Se Asaas falha: marca failed + rollback balance. Se rollback falha: log CRITICAL com todos detalhes
+- Arquivos modificados: supabase/functions/asaas-withdraw/index.ts, supabase/migrations/20260311400000_add_status_wallet_transactions.sql
+- **Aprendizados para proximas iteracoes:**
+  - wallet_transactions nao tinha coluna status, adicionada com DEFAULT 'completed' para retrocompatibilidade
+  - Sempre registrar transacao ANTES de chamar API externa para auditoria
+  - reference_id eh preenchido apenas apos sucesso da API
+---
+
+## 2026-03-11 - SEC-08
+- Story ja estava implementada no codigo: MAX_PAGES=10, loop com pageCount < MAX_PAGES, warning log
+- Verificado build passing, marcado como passes: true
+- Arquivos modificados: scripts/ralph/prd.json (marcado passes: true)
+- **Aprendizados para proximas iteracoes:**
+  - Verificar se a implementacao ja existe antes de comecar a codar
+  - asaas-sync ja tinha proteção contra loop infinito
+---

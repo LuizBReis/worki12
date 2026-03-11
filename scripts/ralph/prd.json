@@ -14,7 +14,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "CRITICAL: Current code does JSON.parse(atob(token.split('.')[1])) without signature verification"
     },
     {
@@ -29,7 +29,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Current WITH CHECK subquery is redundant and confusing. Restrict columns explicitly."
     },
     {
@@ -44,7 +44,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "CRITICAL: Current code can lose user money if Asaas succeeds but DB rollback fails"
     },
     {
@@ -59,7 +59,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "User names injected directly into HTML like: <h1>${workerName}</h1>"
     },
     {
@@ -73,7 +73,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "No validation before passing userId to credit_deposit RPC"
     },
     {
@@ -87,7 +87,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Currently allows release for 'hired' status without requiring job completion"
     },
     {
@@ -102,7 +102,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Current trigger does RAISE WARNING and RETURN NEW, silently leaving money locked"
     },
     {
@@ -116,7 +116,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "while(hasMore) loop has no upper bound"
     },
     {
@@ -131,7 +131,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Currently only checks string length (11 or 14 digits)"
     },
     {
