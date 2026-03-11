@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobApplication } from '../hooks/useJobApplication';
@@ -77,8 +77,14 @@ export default function Jobs() {
     });
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-6 pb-24 max-w-5xl mx-auto animate-pulse">
+            <div className="h-10 bg-gray-200 rounded w-1/3" />
+            <div className="h-12 bg-gray-200 rounded-xl" />
+            <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-200 rounded-2xl" />
+                ))}
+            </div>
         </div>
     );
 

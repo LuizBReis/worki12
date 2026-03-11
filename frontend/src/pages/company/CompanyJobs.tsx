@@ -1,4 +1,4 @@
-import { Search, PlusCircle, MoreHorizontal, Eye, Users, Loader2, Edit2, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
+import { Search, PlusCircle, MoreHorizontal, Eye, Users, Edit2, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -161,8 +161,10 @@ export default function CompanyJobs() {
             {/* Jobs List */}
             <div className="space-y-4">
                 {loading ? (
-                    <div className="text-center py-10 font-bold text-gray-400 flex flex-col items-center gap-2">
-                        <Loader2 className="animate-spin" /> Carregando...
+                    <div className="space-y-4 animate-pulse">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="bg-gray-200 rounded-xl h-28" />
+                        ))}
                     </div>
                 ) : filteredJobs.length === 0 ? (
                     <div className="text-center py-10 font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">

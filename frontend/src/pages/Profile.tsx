@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
+import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
@@ -178,8 +178,19 @@ export default function Profile() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 max-w-4xl mx-auto animate-pulse">
+            <div className="flex items-center gap-6">
+                <div className="w-24 h-24 bg-gray-200 rounded-full" />
+                <div className="flex-1 space-y-3">
+                    <div className="h-8 bg-gray-200 rounded w-1/3" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+            </div>
+            <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-14 bg-gray-200 rounded-xl" />
+                ))}
+            </div>
         </div>
     );
 

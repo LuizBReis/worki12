@@ -1,4 +1,4 @@
-import { BarChart2, Eye, Users, CheckCircle, TrendingUp, Download, Calendar, Loader2 } from 'lucide-react';
+import { BarChart2, Eye, Users, CheckCircle, TrendingUp, Download, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { format, subDays, eachDayOfInterval, isSameDay } from 'date-fns';
@@ -82,8 +82,15 @@ export default function CompanyAnalytics() {
 
     if (loading) {
         return (
-            <div className="h-full w-full flex items-center justify-center p-20">
-                <Loader2 className="animate-spin text-gray-400" />
+            <div className="space-y-8 animate-pulse">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="h-10 bg-gray-200 rounded w-1/3" />
+                    <div className="h-10 bg-gray-200 rounded w-32" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-200 rounded-xl" />)}
+                </div>
+                <div className="h-64 bg-gray-200 rounded-xl" />
             </div>
         );
     }
