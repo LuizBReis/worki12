@@ -6,6 +6,37 @@ import { DollarSign, CreditCard, ArrowDownLeft, ArrowUpRight, History, Loader2, 
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
+function validateCPF(cpf: string): boolean {
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    const d = cpf.split('').map(Number);
+    let s = 0;
+    for (let i = 0; i < 9; i++) s += d[i] * (10 - i);
+    let r = (s * 10) % 11; if (r === 10) r = 0;
+    if (r !== d[9]) return false;
+    s = 0;
+    for (let i = 0; i < 10; i++) s += d[i] * (11 - i);
+    r = (s * 10) % 11; if (r === 10) r = 0;
+    return r === d[10];
+}
+
+function validateCNPJ(cnpj: string): boolean {
+    if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+    const d = cnpj.split('').map(Number);
+    const w1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+    const w2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+    let s = 0;
+    for (let i = 0; i < 12; i++) s += d[i] * w1[i];
+    let r = s % 11;
+    if ((r < 2 ? 0 : 11 - r) !== d[12]) return false;
+    s = 0;
+    for (let i = 0; i < 13; i++) s += d[i] * w2[i];
+    r = s % 11;
+    return (r < 2 ? 0 : 11 - r) === d[13];
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function Wallet() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -89,22 +120,35 @@ export default function Wallet() {
             return;
         }
 
-        // Basic PIX key format validation
+        // PIX key format validation with checksum
         const key = pixKey.trim();
-        if (pixKeyType === 'CPF' && key.replace(/\D/g, '').length !== 11) {
-            addToast('CPF deve ter 11 dígitos.', 'error');
+        if (pixKeyType === 'CPF') {
+            const digits = key.replace(/\D/g, '');
+            if (!validateCPF(digits)) {
+                addToast('CPF invalido. Verifique os digitos.', 'error');
+                return;
+            }
+        }
+        if (pixKeyType === 'CNPJ') {
+            const digits = key.replace(/\D/g, '');
+            if (!validateCNPJ(digits)) {
+                addToast('CNPJ invalido. Verifique os digitos.', 'error');
+                return;
+            }
+        }
+        if (pixKeyType === 'EMAIL' && !EMAIL_REGEX.test(key)) {
+            addToast('Formato de email invalido. Use: usuario@dominio.com', 'error');
             return;
         }
-        if (pixKeyType === 'CNPJ' && key.replace(/\D/g, '').length !== 14) {
-            addToast('CNPJ deve ter 14 dígitos.', 'error');
-            return;
+        if (pixKeyType === 'PHONE') {
+            const digits = key.replace(/\D/g, '');
+            if (digits.length < 10 || digits.length > 13) {
+                addToast('Telefone invalido. Use formato: +5511999999999', 'error');
+                return;
+            }
         }
-        if (pixKeyType === 'EMAIL' && !key.includes('@')) {
-            addToast('Informe um e-mail válido.', 'error');
-            return;
-        }
-        if (pixKeyType === 'PHONE' && key.replace(/\D/g, '').length < 10) {
-            addToast('Telefone deve ter ao menos 10 dígitos.', 'error');
+        if (pixKeyType === 'EVP' && !UUID_REGEX.test(key)) {
+            addToast('Chave aleatoria invalida. Use formato UUID.', 'error');
             return;
         }
 
