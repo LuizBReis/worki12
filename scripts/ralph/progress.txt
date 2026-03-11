@@ -52,3 +52,13 @@ Started: 2026-03-11
   - Verificar se a implementacao ja existe antes de comecar a codar
   - asaas-sync ja tinha proteção contra loop infinito
 ---
+
+## 2026-03-11 - AUTH-09
+- Story ja estava implementada: ProtectedRoute.tsx redireciona com ?reason=session_expired, Login.tsx le o param e mostra mensagem
+- Corrigido build: removidos imports nao utilizados de Loader2 em 7 arquivos (Analytics, Dashboard, Jobs, Profile, CompanyAnalytics, CompanyJobs, CompanyWallet)
+- Arquivos modificados: frontend/src/pages/Analytics.tsx, Dashboard.tsx, Jobs.tsx, Profile.tsx, company/CompanyAnalytics.tsx, company/CompanyJobs.tsx, company/CompanyWallet.tsx
+- **Aprendizados para proximas iteracoes:**
+  - Substituicao de spinner por skeleton (stories anteriores) deixou imports de Loader2 orfaos
+  - Sempre verificar build apos cada story - imports nao usados causam erro no tsc
+  - AUTH-09 foi implementada em iteracao anterior mas nao marcada como passes: true
+---

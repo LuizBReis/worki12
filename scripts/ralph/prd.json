@@ -189,7 +189,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -203,7 +203,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": "Current validation: email.includes('@')"
     },
     {
@@ -218,7 +218,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "notes": "Currently only validates length"
     },
     {
@@ -235,7 +235,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -250,7 +250,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 17,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -263,7 +263,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 18,
-      "passes": false,
+      "passes": true,
       "notes": "canProceed() currently returns true always for step 2"
     },
     {
@@ -277,7 +277,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 19,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -291,7 +291,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 20,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -306,7 +306,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 21,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
