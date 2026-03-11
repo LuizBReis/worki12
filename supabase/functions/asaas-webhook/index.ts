@@ -2,6 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/asaas.ts';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Production IPs - log only in sandbox, enforce in production
 const ASAAS_IPS = [
     '52.67.12.206',
@@ -85,6 +87,23 @@ serve(async (req) => {
 
             if (!payment.externalReference) {
                 return new Response('Ignored - No externalReference', { status: 200 });
+            }
+
+            // Validate externalReference is a valid UUID
+            if (!UUID_REGEX.test(payment.externalReference)) {
+                console.warn('Invalid externalReference format:', payment.externalReference);
+                return new Response('Bad Request - Invalid externalReference format', { status: 400 });
+            }
+
+            // Validate payment.id and payment.value
+            if (!payment.id || typeof payment.id !== 'string') {
+                console.warn('Missing or invalid payment.id');
+                return new Response('Bad Request - Missing payment.id', { status: 400 });
+            }
+
+            if (!payment.value || typeof payment.value !== 'number' || payment.value <= 0) {
+                console.warn('Missing or invalid payment.value:', payment.value);
+                return new Response('Bad Request - Invalid payment.value', { status: 400 });
             }
 
             const userId = payment.externalReference;
