@@ -45,14 +45,21 @@ export default function CompanyJobs() {
                 .order('created_at', { ascending: false });
 
             if (jobsData) {
-                // Fetch candidate counts for each job
-                const jobsWithCounts = await Promise.all(jobsData.map(async (job) => {
-                    const { count } = await supabase
-                        .from('applications')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('job_id', job.id);
+                // Batch fetch candidate counts (single query instead of N+1)
+                const jobIds = jobsData.map(j => j.id);
+                const { data: appCounts } = await supabase
+                    .from('applications')
+                    .select('job_id')
+                    .in('job_id', jobIds);
 
-                    return { ...job, candidates_count: count || 0 };
+                const countMap: Record<string, number> = {};
+                (appCounts || []).forEach(a => {
+                    countMap[a.job_id] = (countMap[a.job_id] || 0) + 1;
+                });
+
+                const jobsWithCounts = jobsData.map(job => ({
+                    ...job,
+                    candidates_count: countMap[job.id] || 0
                 }));
 
                 setJobs(jobsWithCounts);
