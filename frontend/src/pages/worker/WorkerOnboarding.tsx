@@ -219,6 +219,7 @@ export default function WorkerOnboarding() {
                                                 required
                                                 value={formData.cpf}
                                                 onChange={e => setFormData({ ...formData, cpf: formatCpf(e.target.value) })}
+                                                aria-label="CPF"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="000.000.000-00"
                                             />
@@ -230,6 +231,7 @@ export default function WorkerOnboarding() {
                                                 required
                                                 value={formData.birthDate}
                                                 onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
+                                                aria-label="Data de nascimento"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             />
                                         </div>
@@ -242,6 +244,7 @@ export default function WorkerOnboarding() {
                                                 required
                                                 value={formData.phone}
                                                 onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                                                aria-label="Celular ou WhatsApp"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="(00) 00000-0000"
                                             />
@@ -253,6 +256,7 @@ export default function WorkerOnboarding() {
                                                 required
                                                 value={formData.city}
                                                 onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                                aria-label="Cidade"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="Ex: São Paulo"
                                             />
@@ -297,6 +301,7 @@ export default function WorkerOnboarding() {
                                             required
                                             value={formData.experienceYears}
                                             onChange={e => setFormData({ ...formData, experienceYears: e.target.value })}
+                                            aria-label="Tempo de experiencia"
                                             className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                         >
                                             <option value="">Selecione...</option>
@@ -312,6 +317,7 @@ export default function WorkerOnboarding() {
                                         <textarea
                                             value={formData.bio}
                                             onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                                            aria-label="Bio curta"
                                             className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all resize-none h-20"
                                             placeholder="Conte um pouco sobre você..."
                                         />

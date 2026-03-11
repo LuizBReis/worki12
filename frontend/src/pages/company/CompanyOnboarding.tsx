@@ -197,6 +197,7 @@ export default function CompanyOnboarding() {
                                             required
                                             value={formData.name}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            aria-label="Nome da empresa"
                                             className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             placeholder="Ex: Tech Solutions Ltda"
                                         />
@@ -209,6 +210,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.cnpj}
                                                 onChange={e => setFormData({ ...formData, cnpj: formatCnpj(e.target.value) })}
+                                                aria-label="CNPJ"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="00.000.000/0001-00"
                                             />
@@ -220,6 +222,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.companyType}
                                                 onChange={e => setFormData({ ...formData, companyType: e.target.value })}
+                                                aria-label="Tipo de empresa"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             >
                                                 <option value="">Selecione...</option>
@@ -236,6 +239,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.industry}
                                                 onChange={e => setFormData({ ...formData, industry: e.target.value })}
+                                                aria-label="Setor"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             >
                                                 <option value="">Selecione...</option>
@@ -251,6 +255,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.city}
                                                 onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                                aria-label="Cidade"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="Ex: São Paulo"
                                             />

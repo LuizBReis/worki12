@@ -366,6 +366,7 @@ export default function CompanyProfile() {
                                             name="name"
                                             value={company.name || ''}
                                             onChange={handleChange}
+                                            aria-label="Razao social ou nome fantasia"
                                             className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                             placeholder="Nome da Empresa"
                                         />
@@ -382,6 +383,7 @@ export default function CompanyProfile() {
                                             name="industry"
                                             value={company.industry || ''}
                                             onChange={handleChange}
+                                            aria-label="Setor"
                                             className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                             placeholder="Ex: Tecnologia"
                                         />
@@ -398,6 +400,7 @@ export default function CompanyProfile() {
                                             name="description"
                                             value={company.description || ''}
                                             onChange={handleChange}
+                                            aria-label="Descricao da empresa"
                                             className="w-full font-medium text-gray-700 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:ring-0 outline-none transition-all min-h-[140px] resize-none"
                                             placeholder="Conte sobre sua empresa..."
                                         />
@@ -431,6 +434,7 @@ export default function CompanyProfile() {
                                                 name="website"
                                                 value={company.website || ''}
                                                 onChange={handleChange}
+                                                aria-label="Website"
                                                 className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                                 placeholder="https://..."
                                             />
@@ -454,6 +458,7 @@ export default function CompanyProfile() {
                                                 name="email"
                                                 value={company.email || ''}
                                                 onChange={handleChange}
+                                                aria-label="Email corporativo"
                                                 className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                                 placeholder="email@empresa.com"
                                             />
@@ -477,6 +482,7 @@ export default function CompanyProfile() {
                                                 name="address"
                                                 value={company.address || ''}
                                                 onChange={handleChange}
+                                                aria-label="Localizacao"
                                                 className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                                 placeholder="Endereço completo"
                                             />

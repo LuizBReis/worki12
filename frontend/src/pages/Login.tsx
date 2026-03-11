@@ -160,6 +160,7 @@ export default function Login() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    aria-label="Email"
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="nome@exemplo.com"
                                 />
@@ -176,6 +177,7 @@ export default function Login() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                     minLength={8}
+                                    aria-label="Senha"
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="••••••••"
                                 />

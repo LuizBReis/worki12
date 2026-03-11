@@ -101,6 +101,7 @@ export default function ResetPassword() {
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
+                            aria-label="Nova senha"
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="Minimo 8 caracteres"
                             autoFocus
@@ -121,6 +122,7 @@ export default function ResetPassword() {
                             type="password"
                             value={confirm}
                             onChange={e => setConfirm(e.target.value)}
+                            aria-label="Confirmar senha"
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="Repita a senha"
                         />

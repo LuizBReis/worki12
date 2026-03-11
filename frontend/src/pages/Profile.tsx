@@ -269,6 +269,7 @@ export default function Profile() {
                     ref={coverInputRef}
                     className="hidden"
                     accept="image/*"
+                    aria-label="Upload foto de capa"
                     onChange={(e) => handleUpload(e, 'cover')}
                     disabled={uploading}
                 />
@@ -294,6 +295,7 @@ export default function Profile() {
                                     ref={fileInputRef}
                                     className="hidden"
                                     accept="image/*"
+                                    aria-label="Upload foto de perfil"
                                     onChange={(e) => handleUpload(e, 'avatar')}
                                     disabled={uploading}
                                 />
@@ -310,6 +312,7 @@ export default function Profile() {
                                     type="text"
                                     value={formData.full_name}
                                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                    aria-label="Nome completo"
                                     className="text-3xl font-black uppercase tracking-tight text-white drop-shadow-md bg-transparent border-b border-white mb-2 w-full outline-none"
                                 />
                             ) : (
@@ -323,6 +326,7 @@ export default function Profile() {
                                         type="text"
                                         value={formData.city}
                                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        aria-label="Cidade"
                                         className="bg-transparent border-b border-white/50 text-white w-24 outline-none"
                                     />
                                 ) : (
@@ -422,6 +426,7 @@ export default function Profile() {
                                         type="tel"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        aria-label="Telefone"
                                         className="border-b border-gray-300 w-full outline-none focus:border-black"
                                         placeholder="(00) 00000-0000"
                                     />
@@ -451,12 +456,14 @@ export default function Profile() {
                                         value={formData.primary_role}
                                         onChange={(e) => setFormData({ ...formData, primary_role: e.target.value })}
                                         placeholder="Função Principal (ex: Bartender)"
+                                        aria-label="Funcao principal"
                                         className="w-full border p-2 rounded-lg"
                                     />
                                     <textarea
                                         value={formData.roles}
                                         onChange={(e) => setFormData({ ...formData, roles: e.target.value })}
                                         placeholder="Outras habilidades (separe por vírgula)"
+                                        aria-label="Especialidades"
                                         className="w-full border p-2 rounded-lg h-20"
                                     />
                                     <p className="text-xs text-gray-400">Separe as especialidades por vírgula.</p>
@@ -481,6 +488,7 @@ export default function Profile() {
                                 <textarea
                                     value={formData.bio}
                                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                                    aria-label="Sobre voce"
                                     className="w-full border p-2 rounded-lg h-32"
                                     placeholder="Conte um pouco sobre sua experiência..."
                                 />

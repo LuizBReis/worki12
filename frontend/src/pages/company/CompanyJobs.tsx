@@ -24,6 +24,7 @@ export default function CompanyJobs() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
     const { addToast } = useToast();

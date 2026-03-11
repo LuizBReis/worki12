@@ -119,6 +119,7 @@ export default function ForgotPassword() {
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
+                            aria-label="Email"
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="seu@email.com"
                             autoFocus
