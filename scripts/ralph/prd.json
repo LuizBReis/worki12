@@ -393,7 +393,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 27,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -407,7 +407,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 28,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

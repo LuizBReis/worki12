@@ -40,8 +40,8 @@
 
 - [x] **TS-01**: Remover todos os tipos `any` - Jobs.tsx any[] substituido por JobWithCompany[] (06eec20)
 - [x] **TS-02**: Fix ESLint exhaustive-deps - justificativa adicionada em 7 eslint-disable (910c9f1)
-- [ ] **TS-03**: Fix N+1 query em CompanyJobs.tsx - batch fetch candidate counts (lines 48-56)
-- [ ] **TS-04**: Add debouncing em search inputs - Jobs.tsx, CompanyJobs.tsx
+- [x] **TS-03**: Fix N+1 query em CompanyJobs.tsx - batch fetch com .in() (ja implementado)
+- [x] **TS-04**: Add debouncing 300ms em search inputs - Jobs.tsx, CompanyJobs.tsx (aa98731)
 - [ ] **TS-05**: Fix MainLayout onboarding route hardcoded errado (frontend/src/layouts/MainLayout.tsx line 38)
 - [ ] **TS-06**: Remover console.log/console.error desnecessarios em producao - usar Sentry exclusivamente
 
