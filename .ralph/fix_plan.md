@@ -1,65 +1,70 @@
-# Worki - Production Readiness Plan
+# Worki - Production Readiness Plan (Full Audit)
 
-## Phase 1: INFRA-* (Infraestrutura de producao)
+## Phase 1: SEC-* (Seguranca Critica - MUST FIX)
 
-- [x] **INFRA-01**: Linkar projeto Supabase e fazer push das migrations
-- [x] **INFRA-02**: Corrigir CORS em `_shared/asaas.ts` - exigir `CORS_ORIGIN` em producao
-- [x] **INFRA-03**: Corrigir fallback CPF fake no `asaas-deposit` - exigir CPF/CNPJ valido
-- [x] **INFRA-04**: Adicionar rate limiting basico nas edge functions criticas
-- [x] **INFRA-05**: Configurar `ASAAS_ENVIRONMENT` toggle para facil troca sandbox→production
-- [x] **INFRA-06**: Criar script de deploy com checklist de env vars
+- [ ] **SEC-01**: Fix admin-data JWT - usar supabase.auth.getUser() ao inves de parsear JWT manualmente sem verificar assinatura (supabase/functions/admin-data/index.ts line 23-26)
+- [ ] **SEC-02**: Fix wallet update RLS policy - subquery WITH CHECK e redundante e permite bypass; restringir UPDATE para apenas asaas_customer_id, nao balance (supabase/migrations/20260311100000_security_hardening_checkout_escrow.sql)
+- [ ] **SEC-03**: Fix withdrawal rollback critico - se Asaas transfer OK mas rollback RPC falha, usuario perde dinheiro; adicionar estado 'pending_transfer' e reconciliacao (supabase/functions/asaas-withdraw/index.ts lines 79-97)
+- [ ] **SEC-04**: Add HTML escaping em email templates - user name injetado em HTML sem escape, XSS em email (supabase/functions/_shared/email.ts)
+- [ ] **SEC-05**: Add validacao UUID no webhook user_id - externalReference pode ser invalido (supabase/functions/asaas-webhook/index.ts lines 86-92)
+- [ ] **SEC-06**: Fix asaas-checkout status check - permite release para status 'hired', deveria exigir 'completed' ou checkout confirmado (supabase/functions/asaas-checkout/index.ts lines 34-53)
+- [ ] **SEC-07**: Fix escrow auto-release silent failure - se worker sem wallet, escrow fica travado pra sempre; criar wallet automaticamente (supabase/migrations - trigger)
+- [ ] **SEC-08**: Add max iteration limit no asaas-sync loop - loop infinito possivel (supabase/functions/asaas-sync/index.ts lines 50-96)
+- [ ] **SEC-09**: Add validacao checksum CPF/CNPJ - aceita numeros invalidos como 11111111111 (supabase/functions/asaas-deposit/index.ts lines 55-59)
 
-## Phase 2: AUTH-* (Autenticacao e seguranca)
+## Phase 2: AUTH-* (Autenticacao e Controle de Acesso)
 
-- [x] **AUTH-01**: Criar pagina "Esqueci minha senha"
-- [x] **AUTH-02**: Criar pagina de redefinicao de senha
-- [x] **AUTH-03**: Adicionar rotas `/esqueci-senha` e `/redefinir-senha` no App.tsx
-- [x] **AUTH-04**: Habilitar confirmacao de email no Supabase (config manual - feito pelo usuario)
-- [x] **AUTH-05**: Adicionar link "Esqueci minha senha" na pagina de Login
+- [ ] **AUTH-06**: Centralizar admin email whitelist em env var ADMIN_EMAILS - frontend e backend com listas duplicadas (frontend/src/pages/Admin.tsx line 8, supabase/functions/admin-data/index.ts line 5)
+- [ ] **AUTH-07**: Add frontend rate limiting visual no forgot password - debounce + disable botao apos envio (frontend/src/pages/ForgotPassword.tsx)
+- [ ] **AUTH-08**: Fortalecer requisitos de senha - minimo 8 chars com indicador de forca (frontend/src/pages/ResetPassword.tsx, Login.tsx registro)
+- [ ] **AUTH-09**: Add mensagem explicativa no redirect de ProtectedRoute - usuario nao sabe porque foi redirecionado (frontend/src/components/ProtectedRoute.tsx)
 
-## Phase 3: MONITOR-* (Monitoramento e erros)
+## Phase 3: FORM-* (Validacao de Formularios)
 
-- [x] **MONITOR-01**: Instalar `@sentry/react` no frontend
-- [x] **MONITOR-02**: Configurar Sentry no `main.tsx` com DSN via env var
-- [x] **MONITOR-03**: Integrar ErrorBoundary com Sentry
-- [x] **MONITOR-04**: Adicionar Sentry em catch blocks criticos
+- [ ] **FORM-01**: Melhorar validacao de email em ForgotPassword - usar regex ao inves de includes('@') (frontend/src/pages/ForgotPassword.tsx line 17)
+- [ ] **FORM-02**: Add validacao checksum CNPJ no CompanyOnboarding - apenas valida tamanho (frontend/src/pages/company/CompanyOnboarding.tsx)
+- [ ] **FORM-03**: Melhorar validacao PIX key - validar formatos CPF/CNPJ/email/phone/chave aleatoria (frontend/src/pages/Wallet.tsx lines 92-109)
+- [ ] **FORM-04**: Add confirmation dialogs para acoes destrutivas - withdrawal, job deletion, application cancel, checkout (Wallet.tsx, CompanyJobs.tsx, MyJobs.tsx)
+- [ ] **FORM-05**: Fix CompanyOnboarding step 2 validation - canProceed() retorna true sempre (frontend/src/pages/company/CompanyOnboarding.tsx line 78-84)
 
-## Phase 4: EMAIL-* (Notificacoes por email)
+## Phase 4: UX-* (Error Handling e Experiencia)
 
-- [x] **EMAIL-01**: Criar edge function `send-notification`
-- [x] **EMAIL-02**: Disparar email quando worker e contratado
-- [x] **EMAIL-03**: Disparar email quando pagamento e recebido
-- [x] **EMAIL-04**: Disparar email quando deposito e confirmado
-- [x] **EMAIL-05**: Adicionar `RESEND_API_KEY` ao `.env.example`
+- [ ] **UX-05**: Add error states em CompanyDashboard - se queries falham, pagina quebra (frontend/src/pages/company/CompanyDashboard.tsx)
+- [ ] **UX-06**: Melhorar loading states com skeletons ao inves de spinners genericos (MainLayout, CompanyLayout, Dashboard)
+- [ ] **UX-07**: Melhorar mensagens de erro - trocar genericas por especificas em Login, ResetPassword, ForgotPassword
+- [ ] **UX-08**: Add unsaved changes warning em Profile e CompanyProfile edit mode (frontend/src/pages/Profile.tsx, CompanyProfile.tsx)
+- [ ] **UX-09**: Fix disabled buttons sem explicacao - add tooltip ou texto explicando porque esta desabilitado (Wallet.tsx, CompanyJobCandidates.tsx)
+- [ ] **UX-10**: Add success feedback apos acoes criticas - withdrawal, deposit, profile update, job creation (toast notifications)
 
-## Phase 5: ADMIN-* (Painel administrativo)
+## Phase 5: TS-* (TypeScript e Qualidade de Codigo)
 
-- [x] **ADMIN-01**: Criar pagina `/admin` com autenticacao por email whitelist
-- [x] **ADMIN-02**: Dashboard admin: total usuarios, total jobs, total transacoes, saldo plataforma
-- [x] **ADMIN-03**: Lista de transacoes recentes com filtro por tipo/status
-- [x] **ADMIN-04**: Lista de usuarios (workers + companies) via edge function admin-data
-- [x] **ADMIN-05**: Lista de escrows pendentes via edge function admin-data
+- [ ] **TS-01**: Remover todos os tipos `any` - Jobs.tsx line 13, Profile.tsx line 17, e outros
+- [ ] **TS-02**: Fix ESLint react-hooks/exhaustive-deps warnings restantes (10 warnings)
+- [ ] **TS-03**: Fix N+1 query em CompanyJobs.tsx - batch fetch candidate counts (lines 48-56)
+- [ ] **TS-04**: Add debouncing em search inputs - Jobs.tsx, CompanyJobs.tsx
+- [ ] **TS-05**: Fix MainLayout onboarding route hardcoded errado (frontend/src/layouts/MainLayout.tsx line 38)
+- [ ] **TS-06**: Remover console.log/console.error desnecessarios em producao - usar Sentry exclusivamente
 
-## Phase 6: UX-* (Experiencia do usuario)
+## Phase 6: A11Y-* (Acessibilidade)
 
-- [x] **UX-01**: Criar pagina de Ajuda/Suporte com FAQ basico e link de contato
-- [x] **UX-02**: Adicionar rota `/ajuda` no App.tsx
-- [x] **UX-03**: Melhorar Termos de Uso com clausulas completas (escrow, taxas, disputas, LGPD)
-- [x] **UX-04**: Melhorar Politica de Privacidade com detalhes de retencao e direitos LGPD
+- [ ] **A11Y-01**: Add ARIA labels em todos os form inputs - Login, Register, Onboarding, Profile, CreateJob
+- [ ] **A11Y-02**: Add texto junto com indicadores de cor - status badges precisam de texto alem de cor
+- [ ] **A11Y-03**: Add focus management em modais - DepositModal, RateModal, confirmacao dialogs
+- [ ] **A11Y-04**: Add keyboard navigation - garantir tab order correto em todas as paginas
 
-## Phase 7: QUALITY-* (Testes finais)
+## Phase 7: TEST-* (Testes Abrangentes)
 
-- [x] **QUALITY-01**: Expandir testes do walletService com mocks (18 testes passando)
-- [ ] **QUALITY-02**: Adicionar testes para paginas de auth
-- [x] **QUALITY-03**: Build + lint limpos apos todas mudancas
-- [x] **QUALITY-04**: Verificar TODAS as rotas (31 testes passando, build limpo)
+- [ ] **TEST-01**: Add testes para paginas de auth - Login, ForgotPassword, ResetPassword (render, validation, submit)
+- [ ] **TEST-02**: Add testes para ProtectedRoute - redirect, loading, authenticated states
+- [ ] **TEST-03**: Add testes para fluxos financeiros - deposit modal, withdrawal form, escrow display
+- [ ] **TEST-04**: Add testes para validacao de formularios - CPF, CNPJ, PIX, email, password strength
+- [ ] **TEST-05**: Add testes para componentes criticos - JobCard, NotificationBell, BottomNav, Sidebar
+- [ ] **TEST-06**: Final build + lint validation limpo - zero errors, zero warnings
 
 ## Notes
-- NAO alterar nada relacionado a Asaas API/endpoints (apenas CORS e validacao)
-- Asaas permanece em sandbox ate config final
+- NAO alterar logica de pagamento Asaas (apenas validacao, seguranca, UX)
 - Commits em portugues, sem Co-Authored-By
 - Push cada commit imediatamente
-- Verificar build apos cada mudanca
-
-## Remaining:
-- QUALITY-02: Testes de paginas auth (nice-to-have)
+- Build DEVE passar apos cada mudanca
+- Uma task por iteracao do Ralph
+- Prioridade: SEC > AUTH > FORM > UX > TS > A11Y > TEST
