@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { WalletService } from '../services/walletService';
 import { Loader2, X, ExternalLink, QrCode } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface DepositModalProps {
     isOpen: boolean;
@@ -14,13 +15,14 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
     const [amount, setAmount] = useState<string>('');
     const [pixUrl, setPixUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const firstInputRef = useRef<HTMLInputElement>(null);
+    const trapRef = useFocusTrap(isOpen);
 
     useEffect(() => {
         if (isOpen) {
-            firstInputRef.current?.focus();
+            const input = trapRef.current?.querySelector<HTMLInputElement>('input');
+            input?.focus();
         }
-    }, [isOpen]);
+    }, [isOpen, trapRef]);
 
     if (!isOpen) return null;
 
@@ -61,6 +63,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
             onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
         >
             <div
+                ref={trapRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="deposit-modal-title"
@@ -68,6 +71,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
             >
                 <button
                     onClick={handleClose}
+                    aria-label="Fechar"
                     className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center"
                 >
                     <X size={20} />
@@ -90,8 +94,8 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
                                 <input
-                                    ref={firstInputRef}
                                     type="number"
+                                    aria-label="Valor do depósito"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
                                     className="w-full border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-4 focus:border-black focus:ring-0 outline-none font-black text-2xl text-gray-900 transition-all placeholder:text-gray-300"
