@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Users, Briefcase, TrendingUp, Search, Filter, Loader2, Bell } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, Search, Filter, Loader2, Bell, AlertTriangle, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,7 +8,7 @@ import { ptBR } from 'date-fns/locale';
 export default function CompanyDashboard() {
     const navigate = useNavigate();
     // React Query Hooks
-    const { data: company, isLoading: isLoadingCompany } = useQuery({
+    const { data: company, isLoading: isLoadingCompany, isError: isErrorCompany, refetch: refetchCompany } = useQuery({
         queryKey: ['companyProfile'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -18,7 +18,7 @@ export default function CompanyDashboard() {
         }
     });
 
-    const { data: jobs = [] } = useQuery({
+    const { data: jobs = [], isError: isErrorJobs, refetch: refetchJobs } = useQuery({
         queryKey: ['companyJobs'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -33,7 +33,7 @@ export default function CompanyDashboard() {
         enabled: !!company
     });
 
-    const { data: applications = [] } = useQuery({
+    const { data: applications = [], isError: isErrorApps, refetch: refetchApps } = useQuery({
         queryKey: ['companyApplications'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -48,6 +48,9 @@ export default function CompanyDashboard() {
         },
         enabled: !!company
     });
+
+    const hasError = isErrorCompany || isErrorJobs || isErrorApps;
+    const handleRetry = () => { refetchCompany(); refetchJobs(); refetchApps(); };
 
     // Derived State
     const companyName = company?.name || '';
@@ -77,6 +80,18 @@ export default function CompanyDashboard() {
 
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {hasError && (
+                <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle size={20} className="text-red-500" />
+                        <span className="font-bold text-red-700 text-sm">Erro ao carregar alguns dados do dashboard.</span>
+                    </div>
+                    <button onClick={handleRetry} className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg font-bold text-xs uppercase hover:bg-red-200 transition-colors">
+                        <RefreshCw size={14} /> Tentar novamente
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
                 <div>
