@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { WalletService } from '../services/walletService';
 import { Loader2, X, ExternalLink, QrCode } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
@@ -14,6 +14,13 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
     const [amount, setAmount] = useState<string>('');
     const [pixUrl, setPixUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const firstInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            firstInputRef.current?.focus();
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -49,8 +56,16 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-200 shadow-2xl">
+        <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="deposit-modal-title"
+                className="bg-white rounded-3xl w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-200 shadow-2xl"
+            >
                 <button
                     onClick={handleClose}
                     className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center"
@@ -62,7 +77,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                     <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4 shadow-sm border border-blue-100">
                         <QrCode size={32} />
                     </div>
-                    <h3 className="text-2xl font-black uppercase text-gray-900 tracking-tight text-center">Adicionar Créditos</h3>
+                    <h3 id="deposit-modal-title" className="text-2xl font-black uppercase text-gray-900 tracking-tight text-center">Adicionar Créditos</h3>
                     <p className="text-sm font-medium text-gray-500 text-center mt-2 max-w-[280px]">
                         Compre créditos pagando no PIX, Boleto ou Cartão de Crédito. O saldo entra assim que o pagamento for aprovado.
                     </p>
@@ -75,6 +90,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
                                 <input
+                                    ref={firstInputRef}
                                     type="number"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}

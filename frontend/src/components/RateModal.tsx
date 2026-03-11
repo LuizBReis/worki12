@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Star, XCircle, Loader2 } from 'lucide-react';
 
 interface RateModalProps {
@@ -16,6 +16,13 @@ export default function RateModal({ isOpen, onClose, onSubmit, targetName, targe
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const firstStarRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            firstStarRef.current?.focus();
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -34,10 +41,18 @@ export default function RateModal({ isOpen, onClose, onSubmit, targetName, targe
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+            onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        >
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="rate-modal-title"
+                className="bg-white rounded-2xl w-full max-w-md p-6 border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+            >
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-black uppercase tracking-tight">{title}</h3>
+                    <h3 id="rate-modal-title" className="text-2xl font-black uppercase tracking-tight">{title}</h3>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <XCircle size={24} />
                     </button>
@@ -61,6 +76,7 @@ export default function RateModal({ isOpen, onClose, onSubmit, targetName, targe
                     {[1, 2, 3, 4, 5].map((star) => (
                         <button
                             key={star}
+                            ref={star === 1 ? firstStarRef : undefined}
                             onClick={() => setRating(star)}
                             className="transform hover:scale-110 transition-transform"
                         >
