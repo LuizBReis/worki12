@@ -282,6 +282,7 @@ export default function CompanyOnboarding() {
                                                         type="radio"
                                                         name="goal"
                                                         value={opt}
+                                                        aria-label={opt}
                                                         checked={formData.hiringGoal === opt}
                                                         onChange={e => setFormData({ ...formData, hiringGoal: e.target.value })}
                                                         className="accent-black w-5 h-5"
@@ -297,7 +298,7 @@ export default function CompanyOnboarding() {
                                         <div className="flex gap-4">
                                             {['1-5', '6-20', '20+'].map(opt => (
                                                 <label key={opt} className={`flex-1 border-2 rounded-xl p-4 cursor-pointer transition-all flex flex-col items-center justify-center font-bold text-center ${formData.hiringVolume === opt ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-black'}`}>
-                                                    <input type="radio" name="volume" value={opt} checked={formData.hiringVolume === opt} onChange={e => setFormData({ ...formData, hiringVolume: e.target.value })} className="hidden" />
+                                                    <input type="radio" name="volume" value={opt} aria-label={`${opt} vagas por mês`} checked={formData.hiringVolume === opt} onChange={e => setFormData({ ...formData, hiringVolume: e.target.value })} className="hidden" />
                                                     <span className="text-lg">{opt}</span>
                                                     <span className="text-[10px] uppercase font-normal opacity-70">Vagas</span>
                                                 </label>

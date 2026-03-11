@@ -242,6 +242,7 @@ export default function CompanyProfile() {
                                 type="file"
                                 accept="image/*"
                                 id="cover-upload"
+                                aria-label="Upload foto de capa"
                                 className="hidden"
                                 onChange={(e) => handleImageUpload(e, 'cover')}
                             />
@@ -272,6 +273,7 @@ export default function CompanyProfile() {
                                             type="file"
                                             accept="image/*"
                                             id="logo-upload"
+                                            aria-label="Upload logo da empresa"
                                             className="hidden"
                                             onChange={(e) => handleImageUpload(e, 'logo')}
                                         />

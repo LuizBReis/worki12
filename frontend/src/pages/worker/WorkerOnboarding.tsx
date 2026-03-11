@@ -343,6 +343,7 @@ export default function WorkerOnboarding() {
                                                         type="radio"
                                                         name="goal"
                                                         value={opt}
+                                                        aria-label={opt}
                                                         checked={formData.goal === opt}
                                                         onChange={e => setFormData({ ...formData, goal: e.target.value })}
                                                         className="accent-black w-5 h-5"
