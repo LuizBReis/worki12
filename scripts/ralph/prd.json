@@ -365,7 +365,7 @@
         "Build passes with no type errors: cd frontend && npm run build"
       ],
       "priority": 25,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

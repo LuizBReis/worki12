@@ -75,3 +75,14 @@ Started: 2026-03-11
   - Verificar implementacao existente antes de codar evita trabalho duplicado
   - Fase UX completa - proxima fase: TS (TypeScript e qualidade)
 ---
+
+## 2026-03-11 - TS-01
+- Substituido any[] por interface JobWithCompany[] tipada em Jobs.tsx
+- Interface cobre todos os campos retornados pela query Supabase incluindo company join
+- Profile.tsx ja nao tinha any (corrigido em iteracao anterior)
+- Zero any types restantes no codebase (confirmado via grep)
+- Arquivos modificados: frontend/src/pages/Jobs.tsx
+- **Aprendizados para proximas iteracoes:**
+  - Unico any restante era em Jobs.tsx - Profile.tsx ja tinha sido tipado
+  - Interface do JobCard em JobCard.tsx serviu de base para a nova interface
+---

@@ -38,7 +38,7 @@
 
 ## Phase 5: TS-* (TypeScript e Qualidade de Codigo)
 
-- [ ] **TS-01**: Remover todos os tipos `any` - Jobs.tsx line 13, Profile.tsx line 17, e outros
+- [x] **TS-01**: Remover todos os tipos `any` - Jobs.tsx any[] substituido por JobWithCompany[] (06eec20)
 - [ ] **TS-02**: Fix ESLint react-hooks/exhaustive-deps warnings restantes (10 warnings)
 - [ ] **TS-03**: Fix N+1 query em CompanyJobs.tsx - batch fetch candidate counts (lines 48-56)
 - [ ] **TS-04**: Add debouncing em search inputs - Jobs.tsx, CompanyJobs.tsx
