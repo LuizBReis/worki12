@@ -101,7 +101,7 @@ export default function CompanyOnboarding() {
     const canProceed = () => {
         switch (step) {
             case 1: return formData.name && formData.cnpj.replace(/\D/g, '').length === 14 && formData.companyType && formData.industry && formData.city;
-            case 2: return formData.hiringGoal || formData.hiringVolume;
+            case 2: return formData.hiringGoal && formData.hiringVolume;
             default: return true;
         }
     };
@@ -316,19 +316,24 @@ export default function CompanyOnboarding() {
                                 <div />
                             )}
 
-                            <button
-                                type="submit"
-                                disabled={loading || !canProceed()}
-                                className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-primary hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? (
-                                    <Loader2 className="animate-spin" />
-                                ) : (
-                                    <>
-                                        {step === TOTAL_STEPS ? 'Finalizar' : 'Próximo'} <ArrowRight size={20} />
-                                    </>
+                            <div className="flex flex-col items-end gap-1">
+                                <button
+                                    type="submit"
+                                    disabled={loading || !canProceed()}
+                                    className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-primary hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            {step === TOTAL_STEPS ? 'Finalizar' : 'Próximo'} <ArrowRight size={20} />
+                                        </>
+                                    )}
+                                </button>
+                                {step === 2 && !canProceed() && (
+                                    <p className="text-xs text-red-500 font-medium">Selecione o objetivo e o volume de contratacao</p>
                                 )}
-                            </button>
+                            </div>
                         </div>
 
                     </form>
