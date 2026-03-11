@@ -2,6 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, ASAAS_API_URL, getAsaasHeaders } from '../_shared/asaas.ts';
 
+const MAX_PAGES = 10;
+
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
@@ -51,8 +53,10 @@ serve(async (req) => {
             let offset = 0;
             const limit = 100;
             let hasMore = true;
+            let pageCount = 0;
 
-            while (hasMore) {
+            while (hasMore && pageCount < MAX_PAGES) {
+                pageCount++;
                 const asaasRes = await fetch(`${ASAAS_API_URL}/payments?externalReference=${user.id}&status=${status}&limit=${limit}&offset=${offset}`, {
                     headers: getAsaasHeaders()
                 });
@@ -92,6 +96,10 @@ serve(async (req) => {
 
                 hasMore = payments.length === limit;
                 offset += limit;
+
+                if (hasMore && pageCount >= MAX_PAGES) {
+                    console.warn(`Max pages (${MAX_PAGES}) reached for status ${status}, user ${user.id}. Some payments may not be synced.`);
+                }
             }
         }
 
