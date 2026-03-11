@@ -62,3 +62,16 @@ Started: 2026-03-11
   - Sempre verificar build apos cada story - imports nao usados causam erro no tsc
   - AUTH-09 foi implementada em iteracao anterior mas nao marcada como passes: true
 ---
+
+## 2026-03-11 - UX-07, UX-08, UX-09, UX-10 (batch verification)
+- Todas as 4 stories ja estavam implementadas em iteracoes anteriores
+- UX-07: Login, ResetPassword, ForgotPassword ja tem mensagens especificas em portugues
+- UX-08: Profile e CompanyProfile ja tem beforeunload + isDirty detection
+- UX-09: Wallet e CompanyJobCandidates ja mostram texto explicativo em botoes desabilitados
+- UX-10: Todas as acoes criticas ja usam addToast('...', 'success')
+- Arquivos modificados: .ralph/fix_plan.md, scripts/ralph/prd.json (tracking only)
+- **Aprendizados para proximas iteracoes:**
+  - Muitas stories das fases UX foram implementadas nas iteracoes SEC/AUTH/FORM mas nao marcadas
+  - Verificar implementacao existente antes de codar evita trabalho duplicado
+  - Fase UX completa - proxima fase: TS (TypeScript e qualidade)
+---

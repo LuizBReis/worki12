@@ -32,9 +32,9 @@
 - [x] **UX-05**: Add error states em CompanyDashboard (00b4b0e)
 - [x] **UX-06**: Loading skeletons (d01846a)
 - [x] **UX-07**: Melhorar mensagens de erro - trocar genericas por especificas em Login, ResetPassword, ForgotPassword (ja implementado)
-- [ ] **UX-08**: Add unsaved changes warning em Profile e CompanyProfile edit mode (frontend/src/pages/Profile.tsx, CompanyProfile.tsx)
-- [ ] **UX-09**: Fix disabled buttons sem explicacao - add tooltip ou texto explicando porque esta desabilitado (Wallet.tsx, CompanyJobCandidates.tsx)
-- [ ] **UX-10**: Add success feedback apos acoes criticas - withdrawal, deposit, profile update, job creation (toast notifications)
+- [x] **UX-08**: Add unsaved changes warning em Profile e CompanyProfile edit mode (ja implementado)
+- [x] **UX-09**: Fix disabled buttons sem explicacao (ja implementado)
+- [x] **UX-10**: Add success feedback apos acoes criticas (ja implementado)
 
 ## Phase 5: TS-* (TypeScript e Qualidade de Codigo)
 
