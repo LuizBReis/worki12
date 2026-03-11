@@ -5,11 +5,34 @@ import { Loader2, ArrowRight, ArrowLeft, Building2, Briefcase, Target } from 'lu
 import { useToast } from '../../contexts/ToastContext';
 import { WalletService } from '../../services/walletService';
 
+function validateCNPJ(cnpj: string): boolean {
+    const clean = cnpj.replace(/\D/g, '');
+    if (clean.length !== 14) return false;
+    if (/^(\d)\1{13}$/.test(clean)) return false;
+
+    const digits = clean.split('').map(Number);
+    const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += digits[i] * weights1[i];
+    let rem = sum % 11;
+    if ((rem < 2 ? 0 : 11 - rem) !== digits[12]) return false;
+
+    sum = 0;
+    for (let i = 0; i < 13; i++) sum += digits[i] * weights2[i];
+    rem = sum % 11;
+    if ((rem < 2 ? 0 : 11 - rem) !== digits[13]) return false;
+
+    return true;
+}
+
 export default function CompanyOnboarding() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
     const [step, setStep] = useState(1);
+    const [cnpjError, setCnpjError] = useState('');
     const [userId, setUserId] = useState<string | null>(null);
 
     const TOTAL_STEPS = 2;
@@ -78,13 +101,20 @@ export default function CompanyOnboarding() {
     const canProceed = () => {
         switch (step) {
             case 1: return formData.name && formData.cnpj.replace(/\D/g, '').length === 14 && formData.companyType && formData.industry && formData.city;
-            case 2: return true;
+            case 2: return formData.hiringGoal || formData.hiringVolume;
             default: return true;
         }
     };
 
     const handleNext = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (step === 1) {
+            if (!validateCNPJ(formData.cnpj)) {
+                setCnpjError('CNPJ invalido. Verifique os digitos e tente novamente.');
+                return;
+            }
+            setCnpjError('');
+        }
         if (step < TOTAL_STEPS) {
             setStep(step + 1);
         } else {
@@ -182,6 +212,7 @@ export default function CompanyOnboarding() {
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="00.000.000/0001-00"
                                             />
+                                            {cnpjError && <p className="text-red-600 text-xs font-bold mt-1">{cnpjError}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold uppercase mb-1">Tipo de Empresa *</label>
