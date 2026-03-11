@@ -5,7 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock, LogIn, RefreshCw } from 'lucide-react';
 import { invokeFunction } from '../services/api';
 
-const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
+const DEFAULT_ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
+const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS
+    ? (import.meta.env.VITE_ADMIN_EMAILS as string).split(',').map((e: string) => e.trim())
+    : DEFAULT_ADMIN_EMAILS;
 
 interface AsaasBalance {
     currentBalance: number;
