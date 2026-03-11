@@ -1,0 +1,597 @@
+{
+  "project": "Worki",
+  "branchName": "ralph/production-hardening",
+  "description": "Production Hardening - Seguranca, validacao, UX e testes para producao",
+  "userStories": [
+    {
+      "id": "SEC-01",
+      "title": "Fix admin-data JWT verification",
+      "description": "As a security engineer, I need proper JWT verification in admin-data so that attackers cannot forge service_role tokens.",
+      "acceptanceCriteria": [
+        "Replace manual JWT parsing (atob/split) with supabase.auth.getUser(token) in supabase/functions/admin-data/index.ts lines 23-26",
+        "Remove the try/catch block that parses JWT payload manually",
+        "Admin endpoint still works for both service_role and whitelisted email users",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "CRITICAL: Current code does JSON.parse(atob(token.split('.')[1])) without signature verification"
+    },
+    {
+      "id": "SEC-02",
+      "title": "Fix wallet update RLS policy",
+      "description": "As a security engineer, I need wallet RLS to prevent users from modifying their own balance via direct UPDATE.",
+      "acceptanceCriteria": [
+        "Create new migration that drops and recreates wallet UPDATE policy",
+        "New policy allows UPDATE only on asaas_customer_id column, NOT balance",
+        "Users cannot SET balance directly via supabase-js .update()",
+        "Balance changes only through SECURITY DEFINER RPCs",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Current WITH CHECK subquery is redundant and confusing. Restrict columns explicitly."
+    },
+    {
+      "id": "SEC-03",
+      "title": "Fix withdrawal rollback safety",
+      "description": "As a financial engineer, I need withdrawal to handle Asaas API failures safely so users never lose money.",
+      "acceptanceCriteria": [
+        "Add 'pending_transfer' status to wallet_transactions before calling Asaas API in supabase/functions/asaas-withdraw/index.ts",
+        "If Asaas transfer succeeds, update status to 'completed'",
+        "If Asaas transfer fails, rollback with status 'failed' and restore balance",
+        "If rollback fails, log CRITICAL error with all details for manual reconciliation",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "CRITICAL: Current code can lose user money if Asaas succeeds but DB rollback fails"
+    },
+    {
+      "id": "SEC-04",
+      "title": "Add HTML escaping in email templates",
+      "description": "As a security engineer, I need user-provided names escaped in email HTML to prevent XSS in email clients.",
+      "acceptanceCriteria": [
+        "Create escapeHtml() utility function in supabase/functions/_shared/email.ts",
+        "Escape all user-provided variables (workerName, companyName, jobTitle) before HTML insertion",
+        "Function handles: < > & \" ' characters",
+        "All email templates use escaped values",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "User names injected directly into HTML like: <h1>${workerName}</h1>"
+    },
+    {
+      "id": "SEC-05",
+      "title": "Add UUID validation on webhook",
+      "description": "As a security engineer, I need webhook to validate externalReference is a valid UUID before passing to RPC.",
+      "acceptanceCriteria": [
+        "Add UUID format validation for payment.externalReference in supabase/functions/asaas-webhook/index.ts",
+        "Return 400 Bad Request if externalReference is not a valid UUID",
+        "Also validate payment.id and payment.value are present and valid",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "No validation before passing userId to credit_deposit RPC"
+    },
+    {
+      "id": "SEC-06",
+      "title": "Fix asaas-checkout escrow status check",
+      "description": "As a financial engineer, I need checkout to only proceed for completed/confirmed jobs, not just hired status.",
+      "acceptanceCriteria": [
+        "In supabase/functions/asaas-checkout/index.ts, change application status filter to only accept 'completed' or status where company_checkout_confirmed_at IS NOT NULL",
+        "Remove 'hired' from allowed statuses for payment release",
+        "Add clear error message when status is wrong",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Currently allows release for 'hired' status without requiring job completion"
+    },
+    {
+      "id": "SEC-07",
+      "title": "Fix escrow auto-release silent failure",
+      "description": "As a financial engineer, I need escrow trigger to create worker wallet automatically if missing, not silently fail.",
+      "acceptanceCriteria": [
+        "Create new migration that updates the auto-release trigger function",
+        "If worker has no wallet, create one automatically with balance 0",
+        "Then proceed with escrow release normally",
+        "Log wallet creation event for auditing",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Current trigger does RAISE WARNING and RETURN NEW, silently leaving money locked"
+    },
+    {
+      "id": "SEC-08",
+      "title": "Add max iteration limit on asaas-sync",
+      "description": "As a backend engineer, I need sync to have a max page limit to prevent infinite loops and resource exhaustion.",
+      "acceptanceCriteria": [
+        "Add MAX_PAGES constant (10) in supabase/functions/asaas-sync/index.ts",
+        "Break loop after MAX_PAGES iterations",
+        "Log warning when max pages reached",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "while(hasMore) loop has no upper bound"
+    },
+    {
+      "id": "SEC-09",
+      "title": "Add CPF/CNPJ checksum validation",
+      "description": "As a backend engineer, I need CPF/CNPJ validation with checksum to reject obviously invalid documents.",
+      "acceptanceCriteria": [
+        "Create validateCPF() and validateCNPJ() functions with checksum algorithm in supabase/functions/asaas-deposit/index.ts",
+        "Reject known invalid patterns (all same digits like 11111111111)",
+        "Validate check digits mathematically",
+        "Return clear error message in Portuguese when invalid",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Currently only checks string length (11 or 14 digits)"
+    },
+    {
+      "id": "AUTH-06",
+      "title": "Centralizar admin email whitelist",
+      "description": "As a developer, I need admin emails in a single source of truth to prevent frontend/backend desync.",
+      "acceptanceCriteria": [
+        "In frontend/src/pages/Admin.tsx: read admin emails from VITE_ADMIN_EMAILS env var with fallback to current hardcoded list",
+        "In supabase/functions/admin-data/index.ts: read from ADMIN_EMAILS env var with fallback",
+        "Add VITE_ADMIN_EMAILS to frontend/.env.example",
+        "Add ADMIN_EMAILS to edge function env documentation",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Currently hardcoded in 2 separate files that can diverge"
+    },
+    {
+      "id": "AUTH-07",
+      "title": "Add rate limiting visual no forgot password",
+      "description": "As a user, I want feedback when I send a password reset so I know it worked and cant spam the button.",
+      "acceptanceCriteria": [
+        "Disable submit button for 60 seconds after successful send in frontend/src/pages/ForgotPassword.tsx",
+        "Show countdown timer on disabled button",
+        "Show success message after send",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-08",
+      "title": "Fortalecer requisitos de senha",
+      "description": "As a user, I need stronger password requirements so my account is more secure.",
+      "acceptanceCriteria": [
+        "Minimum 8 characters (was 6) in frontend/src/pages/ResetPassword.tsx",
+        "Add simple password strength indicator (weak/medium/strong) based on length + character types",
+        "Also update Login.tsx registration password validation to match",
+        "Clear error messages in Portuguese for each requirement",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-09",
+      "title": "Add mensagem no redirect de ProtectedRoute",
+      "description": "As a user, I want to know why I was redirected to login so I understand what happened.",
+      "acceptanceCriteria": [
+        "Pass redirect reason via URL param (e.g., /login?reason=session_expired)",
+        "Login.tsx reads reason param and shows appropriate message in Portuguese",
+        "ProtectedRoute.tsx adds reason param when redirecting",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "FORM-01",
+      "title": "Melhorar validacao de email",
+      "description": "As a user, I want proper email validation so I dont submit obviously wrong emails.",
+      "acceptanceCriteria": [
+        "Replace includes('@') with proper email regex in frontend/src/pages/ForgotPassword.tsx",
+        "Validate format: user@domain.tld",
+        "Show clear error in Portuguese when format is wrong",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Current validation: email.includes('@')"
+    },
+    {
+      "id": "FORM-02",
+      "title": "Add validacao checksum CNPJ",
+      "description": "As a company, I want CNPJ validation with checksum so I cant register with invalid documents.",
+      "acceptanceCriteria": [
+        "Add validateCNPJ() function with check digit algorithm in frontend/src/pages/company/CompanyOnboarding.tsx",
+        "Reject all-same-digits patterns",
+        "Show error message in Portuguese when CNPJ is invalid",
+        "Validate on step transition (before proceeding to next step)",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "Currently only validates length"
+    },
+    {
+      "id": "FORM-03",
+      "title": "Melhorar validacao PIX key",
+      "description": "As a worker, I want PIX key format validation so I dont enter invalid keys for withdrawal.",
+      "acceptanceCriteria": [
+        "Validate CPF key format (11 digits + checksum) in frontend/src/pages/Wallet.tsx",
+        "Validate CNPJ key format (14 digits + checksum)",
+        "Validate email key format (email regex)",
+        "Validate phone key format (+55 + 11 digits)",
+        "Validate random key format (UUID pattern)",
+        "Show specific error per type in Portuguese",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "FORM-04",
+      "title": "Add confirmation dialogs para acoes destrutivas",
+      "description": "As a user, I want confirmation before destructive actions so I dont accidentally lose data or money.",
+      "acceptanceCriteria": [
+        "Add confirm dialog before withdrawal submit in Wallet.tsx (show amount and fee)",
+        "Add confirm dialog before job deletion in CompanyJobs.tsx",
+        "Add confirm dialog before application cancel in MyJobs.tsx",
+        "Dialogs have clear Portuguese text explaining the action",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "FORM-05",
+      "title": "Fix CompanyOnboarding step 2 validation",
+      "description": "As a developer, I need step 2 canProceed() to actually validate selections.",
+      "acceptanceCriteria": [
+        "canProceed() for step 2 checks that hiring_goal or volume selection has been made in frontend/src/pages/company/CompanyOnboarding.tsx",
+        "Show error if trying to proceed without required selection",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "canProceed() currently returns true always for step 2"
+    },
+    {
+      "id": "UX-05",
+      "title": "Add error states em CompanyDashboard",
+      "description": "As a company user, I want to see error messages when dashboard data fails to load.",
+      "acceptanceCriteria": [
+        "Add error state handling for all queries in frontend/src/pages/company/CompanyDashboard.tsx",
+        "Show user-friendly error message in Portuguese with retry button",
+        "Dashboard doesnt crash when a single query fails",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "UX-06",
+      "title": "Add loading skeletons",
+      "description": "As a user, I want skeleton placeholders instead of generic spinners so loading feels faster.",
+      "acceptanceCriteria": [
+        "Replace generic spinner in MainLayout with content skeleton",
+        "Replace generic spinner in CompanyLayout with content skeleton",
+        "Use simple CSS-only skeleton (no new dependencies) with animate-pulse",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "UX-07",
+      "title": "Melhorar mensagens de erro",
+      "description": "As a user, I want specific error messages so I know exactly what went wrong.",
+      "acceptanceCriteria": [
+        "Login.tsx: differentiate between 'email not found', 'wrong password', 'email not confirmed'",
+        "ResetPassword.tsx: differentiate between 'token expired', 'token invalid', 'password too weak'",
+        "ForgotPassword.tsx: differentiate between 'email not found' and 'server error'",
+        "All messages in Portuguese",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "UX-08",
+      "title": "Add unsaved changes warning",
+      "description": "As a user, I want a warning when leaving a page with unsaved changes.",
+      "acceptanceCriteria": [
+        "Add beforeunload event listener when form is dirty in frontend/src/pages/Profile.tsx",
+        "Add same in frontend/src/pages/company/CompanyProfile.tsx",
+        "Track dirty state by comparing current form values to initial values",
+        "Show browser native confirmation dialog",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "UX-09",
+      "title": "Fix disabled buttons sem explicacao",
+      "description": "As a user, I want to know why a button is disabled so I can take the right action.",
+      "acceptanceCriteria": [
+        "Wallet.tsx: show 'Saldo insuficiente' text below disabled withdraw button when balance <= 0",
+        "CompanyJobCandidates.tsx: show 'Saldo insuficiente para contratar' when canHire is false",
+        "Use small text below button, not tooltip (better mobile support)",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "UX-10",
+      "title": "Add success feedback para acoes criticas",
+      "description": "As a user, I want clear success messages after important actions.",
+      "acceptanceCriteria": [
+        "Show toast after successful withdrawal in Wallet.tsx",
+        "Show toast after successful deposit initiation in DepositModal.tsx",
+        "Show toast after successful profile update in Profile.tsx and CompanyProfile.tsx",
+        "Show toast after successful job creation in CompanyCreateJob.tsx",
+        "Use existing toast system from ToastContext",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TS-01",
+      "title": "Remover tipos any do TypeScript",
+      "description": "As a developer, I need proper TypeScript types to catch bugs at compile time.",
+      "acceptanceCriteria": [
+        "Replace any[] with proper Job[] type in frontend/src/pages/Jobs.tsx line 13",
+        "Replace any with proper type in frontend/src/pages/Profile.tsx line 17",
+        "Search for remaining 'any' types in frontend/src/ and fix them",
+        "Build passes with no type errors: cd frontend && npm run build"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TS-02",
+      "title": "Fix ESLint exhaustive-deps warnings",
+      "description": "As a developer, I need clean lint output with no warnings.",
+      "acceptanceCriteria": [
+        "Fix all react-hooks/exhaustive-deps warnings (currently ~10)",
+        "Either add missing dependencies or use eslint-disable with justification comment",
+        "cd frontend && npm run lint shows zero warnings for exhaustive-deps",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TS-03",
+      "title": "Fix N+1 query em CompanyJobs",
+      "description": "As a developer, I need batch fetching to avoid N+1 queries that slow down the page.",
+      "acceptanceCriteria": [
+        "Replace individual candidate count queries with single batch query in frontend/src/pages/company/CompanyJobs.tsx lines 48-56",
+        "Use Supabase .in() or join to fetch all counts in one query",
+        "Same data displayed, fewer network requests",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TS-04",
+      "title": "Add debouncing em search inputs",
+      "description": "As a user, I want search to wait for me to finish typing before querying.",
+      "acceptanceCriteria": [
+        "Add 300ms debounce on search input in frontend/src/pages/Jobs.tsx",
+        "Add 300ms debounce on search input in frontend/src/pages/company/CompanyJobs.tsx",
+        "Use simple setTimeout/clearTimeout pattern (no new dependencies)",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TS-05",
+      "title": "Fix MainLayout onboarding route",
+      "description": "As a developer, I need correct route for worker onboarding redirect.",
+      "acceptanceCriteria": [
+        "Fix hardcoded route in frontend/src/layouts/MainLayout.tsx line 38",
+        "Verify the route matches App.tsx router configuration",
+        "Worker onboarding redirect works correctly",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TS-06",
+      "title": "Limpar console.log/error em producao",
+      "description": "As a developer, I need production code to use Sentry instead of console.log for error tracking.",
+      "acceptanceCriteria": [
+        "Replace console.error with Sentry.captureException in frontend/src/services/walletService.ts",
+        "Replace console.error with Sentry.captureException in frontend/src/hooks/useJobApplication.ts",
+        "Replace console.error with Sentry.captureException in frontend/src/pages/Admin.tsx",
+        "Keep console.error only in development (check import.meta.env.DEV)",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "A11Y-01",
+      "title": "Add ARIA labels em form inputs",
+      "description": "As a user with screen reader, I need form inputs properly labeled for accessibility.",
+      "acceptanceCriteria": [
+        "Add aria-label or associated label element to all inputs in Login.tsx",
+        "Add to all inputs in ForgotPassword.tsx and ResetPassword.tsx",
+        "Add to all inputs in WorkerOnboarding.tsx and CompanyOnboarding.tsx",
+        "Add to all inputs in Profile.tsx and CompanyProfile.tsx",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "A11Y-02",
+      "title": "Add texto em status badges",
+      "description": "As a colorblind user, I need text alongside color indicators to understand status.",
+      "acceptanceCriteria": [
+        "All status badges in MyJobs.tsx show text label not just color",
+        "All status badges in CompanyJobs.tsx show text label",
+        "All status badges in CompanyJobCandidates.tsx show text label",
+        "Transaction status in Wallet.tsx and CompanyWallet.tsx shows text",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "A11Y-03",
+      "title": "Add focus management em modais",
+      "description": "As a keyboard user, I need modals to trap focus and return focus on close.",
+      "acceptanceCriteria": [
+        "DepositModal.tsx: focus first input on open, trap focus inside modal, return focus on close",
+        "RateModal.tsx: same focus management",
+        "Any confirmation dialogs added in FORM-04: same focus management",
+        "Escape key closes modals",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "A11Y-04",
+      "title": "Add keyboard navigation",
+      "description": "As a keyboard user, I need correct tab order and keyboard shortcuts.",
+      "acceptanceCriteria": [
+        "All interactive elements are reachable via Tab key",
+        "BottomNav.tsx items navigable via keyboard",
+        "Sidebar.tsx items navigable via keyboard",
+        "No focus traps outside of modals",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TEST-01",
+      "title": "Add testes para paginas de auth",
+      "description": "As a developer, I need auth page tests to catch regressions.",
+      "acceptanceCriteria": [
+        "Create frontend/src/pages/__tests__/Login.test.tsx with render, validation, submit tests",
+        "Create frontend/src/pages/__tests__/ForgotPassword.test.tsx with render and validation tests",
+        "Create frontend/src/pages/__tests__/ResetPassword.test.tsx with render and validation tests",
+        "All tests pass: cd frontend && npm run test -- --run",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TEST-02",
+      "title": "Add testes para ProtectedRoute",
+      "description": "As a developer, I need ProtectedRoute tests to verify auth guard works.",
+      "acceptanceCriteria": [
+        "Create frontend/src/components/__tests__/ProtectedRoute.test.tsx",
+        "Test: redirects to /login when not authenticated",
+        "Test: renders children when authenticated",
+        "Test: shows loading state during auth check",
+        "All tests pass: cd frontend && npm run test -- --run",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TEST-03",
+      "title": "Add testes para fluxos financeiros",
+      "description": "As a developer, I need financial flow tests to ensure money operations work correctly.",
+      "acceptanceCriteria": [
+        "Create frontend/src/components/__tests__/DepositModal.test.tsx with render and validation tests",
+        "Add withdrawal validation tests to frontend/src/services/walletService.test.ts",
+        "Test: deposit form validates minimum amount",
+        "Test: withdrawal validates balance and PIX key",
+        "All tests pass: cd frontend && npm run test -- --run",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TEST-04",
+      "title": "Add testes para validacao de formularios",
+      "description": "As a developer, I need form validation tests for CPF, CNPJ, PIX, email, password.",
+      "acceptanceCriteria": [
+        "Create frontend/src/lib/__tests__/validation.test.ts",
+        "Test CPF validation (valid, invalid, all-same-digits)",
+        "Test CNPJ validation (valid, invalid, all-same-digits)",
+        "Test email validation (valid formats, invalid formats)",
+        "Test password strength (weak, medium, strong)",
+        "All tests pass: cd frontend && npm run test -- --run",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TEST-05",
+      "title": "Add testes para componentes criticos",
+      "description": "As a developer, I need component tests for critical UI elements.",
+      "acceptanceCriteria": [
+        "Create frontend/src/components/__tests__/JobCard.test.tsx with render tests",
+        "Create frontend/src/components/__tests__/NotificationBell.test.tsx with render tests",
+        "Create frontend/src/components/__tests__/BottomNav.test.tsx with navigation tests",
+        "All tests pass: cd frontend && npm run test -- --run",
+        "Build passes: cd frontend && npm run build"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "TEST-06",
+      "title": "Final build + lint clean",
+      "description": "As a developer, I need zero errors and zero warnings in build and lint.",
+      "acceptanceCriteria": [
+        "cd frontend && npm run build exits with 0 errors",
+        "cd frontend && npm run lint exits with 0 errors",
+        "cd frontend && npm run test -- --run exits with all tests passing",
+        "No TypeScript any types remaining",
+        "No ESLint warnings remaining"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": "Final validation task - only mark passes when everything is clean"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Ralph Progress Log
+Started: 2026-03-11
+---
+
+## Codebase Patterns
+- Build command: `cd frontend && npm run build` (TypeScript + Vite)
+- Commits em portugues BR, autor unico, SEM Co-Authored-By
+- Edge functions: Deno runtime, imports via URL/JSR
+- Financial RPCs: SECURITY DEFINER com FOR UPDATE locks
+- Migrations: formato 20260312HHMMSS_descricao.sql
+- RLS habilitado em todas as tabelas
+- Supabase project ref: vrklakcbkcsonarmhqhp
+- Toast notifications via ToastContext
+- Sentry para error tracking em producao
+---
