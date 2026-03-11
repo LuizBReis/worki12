@@ -2,20 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-function getPasswordStrength(pw: string): { label: string; color: string; width: string } {
-    let score = 0;
-    if (pw.length >= 8) score++;
-    if (pw.length >= 12) score++;
-    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
-    if (/\d/.test(pw)) score++;
-    if (/[^a-zA-Z0-9]/.test(pw)) score++;
-
-    if (score <= 1) return { label: 'Fraca', color: 'bg-red-500', width: 'w-1/4' };
-    if (score <= 2) return { label: 'Razoavel', color: 'bg-yellow-500', width: 'w-1/2' };
-    if (score <= 3) return { label: 'Media', color: 'bg-blue-500', width: 'w-3/4' };
-    return { label: 'Forte', color: 'bg-green-500', width: 'w-full' };
-}
+import { getPasswordStrength } from '../lib/validation';
 
 export default function ResetPassword() {
     const navigate = useNavigate();
