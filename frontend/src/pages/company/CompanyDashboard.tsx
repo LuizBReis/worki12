@@ -1,9 +1,24 @@
 import { useNavigate } from 'react-router-dom';
-import { Users, Briefcase, TrendingUp, Search, Filter, Loader2, Bell, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, Search, Filter, Bell, AlertTriangle, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+    return (
+        <div className="p-6 bg-red-50 border-2 border-red-200 rounded-xl text-center">
+            <AlertTriangle size={24} className="text-red-400 mx-auto mb-2" />
+            <p className="font-bold text-red-700 text-sm mb-3">{message}</p>
+            <button
+                onClick={onRetry}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold text-xs uppercase hover:bg-red-200 transition-colors border border-red-300"
+            >
+                <RefreshCw size={14} /> Tentar novamente
+            </button>
+        </div>
+    );
+}
 
 export default function CompanyDashboard() {
     const navigate = useNavigate();
@@ -18,7 +33,7 @@ export default function CompanyDashboard() {
         }
     });
 
-    const { data: jobs = [], isError: isErrorJobs, refetch: refetchJobs } = useQuery({
+    const { data: jobs = [], isLoading: isLoadingJobs, isError: isErrorJobs, refetch: refetchJobs } = useQuery({
         queryKey: ['companyJobs'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -33,7 +48,7 @@ export default function CompanyDashboard() {
         enabled: !!company
     });
 
-    const { data: applications = [], isError: isErrorApps, refetch: refetchApps } = useQuery({
+    const { data: applications = [], isLoading: isLoadingApps, isError: isErrorApps, refetch: refetchApps } = useQuery({
         queryKey: ['companyApplications'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -49,46 +64,44 @@ export default function CompanyDashboard() {
         enabled: !!company
     });
 
-    const hasError = isErrorCompany || isErrorJobs || isErrorApps;
-    const handleRetry = () => { refetchCompany(); refetchJobs(); refetchApps(); };
-
     // Derived State
     const companyName = company?.name || '';
     const loading = isLoadingCompany;
 
     const stats = {
-        activeJobs: jobs.filter(j => j.status === 'open').length,
-        totalCandidates: jobs.reduce((acc, job) => acc + (job.candidates_count || 0), 0),
-        views: jobs.reduce((acc, job) => acc + (job.views || 0), 0)
+        activeJobs: isErrorJobs ? null : jobs.filter(j => j.status === 'open').length,
+        totalCandidates: isErrorJobs ? null : jobs.reduce((acc: number, job: Record<string, unknown>) => acc + ((job.candidates_count as number) || 0), 0),
+        views: isErrorJobs ? null : jobs.reduce((acc: number, job: Record<string, unknown>) => acc + ((job.views as number) || 0), 0)
     };
 
-    // Blend Activities
+    // Blend Activities (only from successfully loaded data)
     const activities = [
-        ...jobs.slice(0, 5).map(job => ({
+        ...(isErrorJobs ? [] : jobs.slice(0, 5).map(job => ({
             type: 'job_created',
             text: `Vaga criada: "${job.title}"`,
-            time: job.created_at,
-            id: job.id
-        })),
-        ...applications.map(app => ({
+            time: job.created_at as string,
+            id: job.id as string
+        }))),
+        ...(isErrorApps ? [] : applications.map(app => ({
             type: 'application',
-            text: `Novo candidato para "${app.jobs.title}"`,
-            time: app.created_at,
-            id: app.id
-        }))
+            text: `Novo candidato para "${(app.jobs as Record<string, unknown>).title}"`,
+            time: app.created_at as string,
+            id: app.id as string
+        })))
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+
+    // Check if activity feed has any errors
+    const hasActivityError = isErrorJobs && isErrorApps;
 
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {hasError && (
-                <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <AlertTriangle size={20} className="text-red-500" />
-                        <span className="font-bold text-red-700 text-sm">Erro ao carregar alguns dados do dashboard.</span>
-                    </div>
-                    <button onClick={handleRetry} className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg font-bold text-xs uppercase hover:bg-red-200 transition-colors">
-                        <RefreshCw size={14} /> Tentar novamente
-                    </button>
+            {/* Critical error: company profile failed */}
+            {isErrorCompany && (
+                <div className="mb-6">
+                    <SectionError
+                        message="Erro ao carregar dados da empresa. Tente novamente."
+                        onRetry={() => { refetchCompany(); }}
+                    />
                 </div>
             )}
 
@@ -102,24 +115,33 @@ export default function CompanyDashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                {[
-                    { title: 'Vagas Ativas', value: stats.activeJobs, icon: Briefcase, color: 'bg-blue-100 text-blue-600' },
-                    { title: 'Total Candidatos', value: stats.totalCandidates, icon: Users, color: 'bg-green-100 text-green-600' },
-                    { title: 'Visualizações', value: stats.views, icon: TrendingUp, color: 'bg-purple-100 text-purple-600' }
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`p-3 rounded-lg ${stat.color} border-2 border-black`}>
-                                <stat.icon size={24} />
+            {isErrorJobs ? (
+                <div className="mb-12">
+                    <SectionError
+                        message="Erro ao carregar indicadores. Tente novamente."
+                        onRetry={() => { refetchJobs(); }}
+                    />
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    {[
+                        { title: 'Vagas Ativas', value: stats.activeJobs, icon: Briefcase, color: 'bg-blue-100 text-blue-600' },
+                        { title: 'Total Candidatos', value: stats.totalCandidates, icon: Users, color: 'bg-green-100 text-green-600' },
+                        { title: 'Visualizações', value: stats.views, icon: TrendingUp, color: 'bg-purple-100 text-purple-600' }
+                    ].map((stat, i) => (
+                        <div key={i} className="bg-white border-2 border-black rounded-xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] transition-shadow">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className={`p-3 rounded-lg ${stat.color} border-2 border-black`}>
+                                    <stat.icon size={24} />
+                                </div>
+                                <span className="text-xs font-black uppercase bg-gray-100 px-2 py-1 rounded">Hoje</span>
                             </div>
-                            <span className="text-xs font-black uppercase bg-gray-100 px-2 py-1 rounded">Hoje</span>
+                            <h3 className="text-4xl font-black mb-1">{stat.value ?? '-'}</h3>
+                            <p className="text-gray-500 font-bold uppercase text-xs">{stat.title}</p>
                         </div>
-                        <h3 className="text-4xl font-black mb-1">{stat.value}</h3>
-                        <p className="text-gray-500 font-bold uppercase text-xs">{stat.title}</p>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Recent Jobs Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -140,10 +162,16 @@ export default function CompanyDashboard() {
                     </div>
 
                     <div className="space-y-4">
-                        {loading ? (
-                            <div className="text-center py-10 font-bold text-gray-400 animate-pulse flex flex-col items-center gap-2">
-                                <Loader2 className="animate-spin" />
-                                Carregando dados...
+                        {isErrorJobs ? (
+                            <SectionError
+                                message="Erro ao carregar vagas. Tente novamente."
+                                onRetry={() => { refetchJobs(); }}
+                            />
+                        ) : loading || isLoadingJobs ? (
+                            <div className="space-y-4 animate-pulse">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className="bg-gray-200 rounded-xl h-28" />
+                                ))}
                             </div>
                         ) : jobs.length === 0 ? (
                             <div className="text-center py-10 border-2 border-dashed border-gray-300 rounded-xl">
@@ -184,22 +212,45 @@ export default function CompanyDashboard() {
                         <Bell size={20} /> Atividade Recente
                     </h2>
                     <div className="bg-gray-50 border-2 border-black rounded-xl p-6 space-y-6">
-                        {loading ? (
-                            <div className="text-center py-4 text-gray-400"><Loader2 className="animate-spin inline" /></div>
+                        {hasActivityError ? (
+                            <SectionError
+                                message="Erro ao carregar atividades. Tente novamente."
+                                onRetry={() => { refetchJobs(); refetchApps(); }}
+                            />
+                        ) : loading || isLoadingJobs || isLoadingApps ? (
+                            <div className="space-y-4 animate-pulse">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className="flex gap-3 items-start">
+                                        <div className="w-2 h-2 mt-2 rounded-full bg-gray-200 flex-shrink-0" aria-hidden="true" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-4 bg-gray-200 rounded w-3/4" />
+                                            <div className="h-3 bg-gray-200 rounded w-1/3" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : activities.length === 0 ? (
                             <p className="text-sm text-gray-400 font-bold text-center">Nenhuma atividade recente.</p>
                         ) : (
-                            activities.map((activity, i) => (
-                                <div key={i} className="flex gap-3 items-start animate-in fade-in slide-in-from-right-4" style={{ animationDelay: `${i * 100}ms` }}>
-                                    <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${activity.type === 'job_created' ? 'bg-blue-500' : 'bg-green-500'}`} />
-                                    <div>
-                                        <p className="text-sm font-bold leading-tight">{activity.text}</p>
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
-                                            {formatDistanceToNow(new Date(activity.time), { addSuffix: true, locale: ptBR })}
-                                        </p>
+                            <>
+                                {(isErrorJobs || isErrorApps) && (
+                                    <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0" />
+                                        <span className="text-xs font-bold text-yellow-700">Alguns dados podem estar incompletos.</span>
                                     </div>
-                                </div>
-                            ))
+                                )}
+                                {activities.map((activity, i) => (
+                                    <div key={i} className="flex gap-3 items-start animate-in fade-in slide-in-from-right-4" style={{ animationDelay: `${i * 100}ms` }}>
+                                        <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${activity.type === 'job_created' ? 'bg-blue-500' : 'bg-green-500'}`} aria-hidden="true" />
+                                        <div>
+                                            <p className="text-sm font-bold leading-tight">{activity.text}</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
+                                                {formatDistanceToNow(new Date(activity.time), { addSuffix: true, locale: ptBR })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
                         )}
                     </div>
 

@@ -182,7 +182,7 @@ export default function CompanyAnalytics() {
                     </div>
                     <div className="flex justify-end gap-6 mt-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                            <div className="w-3 h-3 bg-blue-600 rounded-full" aria-hidden="true"></div>
                             <span className="text-xs font-bold uppercase text-gray-500">Candidaturas</span>
                         </div>
                     </div>

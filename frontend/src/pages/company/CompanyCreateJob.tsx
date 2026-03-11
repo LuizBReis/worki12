@@ -223,7 +223,7 @@ export default function CompanyCreateJob() {
                 {/* Progress Indicator */}
                 <div className="flex items-center gap-2">
                     {[1, 2, 3].map((s) => (
-                        <div key={s} className={`w-3 h-3 rounded-full border border-black transition-all ${step >= s ? 'bg-black' : 'bg-transparent'}`} />
+                        <div key={s} className={`w-3 h-3 rounded-full border border-black transition-all ${step >= s ? 'bg-black' : 'bg-transparent'}`} aria-label={`Etapa ${s}${step >= s ? ' concluída' : ''}`} />
                     ))}
                 </div>
             </div>

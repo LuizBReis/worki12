@@ -165,7 +165,7 @@ export default function CompanyJobDetails() {
             {/* Main Content */}
             <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
                 {/* Banner / Status */}
-                <div className={`h-2 w-full ${job.status === 'open' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className={`h-2 w-full ${job.status === 'open' ? 'bg-green-500' : 'bg-gray-300'}`} aria-hidden="true" />
 
                 <div className="p-8">
                     <div className="flex justify-between items-start mb-6">
