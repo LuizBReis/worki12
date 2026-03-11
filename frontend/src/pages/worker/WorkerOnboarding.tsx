@@ -47,7 +47,7 @@ export default function WorkerOnboarding() {
                 navigate('/login');
             }
         });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carrega dados iniciais apenas no mount, navigate estavel
     }, [navigate]);
 
     const checkIfOnboardingComplete = async (uid: string) => {
@@ -206,6 +206,7 @@ export default function WorkerOnboarding() {
                                             required
                                             value={formData.fullName}
                                             onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                                            aria-label="Nome completo"
                                             className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             placeholder="Seu nome completo"
                                         />

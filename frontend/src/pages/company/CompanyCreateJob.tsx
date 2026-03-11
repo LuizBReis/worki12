@@ -78,7 +78,7 @@ export default function CompanyCreateJob() {
         if (isEditing) {
             fetchJobData();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchJobData usa state setters estaveis, so precisa re-executar quando id muda
     }, [id]);
 
     const fetchJobData = async () => {

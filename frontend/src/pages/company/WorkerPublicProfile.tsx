@@ -54,7 +54,7 @@ export default function WorkerPublicProfile() {
                 AnalyticsService.trackProfileView(id);
             });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchProfile usa state setters estaveis, so precisa re-executar quando id muda
     }, [id]);
 
     const fetchProfile = async () => {
@@ -122,7 +122,20 @@ export default function WorkerPublicProfile() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-400 font-bold">Carregando perfil...</div>;
+    if (loading) return (
+        <div className="max-w-4xl mx-auto p-8 animate-pulse">
+            <div className="flex items-center gap-6 mb-8">
+                <div className="w-20 h-20 bg-gray-200 rounded-full" />
+                <div className="flex-1 space-y-3">
+                    <div className="h-8 bg-gray-200 rounded w-1/3" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+            </div>
+            <div className="space-y-4">
+                {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-xl" />)}
+            </div>
+        </div>
+    );
     if (!profile) return <div className="p-8 text-center text-gray-400 font-bold">Perfil não encontrado.</div>;
 
     return (

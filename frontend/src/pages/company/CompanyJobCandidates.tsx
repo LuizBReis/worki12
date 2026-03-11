@@ -50,7 +50,7 @@ export default function CompanyJobCandidates() {
 
     useEffect(() => {
         if (id) fetchCandidates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchCandidates usa state setters estaveis, so precisa re-executar quando id muda
     }, [id]);
 
     const fetchCandidates = async () => {
