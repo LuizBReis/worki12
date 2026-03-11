@@ -5,37 +5,9 @@ import type { WalletTransaction } from '../services/walletService';
 import { DollarSign, CreditCard, ArrowDownLeft, ArrowUpRight, History, Loader2, Wallet as WalletIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
-
-function validateCPF(cpf: string): boolean {
-    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-    const d = cpf.split('').map(Number);
-    let s = 0;
-    for (let i = 0; i < 9; i++) s += d[i] * (10 - i);
-    let r = (s * 10) % 11; if (r === 10) r = 0;
-    if (r !== d[9]) return false;
-    s = 0;
-    for (let i = 0; i < 10; i++) s += d[i] * (11 - i);
-    r = (s * 10) % 11; if (r === 10) r = 0;
-    return r === d[10];
-}
-
-function validateCNPJ(cnpj: string): boolean {
-    if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
-    const d = cnpj.split('').map(Number);
-    const w1 = [5,4,3,2,9,8,7,6,5,4,3,2];
-    const w2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
-    let s = 0;
-    for (let i = 0; i < 12; i++) s += d[i] * w1[i];
-    let r = s % 11;
-    if ((r < 2 ? 0 : 11 - r) !== d[12]) return false;
-    s = 0;
-    for (let i = 0; i < 13; i++) s += d[i] * w2[i];
-    r = s % 11;
-    return (r < 2 ? 0 : 11 - r) === d[13];
-}
+import { validateCPF, validateCNPJ, EMAIL_REGEX } from '../lib/validation';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Wallet() {
     const navigate = useNavigate();
@@ -244,11 +216,11 @@ export default function Wallet() {
 
             {/* Withdraw Modal */}
             {showWithdrawModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowWithdrawModal(false)}>
-                    <div className="bg-white rounded-2xl border-2 border-black p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowWithdrawModal(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowWithdrawModal(false); }}>
+                    <div role="dialog" aria-modal="true" aria-label="Sacar via PIX" className="bg-white rounded-2xl border-2 border-black p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-black uppercase">Sacar via PIX</h3>
-                            <button onClick={() => setShowWithdrawModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                            <button onClick={() => setShowWithdrawModal(false)} aria-label="Fechar" className="p-1 hover:bg-gray-100 rounded-lg">
                                 <X size={20} />
                             </button>
                         </div>

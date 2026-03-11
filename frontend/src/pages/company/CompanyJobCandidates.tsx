@@ -264,7 +264,7 @@ export default function CompanyJobCandidates() {
                     </div>
                 ) : (
                     candidates.map((app) => (
-                        <div key={app.id} className="bg-white border-2 border-gray-100 hover:border-black rounded-xl p-6 transition-all group shadow-sm hover:shadow-md cursor-pointer" onClick={() => navigate(`/company/worker/${app.worker_id}`)}>
+                        <div key={app.id} role="button" tabIndex={0} className="bg-white border-2 border-gray-100 hover:border-black rounded-xl p-6 transition-all group shadow-sm hover:shadow-md cursor-pointer" onClick={() => navigate(`/company/worker/${app.worker_id}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/company/worker/${app.worker_id}`); } }}>
                             <div className="flex flex-col md:flex-row gap-6">
                                 {/* Avatar */}
                                 <div className="flex-shrink-0">

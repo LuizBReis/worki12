@@ -180,7 +180,7 @@ export default function CompanyDashboard() {
                             </div>
                         ) : (
                             jobs.slice(0, 5).map((job) => (
-                                <div key={job.id} onClick={() => navigate('/company/jobs')} className="bg-white border-2 border-black rounded-xl p-5 hover:translate-x-1 hover:-translate-y-1 transition-transform cursor-pointer group">
+                                <div key={job.id} role="button" tabIndex={0} onClick={() => navigate('/company/jobs')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/company/jobs'); } }} className="bg-white border-2 border-black rounded-xl p-5 hover:translate-x-1 hover:-translate-y-1 transition-transform cursor-pointer group">
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
                                             <h3 className="font-black text-lg uppercase group-hover:text-blue-600 transition-colors">{job.title}</h3>
