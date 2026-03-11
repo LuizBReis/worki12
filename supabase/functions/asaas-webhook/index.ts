@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/asaas.ts';
 
+// Production IPs - log only in sandbox, enforce in production
 const ASAAS_IPS = [
     '52.67.12.206',
     '18.230.8.159',
@@ -20,17 +21,20 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        // --- 1. Security Check: IP Whitelist ---
+        // --- 1. IP Check: log in sandbox, block in production ---
         const forwarded = req.headers.get('x-forwarded-for');
-        const clientIp = forwarded ? forwarded.split(',')[0].trim() : '';
+        const clientIp = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+        const isProduction = Deno.env.get('ASAAS_ENVIRONMENT') === 'production';
 
-        // Block if IP is missing or not in whitelist
-        if (!clientIp || !ASAAS_IPS.includes(clientIp)) {
-            console.warn(`Blocked request from unauthorized IP: ${clientIp || 'unknown'}`);
-            return new Response('Unauthorized IP', { status: 403 });
+        if (!ASAAS_IPS.includes(clientIp)) {
+            if (isProduction) {
+                console.warn(`Blocked request from unauthorized IP: ${clientIp}`);
+                return new Response('Unauthorized IP', { status: 403 });
+            }
+            console.log(`Sandbox: allowing request from IP ${clientIp}`);
         }
 
-        // --- 2. Security Check: Auth Token (NO default fallback) ---
+        // --- 2. Security Check: Auth Token ---
         const asaasToken = req.headers.get('asaas-access-token');
         const expectedToken = Deno.env.get('ASAAS_WEBHOOK_TOKEN');
 
