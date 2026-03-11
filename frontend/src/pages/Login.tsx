@@ -82,7 +82,16 @@ export default function Login() {
                 }
             }
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.');
+            const msg = err instanceof Error ? err.message : '';
+            if (msg.includes('Invalid login credentials')) {
+                setError('Email ou senha incorretos.');
+            } else if (msg.includes('Email not confirmed')) {
+                setError('Confirme seu email antes de fazer login.');
+            } else if (msg.includes('User already registered')) {
+                setError('Este email ja esta cadastrado. Faca login.');
+            } else {
+                setError('Erro ao fazer login. Tente novamente.');
+            }
         } finally {
             setLoading(false);
         }

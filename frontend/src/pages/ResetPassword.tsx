@@ -45,7 +45,16 @@ export default function ResetPassword() {
         setLoading(false);
 
         if (updateError) {
-            setError('Erro ao redefinir senha. O link pode ter expirado.');
+            const msg = updateError.message || '';
+            if (msg.includes('expired') || msg.includes('Token has expired')) {
+                setError('Link expirado. Solicite um novo link de recuperacao.');
+            } else if (msg.includes('invalid') || msg.includes('Invalid token') || msg.includes('not found')) {
+                setError('Link invalido. Solicite um novo link de recuperacao.');
+            } else if (msg.includes('weak') || msg.includes('too short') || msg.includes('at least')) {
+                setError('Senha muito fraca. Use no minimo 8 caracteres com letras e numeros.');
+            } else {
+                setError('Erro ao redefinir senha. Tente novamente ou solicite um novo link.');
+            }
             return;
         }
 

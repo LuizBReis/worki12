@@ -47,7 +47,18 @@ export default function ForgotPassword() {
         setLoading(false);
 
         if (resetError) {
-            setError('Erro ao enviar email. Tente novamente.');
+            const msg = resetError.message || '';
+            // Security: don't reveal if email exists. Only show error for real server failures.
+            if (msg.includes('rate limit') || msg.includes('too many')) {
+                setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+            } else if (msg.includes('invalid') && msg.includes('email')) {
+                setError('Informe um email valido.');
+            } else {
+                // For "user not found" or similar, show success anyway (security best practice)
+                setSent(true);
+                startCooldown();
+                return;
+            }
             return;
         }
 
