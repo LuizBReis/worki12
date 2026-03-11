@@ -191,8 +191,17 @@ export default function Wallet() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 max-w-4xl mx-auto animate-pulse">
+            <div>
+                <div className="h-10 bg-gray-200 rounded w-1/3 mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+            </div>
+            <div className="h-36 bg-gray-200 rounded-2xl" />
+            <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-200 rounded-xl" />
+                ))}
+            </div>
         </div>
     );
 
@@ -212,7 +221,7 @@ export default function Wallet() {
 
                     <div className="flex gap-4">
                         <button
-                            className="flex-1 bg-primary text-white py-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-none hover:translate-y-1 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 bg-primary text-white py-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-none hover:translate-y-1 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] disabled:hover:translate-y-0"
                             onClick={() => { setWithdrawAmount(balance.toFixed(2)); setShowWithdrawModal(true); }}
                             disabled={balance <= 0}
                         >
@@ -225,6 +234,9 @@ export default function Wallet() {
                             <CreditCard size={20} /> Ver Perfil
                         </button>
                     </div>
+                    {balance <= 0 && (
+                        <p className="text-xs text-red-500 mt-1">Saldo insuficiente para saque</p>
+                    )}
                 </div>
                 {/* Background Element */}
                 <WalletIcon size={200} className="absolute -top-10 -right-10 text-white/5 rotate-12" />
