@@ -17,13 +17,9 @@ serve(async (req) => {
             });
         }
 
-        // Allow service_role JWT OR admin user email
+        // Allow service_role key OR admin user email
         const token = authHeader.replace('Bearer ', '');
-        let isServiceRole = false;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            isServiceRole = payload.role === 'service_role';
-        } catch { /* not a valid JWT, continue with user auth */ }
+        const isServiceRole = token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
         if (!isServiceRole) {
             const supabaseAnon = createClient(
