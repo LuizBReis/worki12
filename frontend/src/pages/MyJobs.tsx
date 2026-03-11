@@ -194,6 +194,9 @@ export default function MyJobs() {
     }, [fetchJobs]);
 
     const handleCancelApplication = async (appId: string) => {
+        if (!window.confirm('Tem certeza que deseja cancelar esta candidatura? Esta acao nao pode ser desfeita.')) {
+            return;
+        }
         setActionLoading(appId);
         try {
             const { error } = await supabase

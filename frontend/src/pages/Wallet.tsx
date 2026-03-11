@@ -152,6 +152,12 @@ export default function Wallet() {
             return;
         }
 
+        const fee = (amount * 0.05).toFixed(2);
+        const net = (amount * 0.95).toFixed(2);
+        if (!window.confirm(`Confirmar saque de R$ ${amount.toFixed(2)}?\n\nTaxa: R$ ${fee}\nVoce recebera: R$ ${net}\n\nEsta acao nao pode ser desfeita.`)) {
+            return;
+        }
+
         setWithdrawing(true);
 
         const { success, error } = await WalletService.withdrawFunds(amount, pixKey.trim(), pixKeyType);
