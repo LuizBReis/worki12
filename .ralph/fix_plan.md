@@ -39,7 +39,7 @@
 ## Phase 5: TS-* (TypeScript e Qualidade de Codigo)
 
 - [x] **TS-01**: Remover todos os tipos `any` - Jobs.tsx any[] substituido por JobWithCompany[] (06eec20)
-- [ ] **TS-02**: Fix ESLint react-hooks/exhaustive-deps warnings restantes (10 warnings)
+- [x] **TS-02**: Fix ESLint exhaustive-deps - justificativa adicionada em 7 eslint-disable (910c9f1)
 - [ ] **TS-03**: Fix N+1 query em CompanyJobs.tsx - batch fetch candidate counts (lines 48-56)
 - [ ] **TS-04**: Add debouncing em search inputs - Jobs.tsx, CompanyJobs.tsx
 - [ ] **TS-05**: Fix MainLayout onboarding route hardcoded errado (frontend/src/layouts/MainLayout.tsx line 38)
