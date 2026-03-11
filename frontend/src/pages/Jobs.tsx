@@ -6,11 +6,34 @@ import { useNavigate } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobApplication } from '../hooks/useJobApplication';
 
+interface JobWithCompany {
+    id: string;
+    display_code?: number;
+    title: string;
+    description?: string;
+    location: string;
+    start_date: string;
+    created_at?: string;
+    work_start_time?: string;
+    work_end_time?: string;
+    estimated_hours?: number;
+    has_lunch?: boolean;
+    budget: number;
+    budget_period?: string;
+    candidates_count?: number;
+    status: string;
+    company?: {
+        name: string;
+        logo_url?: string;
+        rating_average?: number;
+        reviews_count?: number;
+    };
+}
+
 export default function Jobs() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [jobs, setJobs] = useState<any[]>([]);
+    const [jobs, setJobs] = useState<JobWithCompany[]>([]);
     const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRole, setSelectedRole] = useState('Todos');
