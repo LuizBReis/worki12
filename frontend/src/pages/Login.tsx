@@ -3,6 +3,20 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, ArrowRight, Mail, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+function getPasswordStrength(pw: string): { label: string; color: string; width: string } {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^a-zA-Z0-9]/.test(pw)) score++;
+
+    if (score <= 1) return { label: 'Fraca', color: 'bg-red-500', width: 'w-1/4' };
+    if (score <= 2) return { label: 'Razoavel', color: 'bg-yellow-500', width: 'w-1/2' };
+    if (score <= 3) return { label: 'Media', color: 'bg-blue-500', width: 'w-3/4' };
+    return { label: 'Forte', color: 'bg-green-500', width: 'w-full' };
+}
+
 export default function Login() {
     const [searchParams] = useSearchParams();
     const type = searchParams.get('type') || 'work'; // 'work' or 'hire'
@@ -25,6 +39,11 @@ export default function Login() {
 
         try {
             if (isSignUp) {
+                if (password.length < 8) {
+                    setError('A senha deve ter pelo menos 8 caracteres.');
+                    setLoading(false);
+                    return;
+                }
                 // Sign Up
                 const { data, error: signUpError } = await supabase.auth.signUp({
                     email,
@@ -140,11 +159,22 @@ export default function Login() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    minLength={6}
+                                    minLength={8}
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="••••••••"
                                 />
                             </div>
+                            {isSignUp && password.length > 0 && (() => {
+                                const strength = getPasswordStrength(password);
+                                return (
+                                    <div className="mt-2">
+                                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className={`h-full ${strength.color} ${strength.width} transition-all duration-300 rounded-full`} />
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">Forca: {strength.label}</p>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <button

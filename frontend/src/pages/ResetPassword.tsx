@@ -3,6 +3,20 @@ import { supabase } from '../lib/supabase';
 import { Lock, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+function getPasswordStrength(pw: string): { label: string; color: string; width: string } {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^a-zA-Z0-9]/.test(pw)) score++;
+
+    if (score <= 1) return { label: 'Fraca', color: 'bg-red-500', width: 'w-1/4' };
+    if (score <= 2) return { label: 'Razoavel', color: 'bg-yellow-500', width: 'w-1/2' };
+    if (score <= 3) return { label: 'Media', color: 'bg-blue-500', width: 'w-3/4' };
+    return { label: 'Forte', color: 'bg-green-500', width: 'w-full' };
+}
+
 export default function ResetPassword() {
     const navigate = useNavigate();
     const [password, setPassword] = useState('');
@@ -11,12 +25,14 @@ export default function ResetPassword() {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
+    const strength = getPasswordStrength(password);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (password.length < 6) {
-            setError('A senha deve ter pelo menos 6 caracteres.');
+        if (password.length < 8) {
+            setError('A senha deve ter pelo menos 8 caracteres.');
             return;
         }
         if (password !== confirm) {
@@ -77,9 +93,17 @@ export default function ResetPassword() {
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
-                            placeholder="Minimo 6 caracteres"
+                            placeholder="Minimo 8 caracteres"
                             autoFocus
                         />
+                        {password.length > 0 && (
+                            <div className="mt-2">
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${strength.color} ${strength.width} transition-all duration-300 rounded-full`} />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Forca: {strength.label}</p>
+                            </div>
+                        )}
                     </div>
 
                     <div>
