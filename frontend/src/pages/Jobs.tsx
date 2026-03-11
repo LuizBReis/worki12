@@ -36,7 +36,14 @@ export default function Jobs() {
     const [jobs, setJobs] = useState<JobWithCompany[]>([]);
     const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [selectedRole, setSelectedRole] = useState('Todos');
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     // Custom Hook
     const { applyingId, applyForJob } = useJobApplication();
@@ -91,9 +98,9 @@ export default function Jobs() {
 
     // Filter Logic
     const filteredJobs = jobs.filter(job => {
-        const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.company?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.location.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = job.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            job.company?.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            job.location.toLowerCase().includes(debouncedSearch.toLowerCase());
         const matchesRole = selectedRole === 'Todos' || job.title.toLowerCase().includes(selectedRole.toLowerCase());
 
         return matchesSearch && matchesRole;

@@ -32,6 +32,12 @@ export default function CompanyJobs() {
         fetchJobs();
     }, []);
 
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
     const fetchJobs = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -96,7 +102,7 @@ export default function CompanyJobs() {
     };
 
     const filteredJobs = jobs.filter(job => {
-        const matchesSearch = job.title.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = job.title.toLowerCase().includes(debouncedSearch.toLowerCase());
         const matchesFilter = filter === 'all'
             ? true
             : filter === 'open'
