@@ -20,7 +20,7 @@ This sprint focuses on **security hardening, complete validation, UX polish, and
 ## Key Rules
 - ONE task per loop iteration
 - `cd frontend && npm run build` MUST pass before committing
-- Commit in Portuguese, NO Co-Authored-By
+- **COMMITS:** Mensagem 100% em portugues BR. Autor unico. NUNCA adicionar Co-Authored-By, Signed-off-by, ou qualquer trailer. Exemplo: `git commit -m "fix: corrigir validacao JWT no admin-data"`
 - Push each commit immediately after (`git push origin main`)
 - Mark task as [x] in fix_plan.md after completion
 - DO NOT modify Asaas payment logic (only validation/security/UX)

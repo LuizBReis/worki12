@@ -83,5 +83,5 @@ cp .env.example .env
 ## Notes
 - Always run `npm run build` in frontend/ before committing
 - Edge functions use Deno, NOT Node.js - imports use URL/JSR format
-- All commits should be in Portuguese (project convention)
+- **Commits:** mensagem 100% em portugues BR, autor unico, NUNCA usar Co-Authored-By ou qualquer trailer
 - Update this file when build process changes
