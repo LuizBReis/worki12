@@ -42,24 +42,24 @@
 - [x] **TS-02**: Fix ESLint exhaustive-deps - justificativa adicionada em 7 eslint-disable (910c9f1)
 - [x] **TS-03**: Fix N+1 query em CompanyJobs.tsx - batch fetch com .in() (ja implementado)
 - [x] **TS-04**: Add debouncing 300ms em search inputs - Jobs.tsx, CompanyJobs.tsx (aa98731)
-- [ ] **TS-05**: Fix MainLayout onboarding route hardcoded errado (frontend/src/layouts/MainLayout.tsx line 38)
-- [ ] **TS-06**: Remover console.log/console.error desnecessarios em producao - usar Sentry exclusivamente
+- [x] **TS-05**: MainLayout onboarding route /worker/onboarding ja correta (bate com App.tsx)
+- [x] **TS-06**: Remover console.log/console.error desnecessarios em producao - usar Sentry exclusivamente (9521f9a)
 
 ## Phase 6: A11Y-* (Acessibilidade)
 
-- [ ] **A11Y-01**: Add ARIA labels em todos os form inputs - Login, Register, Onboarding, Profile, CreateJob
-- [ ] **A11Y-02**: Add texto junto com indicadores de cor - status badges precisam de texto alem de cor
-- [ ] **A11Y-03**: Add focus management em modais - DepositModal, RateModal, confirmacao dialogs
-- [ ] **A11Y-04**: Add keyboard navigation - garantir tab order correto em todas as paginas
+- [x] **A11Y-01**: Add ARIA labels em todos os form inputs - Login, Register, Onboarding, Profile, CreateJob (242faaf)
+- [x] **A11Y-02**: Add texto junto com indicadores de cor - status badges precisam de texto alem de cor (48ab52a)
+- [x] **A11Y-03**: Add focus management em modais - DepositModal, RateModal, confirmacao dialogs (d5196cc)
+- [x] **A11Y-04**: Add keyboard navigation - garantir tab order correto em todas as paginas (e4aa974)
 
 ## Phase 7: TEST-* (Testes Abrangentes)
 
-- [ ] **TEST-01**: Add testes para paginas de auth - Login, ForgotPassword, ResetPassword (render, validation, submit)
-- [ ] **TEST-02**: Add testes para ProtectedRoute - redirect, loading, authenticated states
-- [ ] **TEST-03**: Add testes para fluxos financeiros - deposit modal, withdrawal form, escrow display
-- [ ] **TEST-04**: Add testes para validacao de formularios - CPF, CNPJ, PIX, email, password strength
-- [ ] **TEST-05**: Add testes para componentes criticos - JobCard, NotificationBell, BottomNav, Sidebar
-- [ ] **TEST-06**: Final build + lint validation limpo - zero errors, zero warnings
+- [x] **TEST-01**: Add testes para paginas de auth - Login, ForgotPassword, ResetPassword (render, validation, submit) - ja implementado, 13 testes passando
+- [x] **TEST-02**: Add testes para ProtectedRoute - redirect, loading, authenticated states - ja implementado, 3 testes passando
+- [x] **TEST-03**: Add testes para fluxos financeiros - deposit modal, withdrawal form, escrow display - ja implementado, 26 testes passando
+- [x] **TEST-04**: Add testes para validacao de formularios - CPF, CNPJ, PIX, email, password strength - ja implementado, 37 testes passando
+- [x] **TEST-05**: Add testes para componentes criticos - JobCard, NotificationBell, BottomNav, Sidebar (fbe3ad1)
+- [x] **TEST-06**: Final build + lint validation limpo - 0 errors, 0 warnings, 114 testes passando, 12 test files
 
 ## Notes
 - NAO alterar logica de pagamento Asaas (apenas validacao, seguranca, UX)
