@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,16 @@ interface WorkerProfile {
     updated_at?: Date;
 }
 
+interface FormData {
+    full_name: string;
+    city: string;
+    phone: string;
+    bio: string;
+    pix_key: string;
+    primary_role: string;
+    roles: string;
+}
+
 export default function Profile() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -38,7 +48,7 @@ export default function Profile() {
     const { addToast } = useToast();
 
     // Editing State
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormData>({
         full_name: '',
         city: '',
         phone: '',
@@ -47,6 +57,41 @@ export default function Profile() {
         primary_role: '',
         roles: '' // comma separated string for editing
     });
+
+    // Track initial form data for dirty detection
+    const initialFormDataRef = useRef<FormData>({
+        full_name: '',
+        city: '',
+        phone: '',
+        bio: '',
+        pix_key: '',
+        primary_role: '',
+        roles: ''
+    });
+
+    const isDirty = isEditing && (
+        formData.full_name !== initialFormDataRef.current.full_name ||
+        formData.city !== initialFormDataRef.current.city ||
+        formData.phone !== initialFormDataRef.current.phone ||
+        formData.bio !== initialFormDataRef.current.bio ||
+        formData.pix_key !== initialFormDataRef.current.pix_key ||
+        formData.primary_role !== initialFormDataRef.current.primary_role ||
+        formData.roles !== initialFormDataRef.current.roles
+    );
+
+    // Warn user about unsaved changes before leaving
+    const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
+        e.preventDefault();
+    }, []);
+
+    useEffect(() => {
+        if (isDirty) {
+            window.addEventListener('beforeunload', handleBeforeUnload);
+        }
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isDirty, handleBeforeUnload]);
 
     const [stats, setStats] = useState({
         completedJobs: 0,
@@ -69,7 +114,7 @@ export default function Profile() {
                 console.error('Error fetching profile:', error);
             } else {
                 setProfile(data);
-                setFormData({
+                const loadedFormData: FormData = {
                     full_name: data.full_name || '',
                     city: data.city || '',
                     phone: data.phone || '',
@@ -77,7 +122,9 @@ export default function Profile() {
                     pix_key: data.pix_key || '',
                     primary_role: data.primary_role || '',
                     roles: data.roles ? data.roles.join(', ') : ''
-                });
+                };
+                setFormData(loadedFormData);
+                initialFormDataRef.current = loadedFormData;
                 setStats({
                     completedJobs: data.completed_jobs_count || 0,
                     totalEarnings: data.earnings_total || 0,
@@ -167,6 +214,7 @@ export default function Profile() {
             if (error) throw error;
 
             setProfile({ ...profile, ...updates });
+            initialFormDataRef.current = { ...formData };
             setIsEditing(false);
             addToast('Perfil atualizado com sucesso!', 'success');
         } catch (error) {
