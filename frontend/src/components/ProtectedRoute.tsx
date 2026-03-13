@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/logger';
+import { Loader2 } from 'lucide-react';
+import TosGateModal from './TosGateModal';
 
 export default function ProtectedRoute() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<{ id: string; user_metadata?: { user_type?: string } } | null>(null);
     const [onboardingChecked, setOnboardingChecked] = useState(false);
     const [onboardingRedirect, setOnboardingRedirect] = useState<string | null>(null);
+    const [tosAccepted, setTosAccepted] = useState<boolean | null>(null);
+    const [detectedRole, setDetectedRole] = useState<'worker' | 'company'>('worker');
     const location = useLocation();
 
     useEffect(() => {
@@ -19,6 +23,7 @@ export default function ProtectedRoute() {
 
             if (currentUser) {
                 await checkOnboarding(currentUser);
+                await checkTos(currentUser);
             }
         };
 
@@ -67,10 +72,41 @@ export default function ProtectedRoute() {
             setOnboardingChecked(true);
         };
 
+        const checkTos = async (authUser: { id: string; user_metadata?: { user_type?: string } }) => {
+            const userType = authUser.user_metadata?.user_type;
+
+            // Tenta workers primeiro
+            if (userType === 'work') {
+                const { data: workerData } = await supabase
+                    .from('workers')
+                    .select('accepted_tos')
+                    .eq('id', authUser.id)
+                    .single();
+
+                if (workerData) {
+                    setTosAccepted(workerData.accepted_tos === true);
+                    setDetectedRole('worker');
+                    return;
+                }
+            }
+
+            // Tenta companies
+            const { data: companyData } = await supabase
+                .from('companies')
+                .select('accepted_tos')
+                .eq('id', authUser.id)
+                .single();
+            setTosAccepted(companyData?.accepted_tos === true);
+            setDetectedRole('company');
+        };
+
         checkAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user as { id: string; user_metadata?: { user_type?: string } } | null);
+            if (!session?.user) {
+                setTosAccepted(null);
+            }
             setLoading(false);
         });
 
@@ -78,20 +114,23 @@ export default function ProtectedRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (loading || (user && !onboardingChecked)) {
+    if (loading || (user && !onboardingChecked) || (user && tosAccepted === null)) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-                <div className="space-y-4 animate-pulse w-full max-w-md px-4">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="bg-gray-200 rounded-xl h-16" />
-                    ))}
-                </div>
+                <Loader2 className="animate-spin text-primary" size={48} />
             </div>
         );
     }
 
     if (!user) return <Navigate to="/" replace />;
     if (onboardingRedirect) return <Navigate to={onboardingRedirect} replace />;
+
+    if (tosAccepted === false) return (
+        <>
+            <TosGateModal userRole={detectedRole} onAccepted={() => setTosAccepted(true)} />
+            <Outlet />
+        </>
+    );
 
     return <Outlet />;
 }
