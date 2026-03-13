@@ -91,13 +91,22 @@ export default function ProtectedRoute() {
             }
 
             // Tenta companies
-            const { data: companyData } = await supabase
-                .from('companies')
-                .select('accepted_tos')
-                .eq('id', authUser.id)
-                .single();
-            setTosAccepted(companyData?.accepted_tos === true);
-            setDetectedRole('company');
+            if (userType === 'hire') {
+                const { data: companyData } = await supabase
+                    .from('companies')
+                    .select('accepted_tos')
+                    .eq('id', authUser.id)
+                    .single();
+
+                if (companyData) {
+                    setTosAccepted(companyData.accepted_tos === true);
+                    setDetectedRole('company');
+                    return;
+                }
+            }
+
+            // Usuário sem perfil ainda (em onboarding) — não exibir gate de TOS
+            setTosAccepted(true);
         };
 
         checkAuth();
