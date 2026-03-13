@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '../../contexts/ToastContext';
 import JobLifecycleStepper from '../../components/JobLifecycleStepper';
+import EscrowStatusBadge from '../../components/EscrowStatusBadge';
 
 export default function CompanyJobCandidates() {
     const { id } = useParams();
@@ -47,6 +48,9 @@ export default function CompanyJobCandidates() {
     const [submittingReview, setSubmittingReview] = useState(false);
     const [confirmingCheckin, setConfirmingCheckin] = useState<string | null>(null);
     const [companyBalance, setCompanyBalance] = useState<number | null>(null);
+    const [confirmDeliveryApp, setConfirmDeliveryApp] = useState<Application | null>(null);
+    const [releasing, setReleasing] = useState(false);
+    const [escrowStatus, setEscrowStatus] = useState<'reserved' | 'released' | null>(null);
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -86,6 +90,14 @@ export default function CompanyJobCandidates() {
 
             if (error) throw error;
             setCandidates(data || []);
+
+            // Fetch escrow status for this job
+            const { data: escrowData } = await supabase
+                .from('escrow_transactions')
+                .select('status')
+                .eq('job_id', id)
+                .single();
+            setEscrowStatus(escrowData?.status === 'released' ? 'released' : escrowData ? 'reserved' : null);
         } catch (error) {
             console.error('Error fetching candidates:', error);
         } finally {
@@ -94,15 +106,6 @@ export default function CompanyJobCandidates() {
     };
 
     const handleUpdateStatus = async (appId: string, newStatus: string) => {
-        if (newStatus === 'completed') {
-            const app = candidates.find(c => c.id === appId);
-            if (app) {
-                setSelectedApp(app);
-                setRatingModalOpen(true);
-            }
-            return;
-        }
-
         const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', appId);
 
         if (!error) {
@@ -113,6 +116,21 @@ export default function CompanyJobCandidates() {
         }
     };
 
+    const handleConfirmDelivery = async (app: Application) => {
+        setReleasing(true);
+        const result = await WalletService.releaseEscrow(app.job_id, app.id, app.worker_id);
+        if (!result.success) {
+            addToast('Erro ao liberar pagamento. Tente novamente.', 'error');
+            setReleasing(false);
+            return;
+        }
+        await supabase.from('applications').update({ status: 'completed' }).eq('id', app.id);
+        setConfirmDeliveryApp(null);
+        setReleasing(false);
+        addToast('Entrega confirmada! Pagamento liberado ao profissional.', 'success');
+        fetchCandidates();
+    };
+
     const handleSubmitReview = async () => {
         if (!selectedApp) return;
         setSubmittingReview(true);
@@ -121,28 +139,17 @@ export default function CompanyJobCandidates() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // 1. Release Escrow Payment FIRST (most critical operation)
-            const escrowResult = await WalletService.releaseEscrow(
-                selectedApp.job_id,
-                selectedApp.id,
-                selectedApp.worker_id
-            );
-
-            if (!escrowResult.success) {
-                throw new Error(escrowResult.error || 'Falha ao liberar pagamento. Tente novamente.');
-            }
-
-            // 2. Update Application Status (escrow already released, safe to mark completed)
+            // Update Application Status to reviewed (best-effort, already completed)
             const { error: appError } = await supabase
                 .from('applications')
                 .update({ status: 'completed' })
                 .eq('id', selectedApp.id);
 
             if (appError) {
-                console.error('App status update failed after escrow release:', appError);
+                console.error('App status update failed:', appError);
             }
 
-            // 3. Create Review (non-critical, best-effort)
+            // Create Review (non-critical, best-effort)
             const { error: reviewError } = await supabase.from('reviews').insert({
                 job_id: selectedApp.job_id,
                 reviewer_id: user.id,
@@ -164,7 +171,7 @@ export default function CompanyJobCandidates() {
                 return;
             }
 
-            addToast('Job finalizado e pagamento liberado!', 'success');
+            addToast('Avaliação enviada com sucesso!', 'success');
 
             setRatingModalOpen(false);
             setRating(5);
@@ -291,8 +298,9 @@ export default function CompanyJobCandidates() {
                         ))}
                     </div>
                 ) : candidates.length === 0 ? (
-                    <div className="text-center py-10 font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
-                        Ainda não há candidatos para esta vaga.
+                    <div className="text-center py-16">
+                        <p className="text-gray-500 text-lg font-bold">Nenhum candidato encontrado.</p>
+                        <p className="text-gray-400 text-sm mt-2">Ainda não há candidatos para esta vaga.</p>
                     </div>
                 ) : (
                     candidates.map((app) => (
@@ -330,7 +338,10 @@ export default function CompanyJobCandidates() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                                            {/* Escrow Status Badge */}
+                                            <EscrowStatusBadge escrowStatus={escrowStatus} />
+
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleChat(app); }}
                                                 className="p-2 hover:bg-blue-50 text-gray-300 hover:text-blue-500 rounded-lg transition-colors" title="Chat"
@@ -354,7 +365,7 @@ export default function CompanyJobCandidates() {
                                                 </>
                                             )}
                                             {app.status !== 'pending' && (
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={`text-xs font-black uppercase px-3 py-1 rounded-lg border-2 ${app.status === 'hired' ? 'bg-green-100 border-green-200 text-green-700' :
                                                         app.status === 'in_progress' ? 'bg-orange-100 border-orange-200 text-orange-700' :
                                                         app.status === 'completed' ? 'bg-blue-100 border-blue-200 text-blue-700' :
@@ -423,16 +434,26 @@ export default function CompanyJobCandidates() {
                                                                 </span>
                                                             )}
 
-                                                            {/* Finalize button only if both checkouts confirmed */}
+                                                            {/* Confirmar Entrega button — replaces old "Finalizar Job" */}
                                                             {app.company_checkin_confirmed_at && app.company_checkout_confirmed_at && (
                                                                 <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'completed'); }}
-                                                                    className="p-1 px-3 bg-primary text-black border border-black rounded-lg text-xs font-bold uppercase hover:bg-green-400 transition-colors"
+                                                                    onClick={(e) => { e.stopPropagation(); setConfirmDeliveryApp(app); }}
+                                                                    className="p-1 px-3 bg-primary text-white border-2 border-black rounded-lg text-xs font-bold uppercase hover:bg-green-400 transition-colors flex items-center gap-1"
                                                                 >
-                                                                    Finalizar Job
+                                                                    Confirmar Entrega
                                                                 </button>
                                                             )}
                                                         </>
+                                                    )}
+
+                                                    {/* Botão Avaliar — apenas para candidatos já finalizados */}
+                                                    {app.status === 'completed' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setSelectedApp(app); setRatingModalOpen(true); }}
+                                                            className="p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-gray-800 transition-colors"
+                                                        >
+                                                            Avaliar
+                                                        </button>
                                                     )}
                                                 </div>
                                             )}
@@ -473,6 +494,34 @@ export default function CompanyJobCandidates() {
                     ))
                 )}
             </div>
+
+            {/* Modal de Confirmação de Entrega */}
+            {confirmDeliveryApp && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <h2 className="text-xl font-black uppercase tracking-tight mb-4">Confirmar Entrega</h2>
+                        <p className="text-gray-600 font-medium mb-6">
+                            Tem certeza que deseja confirmar a entrega? O pagamento será liberado imediatamente ao profissional.
+                        </p>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setConfirmDeliveryApp(null)}
+                                disabled={releasing}
+                                className="flex-1 py-3 border-2 border-black font-bold rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => handleConfirmDelivery(confirmDeliveryApp)}
+                                disabled={releasing}
+                                className="flex-1 py-3 bg-primary text-white font-bold rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {releasing ? <><Loader2 size={16} className="animate-spin" /> Processando...</> : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Rating Modal */}
             {ratingModalOpen && (
@@ -531,7 +580,7 @@ export default function CompanyJobCandidates() {
                             disabled={submittingReview}
                             className="w-full bg-black text-white py-4 rounded-xl font-black uppercase tracking-wide hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submittingReview ? 'Enviando...' : 'Enviar Avaliação e Finalizar'}
+                            {submittingReview ? 'Enviando...' : 'Enviar Avaliação'}
                         </button>
                     </div>
                 </div>
