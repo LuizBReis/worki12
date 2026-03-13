@@ -50,7 +50,7 @@ export default function CompanyJobCandidates() {
     const [companyBalance, setCompanyBalance] = useState<number | null>(null);
     const [confirmDeliveryApp, setConfirmDeliveryApp] = useState<Application | null>(null);
     const [releasing, setReleasing] = useState(false);
-    const [escrowStatus, setEscrowStatus] = useState<'reserved' | 'released' | null>(null);
+    const [escrowStatusMap, setEscrowStatusMap] = useState<Record<string, 'reserved' | 'released'>>({});
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -91,13 +91,18 @@ export default function CompanyJobCandidates() {
             if (error) throw error;
             setCandidates(data || []);
 
-            // Fetch escrow status for this job
-            const { data: escrowData } = await supabase
+            // Fetch escrow status per application for this job
+            const { data: escrowRows } = await supabase
                 .from('escrow_transactions')
-                .select('status')
-                .eq('job_id', id)
-                .single();
-            setEscrowStatus(escrowData?.status === 'released' ? 'released' : escrowData ? 'reserved' : null);
+                .select('application_id, status')
+                .eq('job_id', id);
+            const statusMap: Record<string, 'reserved' | 'released'> = {};
+            (escrowRows || []).forEach((row) => {
+                if (row.application_id && (row.status === 'reserved' || row.status === 'released')) {
+                    statusMap[row.application_id] = row.status;
+                }
+            });
+            setEscrowStatusMap(statusMap);
         } catch (error) {
             console.error('Error fetching candidates:', error);
         } finally {
@@ -124,7 +129,14 @@ export default function CompanyJobCandidates() {
             setReleasing(false);
             return;
         }
-        await supabase.from('applications').update({ status: 'completed' }).eq('id', app.id);
+        const { error: updateError } = await supabase.from('applications').update({ status: 'completed' }).eq('id', app.id);
+        if (updateError) {
+            addToast('Pagamento liberado, mas houve erro ao atualizar status. Contate o suporte.', 'error');
+            setReleasing(false);
+            setConfirmDeliveryApp(null);
+            fetchCandidates();
+            return;
+        }
         setConfirmDeliveryApp(null);
         setReleasing(false);
         addToast('Entrega confirmada! Pagamento liberado ao profissional.', 'success');
@@ -339,8 +351,8 @@ export default function CompanyJobCandidates() {
                                         </div>
 
                                         <div className="flex items-center gap-2 flex-wrap justify-end">
-                                            {/* Escrow Status Badge */}
-                                            <EscrowStatusBadge escrowStatus={escrowStatus} />
+                                            {/* Escrow Status Badge — per-candidate status */}
+                                            <EscrowStatusBadge escrowStatus={escrowStatusMap[app.id] ?? null} />
 
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleChat(app); }}
