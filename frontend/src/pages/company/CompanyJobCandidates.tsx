@@ -6,6 +6,7 @@ import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, Mes
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '../../contexts/ToastContext';
+import JobLifecycleStepper from '../../components/JobLifecycleStepper';
 
 export default function CompanyJobCandidates() {
     const { id } = useParams();
@@ -230,6 +231,29 @@ export default function CompanyJobCandidates() {
         }
     };
 
+    const computeSteps = (app: Application) => {
+        const checkinComplete = !!(app.worker_checkin_at && app.company_checkin_confirmed_at);
+        const checkinActive = !!(app.worker_checkin_at && !app.company_checkin_confirmed_at);
+        const checkoutComplete = !!(app.worker_checkout_at && app.company_checkout_confirmed_at);
+        const checkoutActive = !!(app.worker_checkout_at && !app.company_checkout_confirmed_at);
+
+        return [
+            { label: 'Contratado', status: 'complete' as const },
+            {
+                label: 'Chegada',
+                status: checkinComplete ? 'complete' as const : checkinActive ? 'active' as const : 'pending' as const
+            },
+            {
+                label: 'Saída',
+                status: checkoutComplete ? 'complete' as const : checkoutActive ? 'active' as const : 'pending' as const
+            },
+            {
+                label: 'Entrega',
+                status: app.status === 'completed' ? 'complete' as const : 'pending' as const
+            }
+        ];
+    };
+
     return (
         <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             {/* Header */}
@@ -389,6 +413,13 @@ export default function CompanyJobCandidates() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Job Lifecycle Stepper */}
+                                    {['hired', 'in_progress', 'completed'].includes(app.status) && (
+                                        <div className="border-t border-gray-100 mt-4 pt-4">
+                                            <JobLifecycleStepper steps={computeSteps(app)} />
+                                        </div>
+                                    )}
 
                                     {/* Cover Letter Snippet */}
                                     <div className="mt-4 bg-gray-50 p-3 rounded-xl border-l-4 border-gray-300">
