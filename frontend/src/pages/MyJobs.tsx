@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { MapPin, CheckCircle2, Clock, XCircle, Loader2, DollarSign, Star, Play, Square, AlertCircle } from 'lucide-react';
+import PageMeta from '../components/PageMeta';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, isToday, parseISO, isWithinInterval, setHours, setMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -333,6 +334,7 @@ export default function MyJobs() {
 
     return (
         <div className="flex flex-col gap-6 pb-24 font-sans text-accent max-w-4xl mx-auto">
+            <PageMeta title="Meus Jobs" description="Acompanhe suas candidaturas, trabalhos agendados e histórico na Worki." />
 
             <header>
                 <h2 className="text-4xl font-black uppercase tracking-tighter">Meus Jobs</h2>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { WalletService } from '../services/walletService';
+import PageMeta from '../components/PageMeta';
 import type { WalletTransaction } from '../services/walletService';
 import { DollarSign, CreditCard, ArrowDownLeft, ArrowUpRight, History, Loader2, Wallet as WalletIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -179,6 +180,7 @@ export default function Wallet() {
 
     return (
         <div className="flex flex-col gap-8 pb-12 font-sans text-accent max-w-4xl mx-auto">
+            <PageMeta title="Carteira" />
 
             <header>
                 <h2 className="text-4xl font-black uppercase tracking-tighter mb-2">Carteira</h2>

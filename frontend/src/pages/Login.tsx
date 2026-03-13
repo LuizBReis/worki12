@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, ArrowRight, Mail, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getPasswordStrength } from '../lib/validation';
+import PageMeta from '../components/PageMeta';
 
 export default function Login() {
     const [searchParams] = useSearchParams();
@@ -87,6 +88,7 @@ export default function Login() {
     return (
         <div className={`min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500
                     ${isHire ? 'bg-accent' : 'bg-[#F4F4F0]'}`}>
+            <PageMeta title="Entrar" description="Entre na sua conta Worki para acessar vagas e gerenciar seus freelancers." />
 
             {/* Back Button */}
             <button

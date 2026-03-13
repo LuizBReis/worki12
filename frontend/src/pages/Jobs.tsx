@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search } from 'lucide-react';
+import PageMeta from '../components/PageMeta';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobApplication } from '../hooks/useJobApplication';
@@ -153,6 +154,7 @@ export default function Jobs() {
 
     return (
         <div className="flex flex-col gap-6 pb-24 font-sans text-accent max-w-5xl mx-auto">
+            <PageMeta title="Buscar Vagas" description="Encontre oportunidades de trabalho freelance na Worki." />
 
             {/* Header */}
             <div>
