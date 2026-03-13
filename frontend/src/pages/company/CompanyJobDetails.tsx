@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, MapPin, Clock, Users, Briefcase, Eye, MoreHorizontal, Edit2, PauseCircle, PlayCircle, Trash2, Check } from 'lucide-react';
+import PageMeta from '../../components/PageMeta';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WalletService } from '../../services/walletService';
@@ -101,6 +102,10 @@ export default function CompanyJobDetails() {
 
     return (
         <>
+        <PageMeta
+          title={job ? job.title : 'Detalhes da Vaga'}
+          description={job ? (job.description?.slice(0, 160) ?? undefined) : undefined}
+        />
         {showDeleteConfirm && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white rounded-2xl w-full max-w-sm p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">

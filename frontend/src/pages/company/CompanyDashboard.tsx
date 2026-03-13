@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Users, Briefcase, TrendingUp, Search, Filter, Loader2, Bell } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import PageMeta from '../../components/PageMeta';
 import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -77,6 +78,7 @@ export default function CompanyDashboard() {
 
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <PageMeta title="Dashboard da Empresa" />
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
                 <div>
