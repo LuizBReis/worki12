@@ -12,6 +12,7 @@ export default function WorkerOnboarding() {
     const { addToast } = useToast();
     const [step, setStep] = useState(1);
     const [userId, setUserId] = useState<string | null>(null);
+    const [tosAccepted, setTosAccepted] = useState(false);
 
     const TOTAL_STEPS = 3;
 
@@ -106,7 +107,7 @@ export default function WorkerOnboarding() {
         switch (step) {
             case 1: return formData.fullName && formData.phone && formData.cpf.replace(/\D/g, '').length === 11 && formData.birthDate && formData.city;
             case 2: return formData.roles.length > 0 && formData.experienceYears;
-            case 3: return formData.availability.length > 0;
+            case 3: return formData.availability.length > 0 && tosAccepted;
             default: return true;
         }
     };
@@ -139,7 +140,10 @@ export default function WorkerOnboarding() {
                     bio: formData.bio,
                     availability: formData.availability,
                     goal: formData.goal,
-                    onboarding_completed: true
+                    onboarding_completed: true,
+                    accepted_tos: true,
+                    tos_version: 'v1',
+                    tos_accepted_at: new Date().toISOString()
                 });
 
             if (error) throw error;
@@ -367,6 +371,22 @@ export default function WorkerOnboarding() {
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 mt-6">
+                                        <input
+                                            type="checkbox"
+                                            id="tos"
+                                            checked={tosAccepted}
+                                            onChange={e => setTosAccepted(e.target.checked)}
+                                            className="w-5 h-5 border-2 border-black rounded accent-primary mt-0.5 flex-shrink-0"
+                                        />
+                                        <label htmlFor="tos" className="text-sm text-gray-700">
+                                            Li e aceito os{' '}
+                                            <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary underline font-bold">Termos de Uso</a>
+                                            {' '}e a{' '}
+                                            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline font-bold">Política de Privacidade</a>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
