@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { Loader2, ArrowRight, ArrowLeft, User, Briefcase, Star, Clock, Target } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { WalletService } from '../../services/walletService';
+import PageMeta from '../../components/PageMeta';
 
 export default function WorkerOnboarding() {
     const navigate = useNavigate();
@@ -160,6 +161,7 @@ export default function WorkerOnboarding() {
 
     return (
         <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center p-6 font-sans text-accent">
+            <PageMeta title="Criar Conta" />
 
             <div className="w-full max-w-2xl">
                 {/* Header */}
