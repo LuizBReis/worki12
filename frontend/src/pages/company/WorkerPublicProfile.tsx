@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, MapPin, Calendar, Star, Briefcase, Award, Zap, MessageSquare } from 'lucide-react';
+import PageMeta from '../../components/PageMeta';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -127,6 +128,11 @@ export default function WorkerPublicProfile() {
 
     return (
         <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+            <PageMeta
+              title={profile ? profile.full_name : 'Perfil do Profissional'}
+              description={profile ? `${profile.bio ?? 'Profissional'} | Veja o perfil completo de ${profile.full_name} na Worki.` : undefined}
+              ogTitle={profile ? `${profile.full_name} — Worki` : undefined}
+            />
             {/* Header / Nav */}
             <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 font-bold hover:text-black transition-colors mb-6">
                 <ArrowLeft size={16} strokeWidth={3} /> Voltar
