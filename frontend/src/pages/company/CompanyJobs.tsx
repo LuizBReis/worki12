@@ -2,6 +2,7 @@ import { Search, PlusCircle, MoreHorizontal, Eye, Users, Edit2, Trash2, PauseCir
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import PageMeta from '../../components/PageMeta';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WalletService } from '../../services/walletService';
@@ -114,6 +115,7 @@ export default function CompanyJobs() {
 
     return (
         <>
+        <PageMeta title="Minhas Vagas" />
         {deleteJobId && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white rounded-2xl w-full max-w-sm p-6 border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
