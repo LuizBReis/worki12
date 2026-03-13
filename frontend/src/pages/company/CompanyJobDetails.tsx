@@ -34,11 +34,25 @@ export default function CompanyJobDetails() {
     const [loading, setLoading] = useState(true);
     const [openMenu, setOpenMenu] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [activeWorkersCount, setActiveWorkersCount] = useState(0);
     const { addToast } = useToast();
 
     useEffect(() => {
         if (id) fetchJobDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
+
+    useEffect(() => {
+        if (!id) return;
+        const fetchActiveWorkers = async () => {
+            const { count } = await supabase
+                .from('applications')
+                .select('id', { count: 'exact', head: true })
+                .eq('job_id', id)
+                .in('status', ['hired', 'in_progress']);
+            setActiveWorkersCount(count ?? 0);
+        };
+        fetchActiveWorkers();
     }, [id]);
 
     const fetchJobDetails = async () => {
@@ -217,6 +231,13 @@ export default function CompanyJobDetails() {
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm font-bold text-blue-600 flex items-center gap-2"><Eye size={16} /> Visualizações</span>
                                         <span className="text-2xl font-black text-blue-900">{job.views || 0}</span>
+                                    </div>
+                                    <div
+                                        className={`flex justify-between items-center rounded-lg p-2 -mx-2 transition-colors ${activeWorkersCount > 0 ? 'cursor-pointer hover:bg-white' : ''}`}
+                                        onClick={() => activeWorkersCount > 0 && navigate(`/company/jobs/${id}/candidates`)}
+                                    >
+                                        <span className="text-sm font-bold text-blue-600">Em andamento</span>
+                                        <span className="font-black text-blue-600">{activeWorkersCount}</span>
                                     </div>
                                 </div>
                             </div>
