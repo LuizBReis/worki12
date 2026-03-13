@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { WalletService } from '../../services/walletService';
+import { logError } from '../../lib/logger';
 import { ArrowLeft, Star, MapPin, Clock, ChevronRight, CheckCircle, XCircle, MessageSquare, Play, Square, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -49,6 +50,7 @@ export default function CompanyJobCandidates() {
     const [confirmDeliveryApp, setConfirmDeliveryApp] = useState<Application | null>(null);
     const [releasing, setReleasing] = useState(false);
     const [escrowStatusMap, setEscrowStatusMap] = useState<Record<string, 'reserved' | 'released'>>({});
+    const [companyBalance, setCompanyBalance] = useState<number | null>(null);
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -95,8 +97,12 @@ export default function CompanyJobCandidates() {
                 }
             });
             setEscrowStatusMap(statusMap);
+
+            // Fetch company balance to guard the "Contratar" button (AC-7)
+            const wallet = await WalletService.getOrCreateWallet(user.id, 'company');
+            setCompanyBalance(wallet ? wallet.balance : null);
         } catch (error) {
-            console.error('Error fetching candidates:', error);
+            logError(error, 'CompanyJobCandidates');
         } finally {
             setLoading(false);
         }
@@ -150,7 +156,7 @@ export default function CompanyJobCandidates() {
                 .eq('id', selectedApp.id);
 
             if (appError) {
-                console.error('App status update failed:', appError);
+                logError(appError, 'CompanyJobCandidates');
             }
 
             // Create Review (non-critical, best-effort)
@@ -164,7 +170,7 @@ export default function CompanyJobCandidates() {
             });
 
             if (reviewError) {
-                console.error('Review insert failed:', reviewError);
+                logError(reviewError, 'CompanyJobCandidates');
             }
 
             addToast('Avaliação enviada com sucesso!', 'success');
@@ -175,7 +181,7 @@ export default function CompanyJobCandidates() {
             fetchCandidates();
 
         } catch (error) {
-            console.error('Error submitting review:', error);
+            logError(error, 'CompanyJobCandidates');
             addToast('Erro ao enviar avaliação.', 'error');
         } finally {
             setSubmittingReview(false);
@@ -208,7 +214,7 @@ export default function CompanyJobCandidates() {
                 navigate(`/company/messages?conversation=${newConvId}`);
             }
         } catch (error) {
-            console.error('Error starting chat:', error);
+            logError(error, 'CompanyJobCandidates');
             addToast('Erro ao iniciar conversa.', 'error');
         }
     };
@@ -224,7 +230,7 @@ export default function CompanyJobCandidates() {
             if (error) throw error;
             fetchCandidates();
         } catch (error) {
-            console.error('Error confirming check-in:', error);
+            logError(error, 'CompanyJobCandidates');
             addToast('Erro ao confirmar check-in.', 'error');
         } finally {
             setConfirmingCheckin(null);
@@ -242,7 +248,7 @@ export default function CompanyJobCandidates() {
             if (error) throw error;
             fetchCandidates();
         } catch (error) {
-            console.error('Error confirming check-out:', error);
+            logError(error, 'CompanyJobCandidates');
             addToast('Erro ao confirmar check-out.', 'error');
         } finally {
             setConfirmingCheckin(null);
@@ -358,7 +364,9 @@ export default function CompanyJobCandidates() {
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'hired'); }}
-                                                                className="p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-green-600 transition-colors"
+                                                                disabled={companyBalance !== null && companyBalance <= 0}
+                                                                className="p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={companyBalance !== null && companyBalance <= 0 ? 'Saldo insuficiente para contratar' : undefined}
                                                             >
                                                                 Contratar
                                                             </button>
