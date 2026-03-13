@@ -34,8 +34,14 @@ export default function ProtectedRoute() {
                         .select('accepted_tos')
                         .eq('id', sessionUser.id)
                         .single();
-                    setTosAccepted(companyData?.accepted_tos === true);
-                    setDetectedRole('company');
+
+                    if (companyData) {
+                        setTosAccepted(companyData.accepted_tos === true);
+                        setDetectedRole('company');
+                    } else {
+                        // Usuário sem perfil ainda (em onboarding) — não exibir gate de TOS
+                        setTosAccepted(true);
+                    }
                 }
             }
 
