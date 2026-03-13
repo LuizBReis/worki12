@@ -17,6 +17,8 @@ export default function WorkerPublicProfile() {
         xp?: number;
         completed_jobs_count?: number;
         recommendation_score?: number;
+        rating_average?: number;
+        reviews_count?: number;
         tags?: string[];
         created_at: string;
         avatar_url?: string;
@@ -62,7 +64,7 @@ export default function WorkerPublicProfile() {
             // Fetch Profile
             const { data: profileData, error: profileError } = await supabase
                 .from('workers')
-                .select('id, full_name, bio, city, level, xp, completed_jobs_count, recommendation_score, tags, created_at, avatar_url')
+                .select('id, full_name, bio, city, level, xp, completed_jobs_count, recommendation_score, rating_average, reviews_count, tags, created_at, avatar_url')
                 .eq('id', id)
                 .single();
 
@@ -116,7 +118,7 @@ export default function WorkerPublicProfile() {
             setHistory(historyData || []);
 
         } catch (error) {
-            console.error('Error fetching worker profile:', error);
+            console.error('Erro ao carregar perfil do worker:', error);
         } finally {
             setLoading(false);
         }
@@ -180,7 +182,12 @@ export default function WorkerPublicProfile() {
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-100">
                             <div className="flex items-center gap-2 text-gray-400 font-bold mb-1 text-xs uppercase"><Star size={14} /> Avaliação</div>
-                            <div className="text-2xl font-black text-yellow-500">{(profile.recommendation_score ?? 0) > 0 ? ((profile.recommendation_score ?? 0) / 20).toFixed(1) : 'N/A'}</div>
+                            <div className="text-2xl font-black text-yellow-500">
+                                {(profile.reviews_count ?? 0) > 0 && (profile.rating_average ?? 0) > 0
+                                    ? Number(profile.rating_average).toFixed(1)
+                                    : '—'}
+                            </div>
+                            <p className="text-xs text-gray-500">({profile.reviews_count ?? 0} avaliações)</p>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-100">
                             <div className="flex items-center gap-2 text-gray-400 font-bold mb-1 text-xs uppercase"><Award size={14} /> XP Total</div>
@@ -235,10 +242,13 @@ export default function WorkerPublicProfile() {
                                         ))}
                                     </div>
                                 </div>
-                                <p className="text-sm text-gray-600 font-medium">"{r.comment}"</p>
+                                <p className="text-sm text-gray-600 font-medium">"{r.comment || 'Sem comentário'}"</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    {format(new Date(r.created_at), "d 'de' MMM. 'de' yyyy", { locale: ptBR })}
+                                </p>
                             </div>
                         )) : (
-                            <p className="text-gray-400 italic font-medium">Nenhuma avaliação ainda.</p>
+                            <p className="text-sm text-gray-400 italic text-center py-4">Nenhuma avaliação ainda. Seja o primeiro a avaliar!</p>
                         )}
                     </div>
                 </div>
