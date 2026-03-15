@@ -44,23 +44,33 @@ serve(async (req) => {
 
     if (!isWorker) {
       // Verificar se é empresa com escrow ativo
-      const { data: escrowData } = await supabaseAdmin
-        .from('escrow_transactions')
+      // escrow_transactions não tem company_id — buscar via jobs.company_id
+      const { data: companyJobIds } = await supabaseAdmin
+        .from('jobs')
         .select('id')
-        .eq('status', 'reserved')
-        .eq('company_id', userId)
-        .limit(1);
+        .eq('company_id', userId);
 
-      if (escrowData && escrowData.length > 0) {
-        return new Response(
-          JSON.stringify({
-            error: 'Você tem pagamentos pendentes. Confirme ou cancele os jobs em andamento antes de deletar sua conta.',
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
+      const jobIds = (companyJobIds || []).map((j: { id: string }) => j.id);
+
+      if (jobIds.length > 0) {
+        const { data: escrowData } = await supabaseAdmin
+          .from('escrow_transactions')
+          .select('id')
+          .in('job_id', jobIds)
+          .eq('status', 'reserved')
+          .limit(1);
+
+        if (escrowData && escrowData.length > 0) {
+          return new Response(
+            JSON.stringify({
+              error: 'Você tem pagamentos pendentes. Confirme ou cancele os jobs em andamento antes de deletar sua conta.',
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            }
+          );
+        }
       }
     }
 
