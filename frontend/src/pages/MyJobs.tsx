@@ -13,34 +13,29 @@ type Step = { label: string; status: 'complete' | 'active' | 'pending' }
 
 function computeWorkerSteps(job: JobApplication): Step[] {
     const checkinDone = !!job.worker_checkin_at;
-    const checkinConfirmed = !!job.company_checkin_confirmed_at;
     const checkoutDone = !!job.worker_checkout_at;
-    const checkoutConfirmed = !!job.company_checkout_confirmed_at;
+    const companyConfirmed = !!job.company_checkout_confirmed_at;
 
     return [
         {
-            label: 'Chegada',
+            label: 'Chegada registrada',
             status: checkinDone ? 'complete' : 'active'
-        },
-        {
-            label: 'Confirmação da empresa',
-            status: checkinConfirmed
-                ? 'complete'
-                : checkinDone && !checkinConfirmed
-                    ? 'active'
-                    : 'pending'
         },
         {
             label: 'Check-out',
             status: checkoutDone
                 ? 'complete'
-                : checkinConfirmed && !checkoutDone
+                : checkinDone && !checkoutDone
                     ? 'active'
                     : 'pending'
         },
         {
-            label: 'Pagamento liberado',
-            status: checkoutConfirmed ? 'complete' : 'pending'
+            label: 'Aguardando empresa',
+            status: companyConfirmed
+                ? 'complete'
+                : checkoutDone && !companyConfirmed
+                    ? 'active'
+                    : 'pending'
         }
     ];
 }
