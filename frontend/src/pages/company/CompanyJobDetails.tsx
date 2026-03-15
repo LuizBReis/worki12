@@ -45,11 +45,15 @@ export default function CompanyJobDetails() {
     useEffect(() => {
         if (!id) return;
         const fetchActiveWorkers = async () => {
-            const { count } = await supabase
+            const { count, error } = await supabase
                 .from('applications')
                 .select('id', { count: 'exact', head: true })
                 .eq('job_id', id)
                 .in('status', ['hired', 'in_progress']);
+            if (error) {
+                console.error('Error fetching active workers:', error);
+                return;
+            }
             setActiveWorkersCount(count ?? 0);
         };
         fetchActiveWorkers();
