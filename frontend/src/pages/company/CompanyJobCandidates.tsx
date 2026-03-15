@@ -112,12 +112,16 @@ export default function CompanyJobCandidates() {
     const handleUpdateStatus = async (appId: string, newStatus: string) => {
         const { error } = await supabase.from('applications').update({ status: newStatus }).eq('id', appId);
 
-        if (!error) {
-            if (newStatus === 'hired') {
-                addToast('Candidato contratado! O job agora está em andamento.', 'success');
-            }
-            fetchCandidates();
+        if (error) {
+            logError('CompanyJobCandidates: handleUpdateStatus', error);
+            addToast('Erro ao atualizar status do candidato.', 'error');
+            return;
         }
+
+        if (newStatus === 'hired') {
+            addToast('Candidato contratado! O job agora está em andamento.', 'success');
+        }
+        fetchCandidates();
     };
 
     const handleConfirmDelivery = async (app: Application) => {
@@ -397,9 +401,15 @@ export default function CompanyJobCandidates() {
                                                             </button>
                                                             <div className="flex flex-col items-end">
                                                                 <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'hired'); }}
-                                                                    disabled={companyBalance !== null && companyBalance <= 0}
-                                                                    className="p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-black"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (companyBalance !== null && companyBalance <= 0) {
+                                                                            addToast('Saldo insuficiente. Deposite fundos na sua carteira para contratar.', 'error');
+                                                                            return;
+                                                                        }
+                                                                        handleUpdateStatus(app.id, 'hired');
+                                                                    }}
+                                                                    className={`p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-green-600 transition-colors ${companyBalance !== null && companyBalance <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                     title={companyBalance !== null && companyBalance <= 0 ? 'Saldo insuficiente para contratar' : undefined}
                                                                 >
                                                                     Contratar
