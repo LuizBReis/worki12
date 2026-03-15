@@ -604,7 +604,7 @@ gh pr create \
 - **Issue da feature:** #{parent_feature_issue_number}
 - **Spec:** \`docs/specs/FEAT-{NNN}-{name}.md\`
 
-Closes #{task_issue_number}
+Refs #{task_issue_number}
 
 ## Definition of Done ✅
 
@@ -775,3 +775,5 @@ Próximo: /project:validate para iniciar o chain de review → QA → security.
 10. **Jamais commite sem `Resolve: FEAT-NNN-TN — #N` no rodapé.** É o link que conecta o commit ao issue para o code-reviewer.
 11. **Jamais pule o Step 3 (exploração do codebase).** O pattern reference existe por uma razão — siga-o.
 12. **Sempre processe todos os itens stage:sprint.** Não pare após o primeiro.
+13. **JAMAIS use `Closes #N` ou `Fixes #N` no PR body.** Use `Refs #N`. GitHub auto-fecha issues com Closes/Fixes ao mergear — isso remove o issue do pipeline antes de QA e Security processarem. O pipeline controla o ciclo de vida via labels e board, não via close/reopen.
+14. **Sempre verifique que o board foi atualizado após cada move-stage.sh.** Se o script falhou silenciosamente, o board fica desincronizado e a equipe não vê o progresso real.

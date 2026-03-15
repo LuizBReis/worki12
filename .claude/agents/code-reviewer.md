@@ -218,7 +218,7 @@ gh issue list --repo Workifree/worki12 \
 ```
 
 Select highest priority issue (P0 > P1 > P2 > P3). Extract from the issue body:
-- PR number (format: "PR: #N" or "Closes #N")
+- PR number (format: "PR: #N" or "Refs #N")
 - Spec file path (format: `docs/specs/FEAT-XXX-name.md`)
 
 Find the linked PR:
