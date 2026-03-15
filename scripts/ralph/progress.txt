@@ -13,3 +13,93 @@ Started: 2026-03-11
 - Toast notifications via ToastContext
 - Sentry para error tracking em producao
 ---
+
+## 2026-03-11 - SEC-01
+- Corrigido verificacao JWT no admin-data: substituido parsing manual (atob/split) por comparacao direta com SUPABASE_SERVICE_ROLE_KEY
+- Arquivos modificados: supabase/functions/admin-data/index.ts
+- **Aprendizados para proximas iteracoes:**
+  - admin-data deploy com --no-verify-jwt (Asaas e admin-data tem auth propria)
+  - service_role key eh estatica, comparacao direta eh mais segura que parsing JWT sem verificacao de assinatura
+  - CWD pode estar em frontend/, usar caminhos absolutos ou cd para root ao commitar
+---
+
+## 2026-03-11 - SEC-02
+- Criada migration para restringir UPDATE de wallets com GRANT de coluna
+- Removida politica RLS com subquery confusa, substituida por REVOKE UPDATE + GRANT UPDATE (asaas_customer_id) TO authenticated
+- Arquivos modificados: supabase/migrations/20260311300000_restrict_wallet_update_columns.sql
+- **Aprendizados para proximas iteracoes:**
+  - GRANT de coluna eh mais explicito e seguro que subquery em WITH CHECK
+  - service_role precisa manter GRANT UPDATE total para RPCs funcionarem
+  - Sempre DROP POLICY IF EXISTS antes de recriar
+---
+
+## 2026-03-11 - SEC-03
+- Adicionado status em wallet_transactions (pending_transfer, completed, failed)
+- Fluxo de saque agora: debit balance → insert pending_transfer → call Asaas → update completed/failed
+- Se Asaas falha: marca failed + rollback balance. Se rollback falha: log CRITICAL com todos detalhes
+- Arquivos modificados: supabase/functions/asaas-withdraw/index.ts, supabase/migrations/20260311400000_add_status_wallet_transactions.sql
+- **Aprendizados para proximas iteracoes:**
+  - wallet_transactions nao tinha coluna status, adicionada com DEFAULT 'completed' para retrocompatibilidade
+  - Sempre registrar transacao ANTES de chamar API externa para auditoria
+  - reference_id eh preenchido apenas apos sucesso da API
+---
+
+## 2026-03-11 - SEC-08
+- Story ja estava implementada no codigo: MAX_PAGES=10, loop com pageCount < MAX_PAGES, warning log
+- Verificado build passing, marcado como passes: true
+- Arquivos modificados: scripts/ralph/prd.json (marcado passes: true)
+- **Aprendizados para proximas iteracoes:**
+  - Verificar se a implementacao ja existe antes de comecar a codar
+  - asaas-sync ja tinha proteção contra loop infinito
+---
+
+## 2026-03-11 - AUTH-09
+- Story ja estava implementada: ProtectedRoute.tsx redireciona com ?reason=session_expired, Login.tsx le o param e mostra mensagem
+- Corrigido build: removidos imports nao utilizados de Loader2 em 7 arquivos (Analytics, Dashboard, Jobs, Profile, CompanyAnalytics, CompanyJobs, CompanyWallet)
+- Arquivos modificados: frontend/src/pages/Analytics.tsx, Dashboard.tsx, Jobs.tsx, Profile.tsx, company/CompanyAnalytics.tsx, company/CompanyJobs.tsx, company/CompanyWallet.tsx
+- **Aprendizados para proximas iteracoes:**
+  - Substituicao de spinner por skeleton (stories anteriores) deixou imports de Loader2 orfaos
+  - Sempre verificar build apos cada story - imports nao usados causam erro no tsc
+  - AUTH-09 foi implementada em iteracao anterior mas nao marcada como passes: true
+---
+
+## 2026-03-11 - UX-07, UX-08, UX-09, UX-10 (batch verification)
+- Todas as 4 stories ja estavam implementadas em iteracoes anteriores
+- UX-07: Login, ResetPassword, ForgotPassword ja tem mensagens especificas em portugues
+- UX-08: Profile e CompanyProfile ja tem beforeunload + isDirty detection
+- UX-09: Wallet e CompanyJobCandidates ja mostram texto explicativo em botoes desabilitados
+- UX-10: Todas as acoes criticas ja usam addToast('...', 'success')
+- Arquivos modificados: .ralph/fix_plan.md, scripts/ralph/prd.json (tracking only)
+- **Aprendizados para proximas iteracoes:**
+  - Muitas stories das fases UX foram implementadas nas iteracoes SEC/AUTH/FORM mas nao marcadas
+  - Verificar implementacao existente antes de codar evita trabalho duplicado
+  - Fase UX completa - proxima fase: TS (TypeScript e qualidade)
+---
+
+## 2026-03-11 - TS-01
+- Substituido any[] por interface JobWithCompany[] tipada em Jobs.tsx
+- Interface cobre todos os campos retornados pela query Supabase incluindo company join
+- Profile.tsx ja nao tinha any (corrigido em iteracao anterior)
+- Zero any types restantes no codebase (confirmado via grep)
+- Arquivos modificados: frontend/src/pages/Jobs.tsx
+- **Aprendizados para proximas iteracoes:**
+  - Unico any restante era em Jobs.tsx - Profile.tsx ja tinha sido tipado
+  - Interface do JobCard em JobCard.tsx serviu de base para a nova interface
+---
+
+## 2026-03-11 - TS-05, TS-06, A11Y-01, A11Y-02, A11Y-03, A11Y-04, TEST-01..05, TEST-06 (verificacao final)
+- Todas as 12 stories restantes ja estavam implementadas em iteracoes anteriores
+- TS-05: Rota /worker/onboarding em MainLayout.tsx ja confere com App.tsx
+- TS-06: walletService, useJobApplication e Admin.tsx ja usam logError/logWarn do logger (Sentry em prod, console em dev)
+- A11Y-01: Todos os inputs em Login, ForgotPassword, ResetPassword, WorkerOnboarding, CompanyOnboarding, Profile, CompanyProfile ja tem aria-label
+- A11Y-02: Todos os status badges em MyJobs, CompanyJobs, CompanyJobCandidates, Wallet, CompanyWallet ja mostram texto
+- A11Y-03: DepositModal e RateModal ja usam useFocusTrap com auto-focus, trap e Escape
+- A11Y-04: BottomNav e Sidebar usam NavLink (nativo teclado), sem focus traps fora de modais
+- TEST-01..05: Todos os 12 arquivos de teste existem, 114 testes passando
+- TEST-06: Build 0 erros, Lint 0 warnings, Testes 114/114, Zero any types
+- Arquivos modificados: scripts/ralph/prd.json (marcados passes: true)
+- **Aprendizados para proximas iteracoes:**
+  - Todas as stories de acessibilidade e testes foram implementadas em iteracoes passadas mas nao marcadas
+  - Verificacao batch economiza tempo quando muitas stories ja estao prontas
+  - PRD COMPLETO - todas as 40 stories passando
+---

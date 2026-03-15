@@ -41,16 +41,23 @@ serve(async (req) => {
         if (jobError || !job) throw new Error('Job not found');
         if (job.company_id !== user.id) throw new Error('Not authorized');
 
-        // 2. Verify workerId has a hired/completed application for this job
+        // 2. Verify workerId has a completed application (or confirmed checkout) for this job
         const { data: app, error: appError } = await supabaseAdmin
             .from('applications')
-            .select('worker_id')
+            .select('worker_id, status, company_checkout_confirmed_at')
             .eq('job_id', jobId)
             .eq('worker_id', workerId)
-            .in('status', ['hired', 'in_progress', 'completed'])
+            .in('status', ['in_progress', 'completed'])
             .single();
 
-        if (appError || !app) throw new Error('No valid application found');
+        if (appError || !app) {
+            throw new Error('Candidatura nao encontrada ou trabalho ainda nao foi iniciado');
+        }
+
+        // Only allow release if job is completed OR company explicitly confirmed checkout
+        if (app.status !== 'completed' && !app.company_checkout_confirmed_at) {
+            throw new Error('O trabalho precisa estar concluido antes de liberar o pagamento');
+        }
 
         // Get or create worker wallet
         let { data: workerWallet } = await supabaseAdmin

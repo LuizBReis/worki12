@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { Loader2 } from 'lucide-react';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './contexts/ToastContext';
@@ -47,10 +46,26 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Help = lazy(() => import('./pages/Help'));
 
-// Loading Component
+// Loading Component - Skeleton placeholder
 const PageLoader = () => (
-  <div className="h-screen w-full flex items-center justify-center bg-[#F4F4F0]">
-    <Loader2 className="animate-spin text-primary" size={48} />
+  <div className="h-screen w-full bg-[#F4F4F0] animate-pulse">
+    <div className="flex flex-col md:flex-row max-w-7xl mx-auto min-h-screen">
+      <div className="hidden md:block w-64 p-6 space-y-4">
+        <div className="h-8 w-24 bg-gray-200 rounded-lg" />
+        <div className="space-y-3 mt-8">
+          {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-200 rounded-xl" />)}
+        </div>
+      </div>
+      <main className="flex-1 p-4 md:p-8 space-y-6">
+        <div className="h-10 w-48 bg-gray-200 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-200 rounded-xl" />)}
+        </div>
+        <div className="space-y-3">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-xl" />)}
+        </div>
+      </main>
+    </div>
   </div>
 );
 
@@ -73,7 +88,7 @@ function HomeRedirect() {
     });
   }, [navigate]);
 
-  if (checking) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (checking) return <div className="h-screen flex items-center justify-center bg-[#F4F4F0] animate-pulse"><div className="h-12 w-32 bg-gray-200 rounded-xl" /></div>;
 
   return <Onboarding />;
 }

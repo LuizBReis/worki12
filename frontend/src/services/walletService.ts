@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { invokeFunction } from './api';
+import { logError } from '../lib/logger';
 
 export interface Wallet {
     id: string;
@@ -51,7 +52,7 @@ export const WalletService = {
             .single();
 
         if (error) {
-            console.error('Error creating wallet:', error);
+            logError('Error creating wallet', error);
             return null;
         }
 
@@ -63,7 +64,7 @@ export const WalletService = {
             await invokeFunction('asaas-withdraw', { amount, pixKey, pixKeyType });
             return { success: true };
         } catch (error: unknown) {
-            console.error('Error withdrawing funds:', error);
+            logError('Error withdrawing funds', error);
             return { success: false, error: error instanceof Error ? error.message : 'Erro ao realizar saque' };
         }
     },
@@ -119,7 +120,7 @@ export const WalletService = {
 
             return { success: true };
         } catch (error) {
-            console.error('Error reserving escrow:', error);
+            logError('Error reserving escrow', error);
             return { success: false, error: 'Erro ao reservar pagamento' };
         }
     },
@@ -128,7 +129,7 @@ export const WalletService = {
         try {
             return await invokeFunction('asaas-deposit', payload);
         } catch (error: unknown) {
-            console.error('Error creating deposit:', error);
+            logError('Error creating deposit', error);
             return { error: error instanceof Error ? error.message : 'Erro ao criar deposito via Asaas' };
         }
     },
@@ -137,7 +138,7 @@ export const WalletService = {
         try {
             return await invokeFunction('asaas-sync', {});
         } catch (error: unknown) {
-            console.error('Error syncing balance:', error);
+            logError('Error syncing balance', error);
             return { success: false, error: error instanceof Error ? error.message : 'Erro ao sincronizar saldo' };
         }
     },
@@ -147,7 +148,7 @@ export const WalletService = {
             await invokeFunction('asaas-checkout', { jobId, applicationId, workerId: workerUserId });
             return { success: true };
         } catch (error: unknown) {
-            console.error('Error releasing escrow:', error);
+            logError('Error releasing escrow', error);
             return { success: false, error: error instanceof Error ? error.message : 'Erro ao liberar pagamento' };
         }
     },
@@ -168,7 +169,7 @@ export const WalletService = {
 
             return { success: true };
         } catch (error) {
-            console.error('Error refunding escrow:', error);
+            logError('Error refunding escrow', error);
             return { success: false, error: 'Erro ao reembolsar' };
         }
     },

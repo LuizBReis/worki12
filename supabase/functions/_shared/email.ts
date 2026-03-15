@@ -45,16 +45,29 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     }
 }
 
+// HTML escaping to prevent XSS in email clients
+export function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Email templates
 
 export function hiredEmail(workerName: string, jobTitle: string, companyName: string): EmailPayload {
+    const w = escapeHtml(workerName);
+    const j = escapeHtml(jobTitle);
+    const c = escapeHtml(companyName);
     return {
         to: '', // filled by caller
-        subject: `Voce foi contratado! - ${jobTitle}`,
+        subject: `Voce foi contratado! - ${j}`,
         html: `
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-                <h1 style="color:#00A651">Parabens, ${workerName}!</h1>
-                <p>Voce foi contratado para a vaga <strong>${jobTitle}</strong> pela empresa <strong>${companyName}</strong>.</p>
+                <h1 style="color:#00A651">Parabens, ${w}!</h1>
+                <p>Voce foi contratado para a vaga <strong>${j}</strong> pela empresa <strong>${c}</strong>.</p>
                 <p>Acesse a plataforma para ver os detalhes e iniciar o check-in no dia do trabalho.</p>
                 <a href="https://worki.com.br/my-jobs" style="display:inline-block;background:#00A651;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Meus Jobs</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
@@ -64,13 +77,16 @@ export function hiredEmail(workerName: string, jobTitle: string, companyName: st
 }
 
 export function paymentReceivedEmail(workerName: string, amount: string, jobTitle: string): EmailPayload {
+    const w = escapeHtml(workerName);
+    const a = escapeHtml(amount);
+    const j = escapeHtml(jobTitle);
     return {
         to: '',
-        subject: `Pagamento recebido: R$ ${amount}`,
+        subject: `Pagamento recebido: R$ ${a}`,
         html: `
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
                 <h1 style="color:#00A651">Pagamento Recebido!</h1>
-                <p>Ola ${workerName}, voce recebeu <strong>R$ ${amount}</strong> pelo trabalho <strong>${jobTitle}</strong>.</p>
+                <p>Ola ${w}, voce recebeu <strong>R$ ${a}</strong> pelo trabalho <strong>${j}</strong>.</p>
                 <p>O valor ja esta disponivel na sua carteira. Voce pode sacar via PIX a qualquer momento.</p>
                 <a href="https://worki.com.br/wallet" style="display:inline-block;background:#00A651;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Carteira</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
@@ -80,13 +96,15 @@ export function paymentReceivedEmail(workerName: string, amount: string, jobTitl
 }
 
 export function depositConfirmedEmail(companyName: string, amount: string): EmailPayload {
+    const c = escapeHtml(companyName);
+    const a = escapeHtml(amount);
     return {
         to: '',
-        subject: `Deposito confirmado: R$ ${amount}`,
+        subject: `Deposito confirmado: R$ ${a}`,
         html: `
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
                 <h1 style="color:#2563EB">Deposito Confirmado!</h1>
-                <p>Ola ${companyName}, seu deposito de <strong>R$ ${amount}</strong> foi confirmado e ja esta disponivel na sua carteira.</p>
+                <p>Ola ${c}, seu deposito de <strong>R$ ${a}</strong> foi confirmado e ja esta disponivel na sua carteira.</p>
                 <a href="https://worki.com.br/company/wallet" style="display:inline-block;background:#2563EB;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Carteira</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
             </div>
@@ -95,13 +113,16 @@ export function depositConfirmedEmail(companyName: string, amount: string): Emai
 }
 
 export function newApplicationEmail(companyName: string, workerName: string, jobTitle: string): EmailPayload {
+    const c = escapeHtml(companyName);
+    const w = escapeHtml(workerName);
+    const j = escapeHtml(jobTitle);
     return {
         to: '',
-        subject: `Nova candidatura: ${workerName} para ${jobTitle}`,
+        subject: `Nova candidatura: ${w} para ${j}`,
         html: `
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
                 <h1 style="color:#2563EB">Nova Candidatura!</h1>
-                <p>Ola ${companyName}, <strong>${workerName}</strong> se candidatou para a vaga <strong>${jobTitle}</strong>.</p>
+                <p>Ola ${c}, <strong>${w}</strong> se candidatou para a vaga <strong>${j}</strong>.</p>
                 <p>Acesse a plataforma para ver o perfil do candidato.</p>
                 <a href="https://worki.com.br/company/jobs" style="display:inline-block;background:#2563EB;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Candidaturas</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>

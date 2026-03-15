@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { TrendingUp, Award, Clock, Star, Activity, BarChart2, Loader2, DollarSign } from 'lucide-react';
+import { TrendingUp, Award, Clock, Star, Activity, BarChart2, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
@@ -125,8 +125,15 @@ export default function Analytics() {
     }, [navigate]);
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto animate-pulse">
+            <div>
+                <div className="h-10 bg-gray-200 rounded w-1/3 mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-200 rounded-2xl" />)}
+            </div>
+            <div className="h-64 bg-gray-200 rounded-2xl" />
         </div>
     );
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Building2, MapPin, Globe, Mail, Save, Camera, Loader2, Star, LayoutDashboard, Pencil } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
@@ -32,6 +32,35 @@ export default function CompanyProfile() {
         address: '',
     });
 
+    // Track initial company data for dirty detection
+    const initialCompanyRef = useRef<Company>({
+        name: '',
+        industry: '',
+        description: '',
+        website: '',
+        email: '',
+        address: '',
+    });
+
+    const editableFields = ['name', 'industry', 'description', 'website', 'email', 'address'] as const;
+    const isDirty = isEditing && editableFields.some(
+        field => (company[field] || '') !== (initialCompanyRef.current[field] || '')
+    );
+
+    // Warn user about unsaved changes before leaving
+    const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
+        e.preventDefault();
+    }, []);
+
+    useEffect(() => {
+        if (isDirty) {
+            window.addEventListener('beforeunload', handleBeforeUnload);
+        }
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isDirty, handleBeforeUnload]);
+
     useEffect(() => {
         const getProfile = async () => {
             try {
@@ -47,6 +76,7 @@ export default function CompanyProfile() {
 
                 if (data) {
                     setCompany(data);
+                    initialCompanyRef.current = { ...data };
                 }
             } catch (error: unknown) {
                 console.error('Error loading profile:', error);
@@ -76,6 +106,7 @@ export default function CompanyProfile() {
                 .eq('id', userId);
 
             if (error) throw error;
+            initialCompanyRef.current = { ...company };
             addToast('Perfil atualizado com sucesso!', 'success');
             setIsEditing(false);
         } catch (error: unknown) {
@@ -152,8 +183,22 @@ export default function CompanyProfile() {
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="animate-spin text-gray-400" size={32} />
+            <div className="max-w-6xl mx-auto px-4 py-8 animate-pulse">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div className="h-10 bg-gray-200 rounded w-1/3" />
+                    <div className="h-10 bg-gray-200 rounded w-32" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
+                    <div className="space-y-4">
+                        <div className="h-40 bg-gray-200 rounded-2xl" />
+                        <div className="h-8 bg-gray-200 rounded w-2/3 mx-auto" />
+                    </div>
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="h-14 bg-gray-200 rounded-xl" />
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -197,6 +242,7 @@ export default function CompanyProfile() {
                                 type="file"
                                 accept="image/*"
                                 id="cover-upload"
+                                aria-label="Upload foto de capa"
                                 className="hidden"
                                 onChange={(e) => handleImageUpload(e, 'cover')}
                             />
@@ -227,6 +273,7 @@ export default function CompanyProfile() {
                                             type="file"
                                             accept="image/*"
                                             id="logo-upload"
+                                            aria-label="Upload logo da empresa"
                                             className="hidden"
                                             onChange={(e) => handleImageUpload(e, 'logo')}
                                         />
@@ -321,6 +368,7 @@ export default function CompanyProfile() {
                                             name="name"
                                             value={company.name || ''}
                                             onChange={handleChange}
+                                            aria-label="Razao social ou nome fantasia"
                                             className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                             placeholder="Nome da Empresa"
                                         />
@@ -337,6 +385,7 @@ export default function CompanyProfile() {
                                             name="industry"
                                             value={company.industry || ''}
                                             onChange={handleChange}
+                                            aria-label="Setor"
                                             className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                             placeholder="Ex: Tecnologia"
                                         />
@@ -353,6 +402,7 @@ export default function CompanyProfile() {
                                             name="description"
                                             value={company.description || ''}
                                             onChange={handleChange}
+                                            aria-label="Descricao da empresa"
                                             className="w-full font-medium text-gray-700 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-black focus:ring-0 outline-none transition-all min-h-[140px] resize-none"
                                             placeholder="Conte sobre sua empresa..."
                                         />
@@ -386,6 +436,7 @@ export default function CompanyProfile() {
                                                 name="website"
                                                 value={company.website || ''}
                                                 onChange={handleChange}
+                                                aria-label="Website"
                                                 className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                                 placeholder="https://..."
                                             />
@@ -409,6 +460,7 @@ export default function CompanyProfile() {
                                                 name="email"
                                                 value={company.email || ''}
                                                 onChange={handleChange}
+                                                aria-label="Email corporativo"
                                                 className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                                 placeholder="email@empresa.com"
                                             />
@@ -432,6 +484,7 @@ export default function CompanyProfile() {
                                                 name="address"
                                                 value={company.address || ''}
                                                 onChange={handleChange}
+                                                aria-label="Localizacao"
                                                 className="w-full font-bold text-gray-900 border-2 border-gray-200 rounded-xl pl-12 pr-4 py-3 focus:border-black focus:ring-0 outline-none transition-all"
                                                 placeholder="Endereço completo"
                                             />

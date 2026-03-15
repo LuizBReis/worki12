@@ -226,6 +226,9 @@ export default function MyJobs() {
     }, [fetchJobs]);
 
     const handleCancelApplication = async (appId: string) => {
+        if (!window.confirm('Tem certeza que deseja cancelar esta candidatura? Esta acao nao pode ser desfeita.')) {
+            return;
+        }
         setActionLoading(appId);
         try {
             const { error } = await supabase
@@ -315,8 +318,16 @@ export default function MyJobs() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-6 pb-24 max-w-4xl mx-auto animate-pulse">
+            <div className="h-10 bg-gray-200 rounded w-1/3" />
+            <div className="flex gap-2">
+                {[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-gray-200 rounded-xl w-24" />)}
+            </div>
+            <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-28 bg-gray-200 rounded-2xl" />
+                ))}
+            </div>
         </div>
     );
 

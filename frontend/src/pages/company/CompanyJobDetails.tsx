@@ -38,7 +38,7 @@ export default function CompanyJobDetails() {
 
     useEffect(() => {
         if (id) fetchJobDetails();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchJobDetails usa state setters estaveis, so precisa re-executar quando id muda
     }, [id]);
 
     const fetchJobDetails = async () => {
@@ -96,7 +96,16 @@ export default function CompanyJobDetails() {
         setShowDeleteConfirm(false);
     };
 
-    if (loading) return <div className="p-8 text-center"><div className="animate-spin inline-block w-6 h-6 border-2 border-black border-t-transparent rounded-full"></div></div>;
+    if (loading) return (
+        <div className="p-8 max-w-4xl mx-auto animate-pulse space-y-6">
+            <div className="h-10 bg-gray-200 rounded w-1/2" />
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-xl" />)}
+            </div>
+            <div className="h-40 bg-gray-200 rounded-xl" />
+        </div>
+    );
     if (!job) return null;
 
     return (
@@ -156,7 +165,7 @@ export default function CompanyJobDetails() {
             {/* Main Content */}
             <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
                 {/* Banner / Status */}
-                <div className={`h-2 w-full ${job.status === 'open' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className={`h-2 w-full ${job.status === 'open' ? 'bg-green-500' : 'bg-gray-300'}`} aria-hidden="true" />
 
                 <div className="p-8">
                     <div className="flex justify-between items-start mb-6">
