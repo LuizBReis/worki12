@@ -5,6 +5,9 @@ import type { WalletTransaction } from '../services/walletService';
 import { DollarSign, CreditCard, ArrowDownLeft, ArrowUpRight, History, Loader2, Wallet as WalletIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { validateCPF, validateCNPJ, EMAIL_REGEX } from '../lib/validation';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function Wallet() {
     const navigate = useNavigate();
@@ -89,22 +92,41 @@ export default function Wallet() {
             return;
         }
 
-        // Basic PIX key format validation
+        // PIX key format validation with checksum
         const key = pixKey.trim();
-        if (pixKeyType === 'CPF' && key.replace(/\D/g, '').length !== 11) {
-            addToast('CPF deve ter 11 dígitos.', 'error');
+        if (pixKeyType === 'CPF') {
+            const digits = key.replace(/\D/g, '');
+            if (!validateCPF(digits)) {
+                addToast('CPF invalido. Verifique os digitos.', 'error');
+                return;
+            }
+        }
+        if (pixKeyType === 'CNPJ') {
+            const digits = key.replace(/\D/g, '');
+            if (!validateCNPJ(digits)) {
+                addToast('CNPJ invalido. Verifique os digitos.', 'error');
+                return;
+            }
+        }
+        if (pixKeyType === 'EMAIL' && !EMAIL_REGEX.test(key)) {
+            addToast('Formato de email invalido. Use: usuario@dominio.com', 'error');
             return;
         }
-        if (pixKeyType === 'CNPJ' && key.replace(/\D/g, '').length !== 14) {
-            addToast('CNPJ deve ter 14 dígitos.', 'error');
+        if (pixKeyType === 'PHONE') {
+            const digits = key.replace(/\D/g, '');
+            if (digits.length < 10 || digits.length > 13) {
+                addToast('Telefone invalido. Use formato: +5511999999999', 'error');
+                return;
+            }
+        }
+        if (pixKeyType === 'EVP' && !UUID_REGEX.test(key)) {
+            addToast('Chave aleatoria invalida. Use formato UUID.', 'error');
             return;
         }
-        if (pixKeyType === 'EMAIL' && !key.includes('@')) {
-            addToast('Informe um e-mail válido.', 'error');
-            return;
-        }
-        if (pixKeyType === 'PHONE' && key.replace(/\D/g, '').length < 10) {
-            addToast('Telefone deve ter ao menos 10 dígitos.', 'error');
+
+        const fee = (amount * 0.05).toFixed(2);
+        const net = (amount * 0.95).toFixed(2);
+        if (!window.confirm(`Confirmar saque de R$ ${amount.toFixed(2)}?\n\nTaxa: R$ ${fee}\nVoce recebera: R$ ${net}\n\nEsta acao nao pode ser desfeita.`)) {
             return;
         }
 
@@ -141,8 +163,17 @@ export default function Wallet() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 max-w-4xl mx-auto animate-pulse">
+            <div>
+                <div className="h-10 bg-gray-200 rounded w-1/3 mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+            </div>
+            <div className="h-36 bg-gray-200 rounded-2xl" />
+            <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-200 rounded-xl" />
+                ))}
+            </div>
         </div>
     );
 
@@ -162,7 +193,7 @@ export default function Wallet() {
 
                     <div className="flex gap-4">
                         <button
-                            className="flex-1 bg-primary text-white py-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-none hover:translate-y-1 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 bg-primary text-white py-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-none hover:translate-y-1 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] disabled:hover:translate-y-0"
                             onClick={() => { setWithdrawAmount(balance.toFixed(2)); setShowWithdrawModal(true); }}
                             disabled={balance <= 0}
                         >
@@ -175,6 +206,9 @@ export default function Wallet() {
                             <CreditCard size={20} /> Ver Perfil
                         </button>
                     </div>
+                    {balance <= 0 && (
+                        <p className="text-xs text-red-500 mt-1">Saldo insuficiente para saque</p>
+                    )}
                 </div>
                 {/* Background Element */}
                 <WalletIcon size={200} className="absolute -top-10 -right-10 text-white/5 rotate-12" />
@@ -182,11 +216,11 @@ export default function Wallet() {
 
             {/* Withdraw Modal */}
             {showWithdrawModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowWithdrawModal(false)}>
-                    <div className="bg-white rounded-2xl border-2 border-black p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowWithdrawModal(false)} onKeyDown={(e) => { if (e.key === 'Escape') setShowWithdrawModal(false); }}>
+                    <div role="dialog" aria-modal="true" aria-label="Sacar via PIX" className="bg-white rounded-2xl border-2 border-black p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-black uppercase">Sacar via PIX</h3>
-                            <button onClick={() => setShowWithdrawModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                            <button onClick={() => setShowWithdrawModal(false)} aria-label="Fechar" className="p-1 hover:bg-gray-100 rounded-lg">
                                 <X size={20} />
                             </button>
                         </div>

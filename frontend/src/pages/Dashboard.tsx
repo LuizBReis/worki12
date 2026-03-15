@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import {
     Briefcase, Clock, Star, TrendingUp, Award, Zap,
-    ChevronRight, CheckCircle2, AlertCircle, Search, Filter,
-    Loader2
+    ChevronRight, CheckCircle2, AlertCircle, Search, Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import JobCard from '../components/JobCard';
@@ -135,8 +134,25 @@ export default function Dashboard() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 font-sans text-accent animate-pulse">
+            <div className="bg-gray-200 rounded-3xl h-40 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="bg-gray-200 rounded-2xl h-44" />
+                ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-8">
+                <div className="space-y-4">
+                    <div className="h-14 bg-gray-200 rounded-xl w-full" />
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="h-32 bg-gray-200 rounded-2xl" />
+                    ))}
+                </div>
+                <div className="space-y-6">
+                    <div className="h-56 bg-gray-200 rounded-2xl" />
+                    <div className="h-64 bg-gray-200 rounded-2xl" />
+                </div>
+            </div>
         </div>
     );
 

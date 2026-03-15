@@ -4,8 +4,12 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock, LogIn, RefreshCw } from 'lucide-react';
 import { invokeFunction } from '../services/api';
+import { logError } from '../lib/logger';
 
-const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
+const DEFAULT_ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
+const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS
+    ? (import.meta.env.VITE_ADMIN_EMAILS as string).split(',').map((e: string) => e.trim())
+    : DEFAULT_ADMIN_EMAILS;
 
 interface AsaasBalance {
     currentBalance: number;
@@ -95,7 +99,7 @@ export default function Admin() {
             setStats(data.stats);
             setTransactions(data.transactions);
         } catch (err) {
-            console.error('Failed to load admin stats:', err);
+            logError('Failed to load admin stats', err);
         }
     }, []);
 
@@ -105,7 +109,7 @@ export default function Admin() {
             const data = await invokeFunction<{ users: AdminUser[] }>('admin-data', { action: 'users' });
             setUsers(data.users);
         } catch (err) {
-            console.error('Failed to load users:', err);
+            logError('Failed to load users', err);
         }
         setLoadingTab(false);
     }, []);
@@ -116,7 +120,7 @@ export default function Admin() {
             const data = await invokeFunction<{ escrows: RichEscrow[] }>('admin-data', { action: 'escrows' });
             setEscrows(data.escrows);
         } catch (err) {
-            console.error('Failed to load escrows:', err);
+            logError('Failed to load escrows', err);
         }
         setLoadingTab(false);
     }, []);

@@ -187,7 +187,7 @@ export default function CompanyMessages() {
     // Load data on mount and refresh
     useEffect(() => {
         loadData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData usa state setters estaveis, deps cobrem triggers de refresh
     }, [navigate, selectedConversationId, refreshTrigger]);
 
     // Realtime subscription for list updates
@@ -322,8 +322,16 @@ export default function CompanyMessages() {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-[50vh]">
-                <Loader2 className="animate-spin" size={32} />
+            <div className="flex flex-col h-[calc(100vh-140px)] max-w-6xl mx-auto animate-pulse">
+                <div className="h-10 bg-gray-200 rounded w-1/4 mb-4" />
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-[320px_1fr] gap-4">
+                    <div className="space-y-3">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="h-16 bg-gray-200 rounded-xl" />
+                        ))}
+                    </div>
+                    <div className="bg-gray-200 rounded-xl" />
+                </div>
             </div>
         );
     }

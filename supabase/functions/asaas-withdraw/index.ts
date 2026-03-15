@@ -61,7 +61,29 @@ serve(async (req) => {
             throw new Error(balanceError.message);
         }
 
-        // 3. Transfer from MASTER account to user's external PIX key
+        // 3. Log transaction with pending_transfer status BEFORE calling Asaas
+        const { data: txRecord, error: txInsertError } = await supabaseAdmin
+            .from('wallet_transactions')
+            .insert({
+                wallet_id: userWallet.id,
+                amount: -amount,
+                type: 'debit',
+                description: `Saque via Pix (R$ ${feeAmount.toFixed(2)} de taxa, R$ ${netAmount.toFixed(2)} enviado)`,
+                status: 'pending_transfer'
+            })
+            .select('id')
+            .single();
+
+        if (txInsertError) {
+            // Rollback balance since we couldn't create transaction record
+            await supabaseAdmin.rpc('update_wallet_balance', {
+                p_wallet_id: userWallet.id,
+                p_amount: amount
+            });
+            throw new Error('Falha ao registrar transacao');
+        }
+
+        // 4. Transfer from MASTER account to user's external PIX key
         const withdrawPayload = {
             value: netAmount,
             pixAddressKeyType: pixKeyType || 'CPF',
@@ -77,6 +99,12 @@ serve(async (req) => {
 
         const withdrawData = await withdrawRes.json();
         if (!withdrawRes.ok) {
+            // Mark transaction as failed
+            await supabaseAdmin
+                .from('wallet_transactions')
+                .update({ status: 'failed', description: `Saque FALHOU: ${withdrawData.errors?.[0]?.description || 'Erro Asaas'}` })
+                .eq('id', txRecord.id);
+
             // Rollback: re-credit the balance since transfer failed
             const { error: rollbackError } = await supabaseAdmin.rpc('update_wallet_balance', {
                 p_wallet_id: userWallet.id,
@@ -84,11 +112,15 @@ serve(async (req) => {
             });
 
             if (rollbackError) {
-                console.error('CRITICAL: Rollback failed! User wallet deducted but transfer failed. Manual intervention needed.', {
+                console.error('CRITICAL: Rollback failed! User wallet deducted but transfer failed. Manual reconciliation needed.', {
                     userId: user.id,
                     walletId: userWallet.id,
+                    transactionId: txRecord.id,
                     amount,
-                    rollbackError
+                    netAmount,
+                    feeAmount,
+                    asaasError: withdrawData,
+                    rollbackError: rollbackError.message
                 });
             }
 
@@ -96,16 +128,11 @@ serve(async (req) => {
             throw new Error(withdrawData.errors?.[0]?.description || 'Failed to transfer funds to external Pix');
         }
 
-        // 4. Log transaction (balance already deducted)
+        // 5. Transfer succeeded - update transaction to completed with reference
         await supabaseAdmin
             .from('wallet_transactions')
-            .insert({
-                wallet_id: userWallet.id,
-                amount: -amount,
-                type: 'debit',
-                description: `Saque via Pix (R$ ${feeAmount.toFixed(2)} de taxa, R$ ${netAmount.toFixed(2)} enviado)`,
-                reference_id: withdrawData.id
-            });
+            .update({ status: 'completed', reference_id: withdrawData.id })
+            .eq('id', txRecord.id);
 
         return new Response(JSON.stringify({ success: true, transferId: withdrawData.id }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

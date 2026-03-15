@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WalletService } from '../services/walletService';
 import { Loader2, X, ExternalLink, QrCode } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface DepositModalProps {
     isOpen: boolean;
@@ -14,6 +15,14 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
     const [amount, setAmount] = useState<string>('');
     const [pixUrl, setPixUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const trapRef = useFocusTrap(isOpen);
+
+    useEffect(() => {
+        if (isOpen) {
+            const input = trapRef.current?.querySelector<HTMLInputElement>('input');
+            input?.focus();
+        }
+    }, [isOpen, trapRef]);
 
     if (!isOpen) return null;
 
@@ -35,7 +44,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
         if (result.pixQrCodeUrl) {
             setPixUrl(result.pixQrCodeUrl);
-            addToast('Cobrança gerada com sucesso!', 'success');
+            addToast('Depósito iniciado! Abra a fatura para pagar.', 'success');
         } else {
             addToast(result.error || 'Erro ao iniciar depósito', 'error');
         }
@@ -49,10 +58,20 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-200 shadow-2xl">
+        <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
+        >
+            <div
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="deposit-modal-title"
+                className="bg-white rounded-3xl w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-200 shadow-2xl"
+            >
                 <button
                     onClick={handleClose}
+                    aria-label="Fechar"
                     className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center"
                 >
                     <X size={20} />
@@ -62,7 +81,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                     <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4 shadow-sm border border-blue-100">
                         <QrCode size={32} />
                     </div>
-                    <h3 className="text-2xl font-black uppercase text-gray-900 tracking-tight text-center">Adicionar Créditos</h3>
+                    <h3 id="deposit-modal-title" className="text-2xl font-black uppercase text-gray-900 tracking-tight text-center">Adicionar Créditos</h3>
                     <p className="text-sm font-medium text-gray-500 text-center mt-2 max-w-[280px]">
                         Compre créditos pagando no PIX, Boleto ou Cartão de Crédito. O saldo entra assim que o pagamento for aprovado.
                     </p>
@@ -76,6 +95,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
                                 <input
                                     type="number"
+                                    aria-label="Valor do depósito"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
                                     className="w-full border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-4 focus:border-black focus:ring-0 outline-none font-black text-2xl text-gray-900 transition-all placeholder:text-gray-300"
@@ -83,7 +103,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                                 />
                             </div>
                             <p className="text-xs font-semibold text-gray-500 mt-3 flex items-start gap-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0"></span>
+                                <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0" aria-hidden="true"></span>
                                 <span>O valor total depositado sera adicionado ao seu saldo. A taxa da plataforma e cobrada apenas no momento do saque.</span>
                             </p>
                         </div>
