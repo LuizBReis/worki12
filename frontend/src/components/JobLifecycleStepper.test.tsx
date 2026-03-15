@@ -84,7 +84,7 @@ describe('computeSteps (lógica de CompanyJobCandidates)', () => {
     ]
   }
 
-  it('com worker_checkin_at=null retorna step Chegada como active', () => {
+  it('com worker_checkin_at=null retorna step Chegada como pending', () => {
     const app: AppFields = {
       worker_checkin_at: null,
       company_checkin_confirmed_at: null,
