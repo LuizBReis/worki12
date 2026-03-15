@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Building2, MapPin, Globe, Mail, Save, Camera, Loader2, Star, LayoutDashboard, Pencil } from 'lucide-react';
+import { Building2, MapPin, Globe, Mail, Save, Camera, Loader2, Star, LayoutDashboard, Pencil, Lock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
+import { getPasswordStrength } from '../../lib/validation';
+import { logError } from '../../lib/logger';
 
 interface Company {
     name: string;
@@ -84,6 +86,35 @@ export default function CompanyProfile() {
         } finally {
             setSaving(false);
         }
+    };
+
+    // Password Change State
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordLoading, setPasswordLoading] = useState(false);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+
+    const handleChangePassword = async () => {
+        if (newPassword.length < 8) {
+            setPasswordError('A senha deve ter pelo menos 8 caracteres.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setPasswordError('As senhas não coincidem.');
+            return;
+        }
+        setPasswordLoading(true);
+        setPasswordError(null);
+        const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
+        setPasswordLoading(false);
+        if (pwError) {
+            logError('Erro ao alterar senha', pwError);
+            addToast('Senha muito fraca. Use pelo menos 8 caracteres com letras e números.', 'error');
+            return;
+        }
+        addToast('Senha alterada com sucesso.', 'success');
+        setNewPassword('');
+        setConfirmPassword('');
     };
 
     const [uploading, setUploading] = useState<'logo' | 'cover' | null>(null);
@@ -447,6 +478,58 @@ export default function CompanyProfile() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+
+            {/* Secao Seguranca */}
+            <div className="mt-8 bg-white border-2 border-gray-100 rounded-3xl p-8 shadow-xl">
+                <h3 className="text-xl font-black uppercase mb-4 flex items-center gap-2">
+                    <Lock size={20} /> Seguranca
+                </h3>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-bold uppercase mb-1">Nova Senha</label>
+                    <input
+                        type="password"
+                        value={newPassword}
+                        onChange={e => { setNewPassword(e.target.value); setPasswordError(null); }}
+                        className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none font-medium"
+                    />
+                    {newPassword && (() => {
+                        const strength = getPasswordStrength(newPassword);
+                        return (
+                            <div className="mt-1">
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${strength.color} rounded-full ${strength.width}`} />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Forca: {strength.label}</p>
+                            </div>
+                        );
+                    })()}
+                </div>
+
+                <div className="mb-2">
+                    <label className="block text-sm font-bold uppercase mb-1">Confirmar Nova Senha</label>
+                    <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={e => { setConfirmPassword(e.target.value); setPasswordError(null); }}
+                        className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none font-medium"
+                    />
+                </div>
+
+                {passwordError && (
+                    <p className="text-red-600 text-sm font-bold mb-4">{passwordError}</p>
+                )}
+
+                <button
+                    onClick={handleChangePassword}
+                    disabled={!newPassword || !confirmPassword || passwordLoading}
+                    className="bg-black text-white px-6 py-3 rounded-xl font-black uppercase hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {passwordLoading ? <Loader2 className="animate-spin" size={18} /> : null}
+                    Alterar Senha
+                </button>
             </div>
 
             {/* Enterprise Banner Footer */}
