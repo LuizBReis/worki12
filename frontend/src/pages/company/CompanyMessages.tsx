@@ -41,6 +41,9 @@ export default function CompanyMessages() {
     const { addToast } = useToast();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const presenceChannel = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [isOtherTyping, setIsOtherTyping] = useState(false);
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -259,8 +262,26 @@ export default function CompanyMessages() {
             })
             .subscribe();
 
+        // Presence channel for typing indicator
+        const pChannel = supabase.channel(`typing:${selectedConversation.id}`)
+        pChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = pChannel.presenceState();
+                setIsOtherTyping(
+                    Object.values(state).some(presences =>
+                        presences.some(p => {
+                            const pTyped = p as { typing?: boolean; userId?: string };
+                            return pTyped.typing === true && pTyped.userId !== currentUser;
+                        })
+                    )
+                );
+            })
+            .subscribe();
+        presenceChannel.current = pChannel;
+
         return () => {
             supabase.removeChannel(channel);
+            pChannel.unsubscribe();
         };
     }, [selectedConversation, currentUser]);
 
@@ -270,6 +291,10 @@ export default function CompanyMessages() {
         setSending(true);
         const messageContent = newMessage.trim();
         setNewMessage('');
+
+        // Stop typing indicator before sending
+        presenceChannel.current?.track({ typing: false, userId: currentUser });
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
         const { error } = await supabase
             .from('Message')
@@ -451,12 +476,31 @@ export default function CompanyMessages() {
                                 <div ref={messagesEndRef} />
                             </div>
 
+                            {/* Typing Indicator */}
+                            {isOtherTyping && (
+                                <div className="px-4 py-2 text-xs text-gray-400 font-bold flex items-center gap-2">
+                                    <span className="animate-bounce">•</span>
+                                    <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>•</span>
+                                    <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>•</span>
+                                    Digitando...
+                                </div>
+                            )}
+
                             <div className="p-4 border-t-2 border-gray-100 bg-white">
                                 <div className="flex gap-3">
                                     <input
                                         type="text"
                                         value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onChange={(e) => {
+                                            setNewMessage(e.target.value);
+                                            if (selectedConversation && currentUser) {
+                                                presenceChannel.current?.track({ typing: true, userId: currentUser });
+                                                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                                                typingTimeoutRef.current = setTimeout(() => {
+                                                    presenceChannel.current?.track({ typing: false, userId: currentUser });
+                                                }, 3000);
+                                            }
+                                        }}
                                         onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                                         placeholder="Digite sua mensagem..."
                                         className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors font-medium"
