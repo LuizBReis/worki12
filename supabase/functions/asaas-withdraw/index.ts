@@ -61,7 +61,21 @@ serve(async (req) => {
             throw new Error(balanceError.message);
         }
 
-        // 3. Transfer from MASTER account to user's external PIX key
+        // 3. Log pending_transfer transaction BEFORE calling Asaas (for reconciliation)
+        const pendingRefId = `withdraw-pending-${Date.now()}-${user.id.substring(0, 8)}`;
+        const { data: pendingTx } = await supabaseAdmin
+            .from('wallet_transactions')
+            .insert({
+                wallet_id: userWallet.id,
+                amount: -amount,
+                type: 'debit',
+                description: `Saque pendente via Pix (R$ ${feeAmount.toFixed(2)} de taxa, R$ ${netAmount.toFixed(2)} a enviar)`,
+                reference_id: pendingRefId
+            })
+            .select('id')
+            .single();
+
+        // 4. Transfer from MASTER account to user's external PIX key
         const withdrawPayload = {
             value: netAmount,
             pixAddressKeyType: pixKeyType || 'CPF',
@@ -88,24 +102,37 @@ serve(async (req) => {
                     userId: user.id,
                     walletId: userWallet.id,
                     amount,
+                    pendingRefId,
                     rollbackError
                 });
+                // Even if rollback fails, mark the transaction as failed for reconciliation
+            }
+
+            // Mark pending transaction as failed
+            if (pendingTx?.id) {
+                await supabaseAdmin
+                    .from('wallet_transactions')
+                    .update({
+                        description: `Saque FALHOU - ${rollbackError ? 'ROLLBACK FALHOU - REQUER INTERVENCAO MANUAL' : 'saldo restaurado'} (ref: ${pendingRefId})`,
+                        reference_id: `failed-${pendingRefId}`
+                    })
+                    .eq('id', pendingTx.id);
             }
 
             console.error('Withdraw Transfer Error:', withdrawData);
             throw new Error(withdrawData.errors?.[0]?.description || 'Failed to transfer funds to external Pix');
         }
 
-        // 4. Log transaction (balance already deducted)
-        await supabaseAdmin
-            .from('wallet_transactions')
-            .insert({
-                wallet_id: userWallet.id,
-                amount: -amount,
-                type: 'debit',
-                description: `Saque via Pix (R$ ${feeAmount.toFixed(2)} de taxa, R$ ${netAmount.toFixed(2)} enviado)`,
-                reference_id: withdrawData.id
-            });
+        // 5. Update pending transaction with actual Asaas transfer ID (confirms completion)
+        if (pendingTx?.id) {
+            await supabaseAdmin
+                .from('wallet_transactions')
+                .update({
+                    description: `Saque via Pix (R$ ${feeAmount.toFixed(2)} de taxa, R$ ${netAmount.toFixed(2)} enviado)`,
+                    reference_id: withdrawData.id
+                })
+                .eq('id', pendingTx.id);
+        }
 
         return new Response(JSON.stringify({ success: true, transferId: withdrawData.id }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
