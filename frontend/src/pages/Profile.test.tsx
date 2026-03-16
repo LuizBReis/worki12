@@ -8,6 +8,7 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getUser: vi.fn(),
       signOut: vi.fn().mockResolvedValue({}),
+      updateUser: vi.fn().mockResolvedValue({ error: null }),
     },
     from: vi.fn(),
     functions: {
@@ -33,6 +34,11 @@ vi.mock('react-router-dom', async () => {
     useNavigate: vi.fn(() => vi.fn()),
   }
 })
+
+vi.mock('../lib/logger', () => ({ logError: vi.fn() }))
+vi.mock('../lib/validation', () => ({
+  getPasswordStrength: () => ({ label: 'Forte', color: 'bg-green-500', width: 'w-full', score: 4 }),
+}))
 
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
@@ -94,6 +100,14 @@ function renderComponent() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+describe('Profile - Renderizacao', () => {
+  it('exibe nome do usuario apos carregar', async () => {
+    setupMocks()
+    renderComponent()
+    await waitFor(() => { expect(screen.getByText('Maria Silva')).toBeInTheDocument() })
+  })
 })
 
 describe('Profile — modal de exclusão de conta', () => {
@@ -178,5 +192,14 @@ describe('Profile — modal de exclusão de conta', () => {
         'error'
       )
     })
+  })
+})
+
+describe('Profile - Seguranca', () => {
+  it('botao Alterar Senha desabilitado com campos vazios', async () => {
+    setupMocks()
+    renderComponent()
+    await waitFor(() => { expect(screen.getByText('Maria Silva')).toBeInTheDocument() })
+    expect(screen.getByRole('button', { name: /alterar senha/i })).toBeDisabled()
   })
 })
