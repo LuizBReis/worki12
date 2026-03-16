@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WalletService } from '../../services/walletService';
 import { useToast } from '../../contexts/ToastContext';
+import { logError } from '../../lib/logger';
 
 export default function CompanyJobDetails() {
     const { id } = useParams();
@@ -51,7 +52,7 @@ export default function CompanyJobDetails() {
                 .eq('job_id', id)
                 .in('status', ['hired', 'in_progress']);
             if (error) {
-                console.error('Error fetching active workers:', error);
+                logError('Error fetching active workers', error);
                 return;
             }
             setActiveWorkersCount(count ?? 0);
