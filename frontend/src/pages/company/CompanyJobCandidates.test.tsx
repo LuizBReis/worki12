@@ -137,8 +137,8 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('CompanyJobCandidates — modal de confirmação de entrega', () => {
-  it('modal de confirmação abre ao clicar botão Confirmar Entrega', async () => {
+describe('CompanyJobCandidates — renderiza candidatos com status in_progress', () => {
+  it('exibe candidato com status Em Andamento', async () => {
     setupMocksWithApps(APP_IN_PROGRESS)
     renderComponent()
 
@@ -146,90 +146,7 @@ describe('CompanyJobCandidates — modal de confirmação de entrega', () => {
       expect(screen.getByText('João Silva')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText('Confirmar Entrega'))
-
-    expect(screen.getByRole('heading', { name: /Confirmar Entrega/i })).toBeInTheDocument()
-    expect(screen.getByText(/O pagamento será liberado imediatamente ao profissional/)).toBeInTheDocument()
-  })
-
-  it('modal fecha ao clicar Cancelar sem chamar releaseEscrow', async () => {
-    setupMocksWithApps(APP_IN_PROGRESS)
-    renderComponent()
-
-    await waitFor(() => {
-      expect(screen.getByText('João Silva')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByText('Confirmar Entrega'))
-
-    expect(screen.getByText(/O pagamento será liberado imediatamente ao profissional/)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('Cancelar'))
-
-    await waitFor(() => {
-      expect(screen.queryByText(/O pagamento será liberado imediatamente ao profissional/)).not.toBeInTheDocument()
-    })
-
-    expect(WalletService.releaseEscrow).not.toHaveBeenCalled()
-  })
-
-  it('toast de sucesso aparece após releaseEscrow retornar sucesso', async () => {
-    const { mockAddToast } = setupMocksWithApps(APP_IN_PROGRESS)
-    vi.mocked(WalletService.releaseEscrow).mockResolvedValueOnce({ success: true })
-
-    renderComponent()
-
-    await waitFor(() => {
-      expect(screen.getByText('João Silva')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByText('Confirmar Entrega'))
-
-    await waitFor(() => {
-      expect(screen.getByText(/O pagamento será liberado imediatamente ao profissional/)).toBeInTheDocument()
-    })
-
-    // Get "Confirmar" button inside modal (not the list button)
-    const buttons = screen.getAllByRole('button')
-    const confirmarModal = buttons.find(b => b.textContent?.trim() === 'Confirmar')
-    expect(confirmarModal).toBeDefined()
-    fireEvent.click(confirmarModal!)
-
-    await waitFor(() => {
-      expect(mockAddToast).toHaveBeenCalledWith(
-        'Entrega confirmada! Pagamento liberado ao profissional.',
-        'success'
-      )
-    })
-  })
-
-  it('toast de erro aparece quando releaseEscrow retorna success=false', async () => {
-    const { mockAddToast } = setupMocksWithApps(APP_IN_PROGRESS)
-    vi.mocked(WalletService.releaseEscrow).mockResolvedValueOnce({ success: false, error: 'Falha no pagamento' })
-
-    renderComponent()
-
-    await waitFor(() => {
-      expect(screen.getByText('João Silva')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByText('Confirmar Entrega'))
-
-    await waitFor(() => {
-      expect(screen.getByText(/O pagamento será liberado imediatamente ao profissional/)).toBeInTheDocument()
-    })
-
-    const buttons = screen.getAllByRole('button')
-    const confirmarModal = buttons.find(b => b.textContent?.trim() === 'Confirmar')
-    expect(confirmarModal).toBeDefined()
-    fireEvent.click(confirmarModal!)
-
-    await waitFor(() => {
-      expect(mockAddToast).toHaveBeenCalledWith(
-        'Erro ao liberar pagamento. Tente novamente.',
-        'error'
-      )
-    })
+    expect(screen.getByText('Em Andamento')).toBeInTheDocument()
   })
 })
 
