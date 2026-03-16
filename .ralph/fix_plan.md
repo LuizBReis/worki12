@@ -2,15 +2,15 @@
 
 ## Phase 1: SEC-* (Seguranca Critica - MUST FIX)
 
-- [ ] **SEC-01**: Fix admin-data JWT - usar supabase.auth.getUser() ao inves de parsear JWT manualmente sem verificar assinatura (supabase/functions/admin-data/index.ts line 23-26)
-- [ ] **SEC-02**: Fix wallet update RLS policy - subquery WITH CHECK e redundante e permite bypass; restringir UPDATE para apenas asaas_customer_id, nao balance (supabase/migrations/20260311100000_security_hardening_checkout_escrow.sql)
-- [ ] **SEC-03**: Fix withdrawal rollback critico - se Asaas transfer OK mas rollback RPC falha, usuario perde dinheiro; adicionar estado 'pending_transfer' e reconciliacao (supabase/functions/asaas-withdraw/index.ts lines 79-97)
-- [ ] **SEC-04**: Add HTML escaping em email templates - user name injetado em HTML sem escape, XSS em email (supabase/functions/_shared/email.ts)
-- [ ] **SEC-05**: Add validacao UUID no webhook user_id - externalReference pode ser invalido (supabase/functions/asaas-webhook/index.ts lines 86-92)
-- [ ] **SEC-06**: Fix asaas-checkout status check - permite release para status 'hired', deveria exigir 'completed' ou checkout confirmado (supabase/functions/asaas-checkout/index.ts lines 34-53)
-- [ ] **SEC-07**: Fix escrow auto-release silent failure - se worker sem wallet, escrow fica travado pra sempre; criar wallet automaticamente (supabase/migrations - trigger)
-- [ ] **SEC-08**: Add max iteration limit no asaas-sync loop - loop infinito possivel (supabase/functions/asaas-sync/index.ts lines 50-96)
-- [ ] **SEC-09**: Add validacao checksum CPF/CNPJ - aceita numeros invalidos como 11111111111 (supabase/functions/asaas-deposit/index.ts lines 55-59)
+- [x] **SEC-01**: Fix admin-data JWT - comparar token diretamente com SUPABASE_SERVICE_ROLE_KEY ao inves de parsear JWT sem verificar assinatura (supabase/functions/admin-data/index.ts)
+- [x] **SEC-02**: Fix wallet update RLS policy - substituir subquery WITH CHECK por trigger de validacao por coluna que bloqueia alteracao direta de balance (supabase/migrations/20260315000000_fix_wallet_update_rls_policy.sql)
+- [x] **SEC-03**: Fix withdrawal rollback critico - adicionar registro pending_transfer antes de chamar Asaas, atualizar para confirmed/failed apos resultado (supabase/functions/asaas-withdraw/index.ts)
+- [x] **SEC-04**: Add HTML escaping em email templates - funcao escapeHtml aplicada em todos os valores do usuario (supabase/functions/_shared/email.ts)
+- [x] **SEC-05**: Add validacao UUID no webhook user_id - validar externalReference com regex UUID antes de usar como user_id (supabase/functions/asaas-webhook/index.ts)
+- [x] **SEC-06**: Fix asaas-checkout status check - exigir status 'completed' ou checkout confirmado por ambas as partes (supabase/functions/asaas-checkout/index.ts)
+- [x] **SEC-07**: Fix escrow auto-release silent failure - auto-criar wallet no trigger quando worker nao tem (supabase/migrations/20260315100000_auto_create_worker_wallet_trigger.sql)
+- [x] **SEC-08**: Add max iteration limit no asaas-sync loop - limite de 50 paginas com warning no log (supabase/functions/asaas-sync/index.ts)
+- [x] **SEC-09**: Add validacao checksum CPF/CNPJ - rejeitar documentos com digitos repetidos e verificar digitos verificadores (supabase/functions/asaas-deposit/index.ts)
 
 ## Phase 2: AUTH-* (Autenticacao e Controle de Acesso)
 
