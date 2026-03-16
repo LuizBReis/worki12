@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
+import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Award, Save, X, Camera, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
@@ -98,6 +98,35 @@ export default function Profile() {
         totalEarnings: 0,
         hoursWorked: 0
     });
+
+    // Password change state
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+
+    const handlePasswordChange = async () => {
+        setPasswordError(null);
+
+        if (newPassword.length < 8) {
+            setPasswordError('A senha deve ter pelo menos 8 caracteres.');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError('As senhas nao coincidem.');
+            return;
+        }
+
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+            setPasswordError('Erro ao alterar senha.');
+            return;
+        }
+
+        addToast('Senha alterada com sucesso.', 'success');
+        setNewPassword('');
+        setConfirmPassword('');
+    };
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -510,6 +539,47 @@ export default function Profile() {
                                     {Array.isArray(profile.availability) && profile.availability.length > 0 ? profile.availability[0] + (profile.availability.length > 1 ? ` +${profile.availability.length - 1}` : '') : (profile.availability || "N/A")}
                                 </span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Security Section */}
+                    <div className="bg-white p-8 rounded-2xl border-2 border-black shadow-sm">
+                        <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2">
+                            <Lock size={20} /> Seguranca
+                        </h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold mb-1">Nova Senha</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    aria-label="Nova senha"
+                                    placeholder="Minimo 8 caracteres"
+                                    className="w-full border-2 border-gray-200 rounded-xl p-3 font-bold focus:border-black outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold mb-1">Confirmar Senha</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    aria-label="Confirmar senha"
+                                    placeholder="Repita a nova senha"
+                                    className="w-full border-2 border-gray-200 rounded-xl p-3 font-bold focus:border-black outline-none"
+                                />
+                            </div>
+                            {passwordError && (
+                                <p className="text-red-600 text-sm font-bold">{passwordError}</p>
+                            )}
+                            <button
+                                onClick={handlePasswordChange}
+                                disabled={!newPassword || !confirmPassword}
+                                className="bg-black text-white px-6 py-3 rounded-xl font-black uppercase text-sm hover:bg-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Alterar Senha
+                            </button>
                         </div>
                     </div>
 
