@@ -11,3 +11,7 @@ supabase/.env
 # Ralph logs (config files ARE committed)
 .ralph/logs/
 .ralph/session_*
+
+# Playwright E2E
+frontend/test-results/
+frontend/playwright-report/
