@@ -406,6 +406,11 @@ export default function MyJobs() {
                                             <MapPin size={14} /> {job.location}
                                         </span>
                                     </div>
+                                    {job.status === 'in_progress' && (
+                                        <p className="text-xs text-yellow-600 font-bold flex items-center gap-1 mt-1">
+                                            Pagamento em garantia até confirmação da empresa
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
