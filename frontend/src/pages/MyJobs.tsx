@@ -6,7 +6,39 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, isToday, parseISO, isWithinInterval, setHours, setMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import RateModal from '../components/RateModal';
+import JobLifecycleStepper from '../components/JobLifecycleStepper';
 import { useToast } from '../contexts/ToastContext';
+
+type Step = { label: string; status: 'complete' | 'active' | 'pending' }
+
+function computeWorkerSteps(job: JobApplication): Step[] {
+    const checkinDone = !!job.worker_checkin_at;
+    const checkoutDone = !!job.worker_checkout_at;
+    const companyConfirmed = !!job.company_checkout_confirmed_at;
+
+    return [
+        {
+            label: 'Chegada registrada',
+            status: checkinDone ? 'complete' : 'active'
+        },
+        {
+            label: 'Check-out',
+            status: checkoutDone
+                ? 'complete'
+                : checkinDone && !checkoutDone
+                    ? 'active'
+                    : 'pending'
+        },
+        {
+            label: 'Aguardando empresa',
+            status: companyConfirmed
+                ? 'complete'
+                : checkoutDone && !companyConfirmed
+                    ? 'active'
+                    : 'pending'
+        }
+    ];
+}
 
 interface JobApplication {
     id: string;
@@ -414,7 +446,13 @@ export default function MyJobs() {
                                 </div>
                             </div>
 
-                            {/* Check-in/Check-out Section */}
+                        </div>
+                        {/* Job Lifecycle Stepper */}
+                        <div className="border-t border-gray-100 mt-3 pt-3">
+                            <JobLifecycleStepper steps={computeWorkerSteps(job)} />
+                        </div>
+                        <div className="flex flex-col gap-3 mt-3">
+                            {/* Check-in/Check-out Section (reorganizado para ficar abaixo do stepper) */}
                             <div className="flex flex-col gap-3 min-w-[200px]">
                                 {/* Worker Check-in */}
                                 {!job.worker_checkin_at ? (
