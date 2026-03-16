@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2, MapPin, Globe, Mail, Save, Camera, Loader2, Star, LayoutDashboard, Pencil } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
+import { logError } from '../../lib/logger';
 
 interface Company {
     name: string;
@@ -18,11 +20,15 @@ interface Company {
 }
 
 export default function CompanyProfile() {
+    const navigate = useNavigate();
     const { addToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [deleting, setDeleting] = useState(false);
     const [company, setCompany] = useState<Company>({
         name: '',
         industry: '',
@@ -181,6 +187,19 @@ export default function CompanyProfile() {
         setCompany({ ...company, [e.target.name]: e.target.value });
     };
 
+    const handleDeleteAccount = async () => {
+        setDeleting(true);
+        const { error } = await supabase.functions.invoke('delete-account', { body: {} });
+        if (error) {
+            logError('Erro ao excluir conta da empresa', error);
+            addToast(error.message || 'Erro ao excluir conta. Tente novamente.', 'error');
+            setDeleting(false);
+            return;
+        }
+        await supabase.auth.signOut();
+        navigate('/login');
+    };
+
     if (loading) {
         return (
             <div className="max-w-6xl mx-auto px-4 py-8 animate-pulse">
@@ -204,6 +223,7 @@ export default function CompanyProfile() {
     }
 
     return (
+        <>
         <div className="max-w-6xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Page Header */}
             <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -519,6 +539,69 @@ export default function CompanyProfile() {
                     </button>
                 </div>
             )}
+
+            {/* Zona de Perigo */}
+            <div className="border-t-2 border-red-200 pt-8 mt-8">
+                <h3 className="text-red-600 font-black uppercase text-lg mb-4">Zona de Perigo</h3>
+                <p className="text-sm text-gray-600 mb-4">A exclusão da sua empresa é irreversível. Todos os dados da empresa serão anonimizados.</p>
+                <button
+                    onClick={() => setDeleteModalOpen(true)}
+                    className="border-2 border-red-500 text-red-500 bg-white hover:bg-red-50 font-bold uppercase px-4 py-2 rounded-xl transition-colors"
+                >
+                    Excluir minha empresa
+                </button>
+            </div>
+
         </div>
+
+        {/* Modal de confirmação de exclusão */}
+        {deleteModalOpen && (
+            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl w-full max-w-md p-6 border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <h2 className="text-xl font-black uppercase tracking-tight mb-4 text-red-600">Tem certeza? Esta ação é irreversível.</h2>
+                    <ul className="space-y-2 mb-6 text-sm text-gray-700">
+                        <li className="flex items-start gap-2">
+                            <span className="font-black text-red-500 mt-0.5">&#8226;</span>
+                            Dados da empresa serão anonimizados
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="font-black text-red-500 mt-0.5">&#8226;</span>
+                            Todas as vagas e candidaturas serão canceladas
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="font-black text-red-500 mt-0.5">&#8226;</span>
+                            Pagamentos pendentes bloqueiam a exclusão
+                        </li>
+                    </ul>
+                    <label className="block text-sm font-bold mb-2">
+                        Digite <span className="font-black">EXCLUIR</span> para confirmar:
+                    </label>
+                    <input
+                        type="text"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        className="w-full border-2 border-gray-300 rounded-xl px-4 py-2 mb-6 font-bold focus:border-red-500 outline-none"
+                        placeholder="EXCLUIR"
+                        aria-label="Confirmar exclusao"
+                    />
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => { setDeleteModalOpen(false); setDeleteConfirmText(''); }}
+                            className="flex-1 py-3 border-2 border-black font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleDeleteAccount}
+                            disabled={deleteConfirmText !== 'EXCLUIR' || deleting}
+                            className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {deleting ? 'Excluindo...' : 'Confirmar Exclusão'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }

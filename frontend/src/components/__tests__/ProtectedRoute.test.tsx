@@ -14,10 +14,12 @@ vi.mock('react-router-dom', () => ({
     mockOutlet()
     return <div data-testid="outlet">Protected Content</div>
   },
+  useLocation: () => ({ pathname: '/dashboard' }),
 }))
 
 const mockGetSession = vi.fn()
 const mockOnAuthStateChange = vi.fn()
+const mockFrom = vi.fn()
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
@@ -25,7 +27,12 @@ vi.mock('../../lib/supabase', () => ({
       getSession: () => mockGetSession(),
       onAuthStateChange: () => mockOnAuthStateChange(),
     },
+    from: () => mockFrom(),
   },
+}))
+
+vi.mock('../../lib/logger', () => ({
+  logError: vi.fn(),
 }))
 
 describe('ProtectedRoute', () => {
@@ -35,6 +42,13 @@ describe('ProtectedRoute', () => {
       data: {
         subscription: { unsubscribe: vi.fn() },
       },
+    })
+    mockFrom.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: { onboarding_completed: true }, error: null }),
+        }),
+      }),
     })
   })
 
@@ -53,7 +67,7 @@ describe('ProtectedRoute', () => {
     mockGetSession.mockResolvedValue({
       data: {
         session: {
-          user: { id: 'user-123' },
+          user: { id: 'user-123', user_metadata: { user_type: 'work' } },
         },
       },
     })
@@ -68,7 +82,7 @@ describe('ProtectedRoute', () => {
     expect(screen.queryByTestId('navigate')).not.toBeInTheDocument()
   })
 
-  it('redireciona para /login quando nao autenticado', async () => {
+  it('redireciona para / quando nao autenticado', async () => {
     mockGetSession.mockResolvedValue({
       data: {
         session: null,
@@ -83,7 +97,7 @@ describe('ProtectedRoute', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: '/login?reason=session_expired',
+        to: '/',
         replace: true,
       })
     )
