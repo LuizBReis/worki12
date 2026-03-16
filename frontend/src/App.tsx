@@ -45,6 +45,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Help = lazy(() => import('./pages/Help'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 // Loading Component - Skeleton placeholder
 const PageLoader = () => (
@@ -142,6 +143,7 @@ function App() {
                       <Route path="wallet" element={<Wallet />} />
                       <Route path="profile" element={<Profile />} />
                       <Route path="messages" element={<Messages />} />
+                      <Route path="notifications" element={<Notifications />} />
                       <Route path="worker/dashboard" element={<WorkerDashboard />} />
                     </Route>
 
@@ -158,6 +160,7 @@ function App() {
                       <Route path="messages" element={<CompanyMessages />} />
                       <Route path="wallet" element={<CompanyWallet />} />
                       <Route path="analytics" element={<CompanyAnalytics />} />
+                      <Route path="notifications" element={<Notifications />} />
                     </Route>
 
                   </Route>
