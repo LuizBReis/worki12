@@ -13,6 +13,7 @@ export default function CompanyOnboarding() {
     const [step, setStep] = useState(1);
     const [cnpjError, setCnpjError] = useState('');
     const [userId, setUserId] = useState<string | null>(null);
+    const [tosAccepted, setTosAccepted] = useState(false);
 
     const TOTAL_STEPS = 2;
 
@@ -80,7 +81,7 @@ export default function CompanyOnboarding() {
     const canProceed = () => {
         switch (step) {
             case 1: return formData.name && formData.cnpj.replace(/\D/g, '').length === 14 && formData.companyType && formData.industry && formData.city;
-            case 2: return formData.hiringGoal && formData.hiringVolume;
+            case 2: return formData.hiringGoal && formData.hiringVolume && tosAccepted;
             default: return true;
         }
     };
@@ -116,7 +117,10 @@ export default function CompanyOnboarding() {
                     industry: formData.industry,
                     city: formData.city,
                     size: formData.hiringVolume,
-                    onboarding_completed: true
+                    onboarding_completed: true,
+                    accepted_tos: true,
+                    tos_version: 'v1',
+                    tos_accepted_at: new Date().toISOString()
                 });
 
             if (error) throw error;
@@ -283,6 +287,22 @@ export default function CompanyOnboarding() {
                                                 </label>
                                             ))}
                                         </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 mt-6">
+                                        <input
+                                            type="checkbox"
+                                            id="tos"
+                                            checked={tosAccepted}
+                                            onChange={e => setTosAccepted(e.target.checked)}
+                                            className="w-5 h-5 border-2 border-black rounded accent-primary mt-0.5 flex-shrink-0"
+                                        />
+                                        <label htmlFor="tos" className="text-sm text-gray-700">
+                                            Li e aceito os{' '}
+                                            <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary underline font-bold">Termos de Uso</a>
+                                            {' '}e a{' '}
+                                            <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline font-bold">Política de Privacidade</a>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
