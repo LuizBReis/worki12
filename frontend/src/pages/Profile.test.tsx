@@ -102,6 +102,14 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+describe('Profile - Renderizacao', () => {
+  it('exibe nome do usuario apos carregar', async () => {
+    setupMocks()
+    renderComponent()
+    await waitFor(() => { expect(screen.getByText('Maria Silva')).toBeInTheDocument() })
+  })
+})
+
 describe('Profile — modal de exclusão de conta', () => {
   it('botão Confirmar Exclusão desabilitado quando confirmText !== EXCLUIR', async () => {
     setupMocks()

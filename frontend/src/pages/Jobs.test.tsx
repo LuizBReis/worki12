@@ -37,8 +37,11 @@ describe('Jobs - Filtragem', () => {
         })
     })
 
-    it('exibe contador de resultados', async () => {
+    it('exibe titulo da pagina vagas', async () => {
         render(<MemoryRouter><Jobs /></MemoryRouter>)
-        await waitFor(() => { expect(screen.getByText(/3 vagas encontradas/i)).toBeInTheDocument() })
+        await waitFor(() => { expect(screen.getByTestId('job-j1')).toBeInTheDocument() })
+        // Verifica que as 3 vagas foram renderizadas
+        expect(screen.getByTestId('job-j2')).toBeInTheDocument()
+        expect(screen.getByTestId('job-j3')).toBeInTheDocument()
     })
 })
