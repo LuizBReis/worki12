@@ -237,10 +237,8 @@ export default function CompanyJobCandidates() {
         const checkoutComplete = !!(app.worker_checkout_at && app.company_checkout_confirmed_at);
         const checkoutActive = !!(app.worker_checkout_at && !app.company_checkout_confirmed_at);
 
-        const hiredComplete = !!(app.worker_checkin_at || app.status === 'in_progress' || app.status === 'completed');
-
         return [
-            { label: 'Contratado', status: hiredComplete ? 'complete' as const : 'active' as const },
+            { label: 'Contratado', status: 'complete' as const },
             {
                 label: 'Chegada',
                 status: checkinComplete ? 'complete' as const : checkinActive ? 'active' as const : 'pending' as const
