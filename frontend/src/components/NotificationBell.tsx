@@ -108,6 +108,14 @@ export default function NotificationBell({ className = "" }: { className?: strin
                             </div>
                         )}
                     </div>
+                    <div className="border-t border-gray-100 p-3 text-center">
+                        <button
+                            onClick={() => { setIsOpen(false); navigate('/notifications'); }}
+                            className="text-sm font-bold text-primary hover:underline"
+                        >
+                            Ver todas as notificações
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
