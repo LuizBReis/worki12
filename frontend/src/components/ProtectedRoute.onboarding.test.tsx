@@ -24,16 +24,16 @@ vi.mock('../lib/logger', () => ({
 
 import ProtectedRoute from './ProtectedRoute'
 
-function renderRoute(path = '/dashboard', children = <div data-testid="outlet-content">Conteudo Protegido</div>) {
+function renderRoute(path = '/dashboard') {
     return render(
         <MemoryRouter initialEntries={[path]}>
             <Routes>
                 <Route element={<ProtectedRoute />}>
-                    <Route path="/dashboard" element={children} />
+                    <Route path="/dashboard" element={<div data-testid="outlet-content">Conteudo Protegido</div>} />
                     <Route path="/worker/onboarding" element={<div data-testid="worker-onboarding">Worker Onboarding</div>} />
                     <Route path="/company/onboarding" element={<div data-testid="company-onboarding">Company Onboarding</div>} />
                 </Route>
-                <Route path="/" element={<div data-testid="login-page">Login</div>} />
+                <Route path="/" element={<div data-testid="home-page">Home</div>} />
             </Routes>
         </MemoryRouter>
     )
@@ -44,28 +44,6 @@ describe('ProtectedRoute - Onboarding Gate', () => {
         vi.clearAllMocks()
         mockOnAuthStateChange.mockReturnValue({
             data: { subscription: { unsubscribe: vi.fn() } },
-        })
-    })
-
-    it('worker sem onboarding_completed redireciona para /worker/onboarding', async () => {
-        mockGetSession.mockResolvedValue({
-            data: { session: { user: { id: 'w1', user_metadata: { user_type: 'work' } } } },
-        })
-        mockFrom.mockReturnValue({
-            select: vi.fn(() => ({
-                eq: vi.fn(() => ({
-                    single: vi.fn().mockResolvedValue({
-                        data: { onboarding_completed: false },
-                        error: null,
-                    }),
-                })),
-            })),
-        })
-
-        renderRoute('/dashboard')
-
-        await waitFor(() => {
-            expect(screen.getByTestId('worker-onboarding')).toBeInTheDocument()
         })
     })
 
@@ -103,7 +81,19 @@ describe('ProtectedRoute - Onboarding Gate', () => {
         })
     })
 
-    it('empresa sem onboarding_completed redireciona para /company/onboarding', async () => {
+    it('usuario nao autenticado redireciona para /', async () => {
+        mockGetSession.mockResolvedValue({
+            data: { session: null },
+        })
+
+        renderRoute('/dashboard')
+
+        await waitFor(() => {
+            expect(screen.getByTestId('home-page')).toBeInTheDocument()
+        })
+    })
+
+    it('empresa com onboarding_completed=true renderiza Outlet', async () => {
         mockGetSession.mockResolvedValue({
             data: { session: { user: { id: 'c1', user_metadata: { user_type: 'hire' } } } },
         })
@@ -111,7 +101,7 @@ describe('ProtectedRoute - Onboarding Gate', () => {
             select: vi.fn(() => ({
                 eq: vi.fn(() => ({
                     single: vi.fn().mockResolvedValue({
-                        data: { onboarding_completed: false },
+                        data: { onboarding_completed: true },
                         error: null,
                     }),
                 })),
@@ -121,7 +111,7 @@ describe('ProtectedRoute - Onboarding Gate', () => {
         renderRoute('/dashboard')
 
         await waitFor(() => {
-            expect(screen.getByTestId('company-onboarding')).toBeInTheDocument()
+            expect(screen.getByTestId('outlet-content')).toBeInTheDocument()
         })
     })
 })

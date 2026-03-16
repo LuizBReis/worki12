@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@sentry/react', () => ({
   captureException: vi.fn(),
@@ -12,62 +12,65 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-afterEach(() => {
-  vi.unstubAllEnvs()
-})
-
 describe('logError', () => {
-  it('nao chama Sentry.captureException em ambiente de teste (PROD=false)', () => {
-    const error = new Error('teste')
-    logError(error, 'TestContext')
-
-    expect(Sentry.captureException).not.toHaveBeenCalled()
-  })
-
-  it('chama Sentry.captureException quando PROD=true', () => {
-    vi.stubEnv('PROD', true)
-
-    const error = new Error('erro em producao')
-    logError(error, 'ProdContext')
+  it('chama Sentry.captureException quando error e instancia de Error', () => {
+    const error = new Error('erro de teste')
+    logError('Contexto do erro', error)
 
     expect(Sentry.captureException).toHaveBeenCalledWith(error, {
-      extra: { context: 'ProdContext' },
+      extra: { message: 'Contexto do erro' },
     })
   })
 
-  it('sempre chama console.error independente do ambiente', () => {
+  it('chama Sentry.captureMessage quando error nao e instancia de Error', () => {
+    logError('Contexto do erro', 'string de erro')
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Contexto do erro: string de erro',
+      'error'
+    )
+  })
+
+  it('chama Sentry.captureMessage com apenas message quando error e undefined', () => {
+    logError('Apenas mensagem')
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('Apenas mensagem', 'error')
+  })
+
+  it('chama console.error em modo DEV', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const error = new Error('teste console')
-    logError(error, 'TestContext')
+    logError('Contexto', error)
 
-    expect(consoleSpy).toHaveBeenCalledWith('[TestContext]', error)
+    expect(consoleSpy).toHaveBeenCalledWith('Contexto', error)
     consoleSpy.mockRestore()
   })
 })
 
 describe('logWarn', () => {
-  it('nao chama Sentry.captureMessage em ambiente de teste (PROD=false)', () => {
-    logWarn('mensagem de aviso', 'TestContext')
+  it('chama Sentry.captureMessage com nivel warning', () => {
+    logWarn('Aviso de teste', 'detalhe')
 
-    expect(Sentry.captureMessage).not.toHaveBeenCalled()
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Aviso de teste: detalhe',
+      'warning'
+    )
   })
 
-  it('chama Sentry.captureMessage quando PROD=true', () => {
-    vi.stubEnv('PROD', true)
+  it('chama Sentry.captureMessage com string vazia quando detail e undefined', () => {
+    logWarn('Aviso sem detalhe')
 
-    logWarn('aviso em producao', 'ProdContext')
-
-    expect(Sentry.captureMessage).toHaveBeenCalledWith('aviso em producao', {
-      level: 'warning',
-      extra: { context: 'ProdContext' },
-    })
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Aviso sem detalhe: ',
+      'warning'
+    )
   })
 
-  it('sempre chama console.warn independente do ambiente', () => {
+  it('chama console.warn em modo DEV', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    logWarn('aviso', 'TestContext')
+    logWarn('Aviso', 'detalhe')
 
-    expect(consoleSpy).toHaveBeenCalledWith('[TestContext]', 'aviso')
+    expect(consoleSpy).toHaveBeenCalledWith('Aviso', 'detalhe')
     consoleSpy.mockRestore()
   })
 })
