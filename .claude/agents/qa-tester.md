@@ -196,9 +196,33 @@ Build commands: npm run build, npm run test, npm run lint
 
 ---
 
+## ━━━ STEP 2.5: CHECKOUT THE PR BRANCH (CRITICAL — do not skip) ━━━
+
+**The code you need to test is on the PR's branch, NOT on main.** If you read files from main, you will see old code and produce false BLOCK verdicts.
+
+```bash
+# Find the PR for this issue
+PR_DATA=$(gh pr list --repo Workifree/worki12 --state open --json number,headRefName,title --limit 50)
+# Match by issue number or FEAT-NNN-TN in branch name
+
+# Checkout the PR branch
+git fetch origin
+git checkout {branch_name}
+```
+
+**Verify you are on the correct branch before testing:**
+```bash
+git branch --show-current
+# Must show the feature branch, NOT main
+```
+
+> **ABSOLUTE RULE:** If you are on `main` when testing, your results are INVALID. Always checkout the PR branch first.
+
+---
+
 ## ━━━ STEP 3: VERIFY BUILD, TESTS, AND LINT ━━━
 
-Before testing any behavior, verify the code compiles and existing tests pass:
+Before testing any behavior, verify the code compiles and existing tests pass **on the PR branch:**
 
 ```bash
 cd frontend && npm run build 2>&1 | tail -30
