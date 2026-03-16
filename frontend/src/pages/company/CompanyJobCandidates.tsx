@@ -153,7 +153,15 @@ export default function CompanyJobCandidates() {
             });
 
             if (reviewError) {
-                console.error('Review insert failed:', reviewError);
+                if (reviewError.code === '23505') {
+                    addToast('Você já avaliou este profissional para este job.', 'error');
+                } else {
+                    addToast('Erro ao salvar avaliação. Tente novamente.', 'error');
+                }
+                setSubmittingReview(false);
+                setRatingModalOpen(false);
+                fetchCandidates();
+                return;
             }
 
             addToast('Job finalizado e pagamento liberado!', 'success');
