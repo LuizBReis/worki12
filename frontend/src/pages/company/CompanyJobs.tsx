@@ -1,4 +1,4 @@
-import { Search, PlusCircle, MoreHorizontal, Eye, Users, Loader2, Edit2, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
+import { Search, PlusCircle, MoreHorizontal, Eye, Users, Edit2, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -24,6 +24,7 @@ export default function CompanyJobs() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
     const { addToast } = useToast();
@@ -31,6 +32,12 @@ export default function CompanyJobs() {
     useEffect(() => {
         fetchJobs();
     }, []);
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => clearTimeout(timer);
+    }, [search]);
 
     const fetchJobs = async () => {
         try {
@@ -45,14 +52,21 @@ export default function CompanyJobs() {
                 .order('created_at', { ascending: false });
 
             if (jobsData) {
-                // Fetch candidate counts for each job
-                const jobsWithCounts = await Promise.all(jobsData.map(async (job) => {
-                    const { count } = await supabase
-                        .from('applications')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('job_id', job.id);
+                // Batch fetch candidate counts (single query instead of N+1)
+                const jobIds = jobsData.map(j => j.id);
+                const { data: appCounts } = await supabase
+                    .from('applications')
+                    .select('job_id')
+                    .in('job_id', jobIds);
 
-                    return { ...job, candidates_count: count || 0 };
+                const countMap: Record<string, number> = {};
+                (appCounts || []).forEach(a => {
+                    countMap[a.job_id] = (countMap[a.job_id] || 0) + 1;
+                });
+
+                const jobsWithCounts = jobsData.map(job => ({
+                    ...job,
+                    candidates_count: countMap[job.id] || 0
                 }));
 
                 setJobs(jobsWithCounts);
@@ -89,7 +103,7 @@ export default function CompanyJobs() {
     };
 
     const filteredJobs = jobs.filter(job => {
-        const matchesSearch = job.title.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = job.title.toLowerCase().includes(debouncedSearch.toLowerCase());
         const matchesFilter = filter === 'all'
             ? true
             : filter === 'open'
@@ -161,8 +175,10 @@ export default function CompanyJobs() {
             {/* Jobs List */}
             <div className="space-y-4">
                 {loading ? (
-                    <div className="text-center py-10 font-bold text-gray-400 flex flex-col items-center gap-2">
-                        <Loader2 className="animate-spin" /> Carregando...
+                    <div className="space-y-4 animate-pulse">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="bg-gray-200 rounded-xl h-28" />
+                        ))}
                     </div>
                 ) : filteredJobs.length === 0 ? (
                     <div className="text-center py-10 font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Mail, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,27 @@ export default function ForgotPassword() {
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
     const [error, setError] = useState('');
+    const [cooldown, setCooldown] = useState(0);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const startCooldown = useCallback(() => {
+        setCooldown(60);
+        timerRef.current = setInterval(() => {
+            setCooldown(prev => {
+                if (prev <= 1) {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,11 +47,23 @@ export default function ForgotPassword() {
         setLoading(false);
 
         if (resetError) {
-            setError('Erro ao enviar email. Tente novamente.');
+            const msg = resetError.message || '';
+            // Security: don't reveal if email exists. Only show error for real server failures.
+            if (msg.includes('rate limit') || msg.includes('too many')) {
+                setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+            } else if (msg.includes('invalid') && msg.includes('email')) {
+                setError('Informe um email valido.');
+            } else {
+                // For "user not found" or similar, show success anyway (security best practice)
+                setSent(true);
+                startCooldown();
+                return;
+            }
             return;
         }
 
         setSent(true);
+        startCooldown();
     };
 
     if (sent) {
@@ -45,8 +78,15 @@ export default function ForgotPassword() {
                         Se o email <strong>{email}</strong> estiver cadastrado, voce recebera um link para redefinir sua senha.
                     </p>
                     <button
+                        onClick={() => { setSent(false); startCooldown(); }}
+                        disabled={cooldown > 0}
+                        className="w-full bg-black text-white py-3 rounded-xl font-bold uppercase hover:bg-gray-800 transition-colors disabled:opacity-50 mb-3"
+                    >
+                        {cooldown > 0 ? `Reenviar em ${cooldown}s` : 'Reenviar Email'}
+                    </button>
+                    <button
                         onClick={() => navigate('/login')}
-                        className="w-full bg-black text-white py-3 rounded-xl font-bold uppercase hover:bg-gray-800 transition-colors"
+                        className="w-full border-2 border-black text-black py-3 rounded-xl font-bold uppercase hover:bg-gray-100 transition-colors"
                     >
                         Voltar para Login
                     </button>
@@ -79,6 +119,7 @@ export default function ForgotPassword() {
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
+                            aria-label="Email"
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="seu@email.com"
                             autoFocus
@@ -91,10 +132,10 @@ export default function ForgotPassword() {
 
                     <button
                         type="submit"
-                        disabled={loading || !email.trim()}
+                        disabled={loading || !email.trim() || cooldown > 0}
                         className="w-full bg-black text-white py-3 rounded-xl font-bold uppercase hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : 'Enviar Link de Recuperacao'}
+                        {loading ? <Loader2 className="animate-spin" size={20} /> : cooldown > 0 ? `Aguarde ${cooldown}s` : 'Enviar Link de Recuperacao'}
                     </button>
                 </form>
             </div>

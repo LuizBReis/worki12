@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
-import { Loader2 } from 'lucide-react';
 
 export default function MainLayout() {
     const navigate = useNavigate();
@@ -46,8 +45,22 @@ export default function MainLayout() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F4F4F0]">
-                <Loader2 className="animate-spin" size={48} />
+            <div className="min-h-screen flex flex-col md:flex-row max-w-7xl mx-auto bg-[#F4F4F0]">
+                <div className="hidden md:block w-64 p-6 space-y-4">
+                    <div className="h-8 w-24 bg-gray-200 rounded-lg animate-pulse" />
+                    <div className="space-y-3 mt-8">
+                        {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-200 rounded-xl animate-pulse" />)}
+                    </div>
+                </div>
+                <main className="flex-1 p-4 md:p-8 space-y-6">
+                    <div className="h-10 w-48 bg-gray-200 rounded-xl animate-pulse" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-200 rounded-xl animate-pulse" />)}
+                    </div>
+                    <div className="space-y-3">
+                        {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-gray-200 rounded-xl animate-pulse" />)}
+                    </div>
+                </main>
             </div>
         );
     }

@@ -46,17 +46,24 @@ export default function CompanyJobCandidates() {
     const [comment, setComment] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
     const [confirmingCheckin, setConfirmingCheckin] = useState<string | null>(null);
+    const [companyBalance, setCompanyBalance] = useState<number | null>(null);
     const { addToast } = useToast();
 
     useEffect(() => {
         if (id) fetchCandidates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchCandidates usa state setters estaveis, so precisa re-executar quando id muda
     }, [id]);
 
     const fetchCandidates = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) { navigate('/login'); return; }
+
+            // Fetch company wallet balance
+            const wallet = await WalletService.getOrCreateWallet(user.id, 'company');
+            if (wallet) {
+                setCompanyBalance(wallet.balance);
+            }
 
             // Fetch Job Title (only if owned by this company)
             const { data: job, error: jobError } = await supabase.from('jobs').select('title').eq('id', id).eq('company_id', user.id).single();
@@ -270,14 +277,18 @@ export default function CompanyJobCandidates() {
             {/* Candidates List */}
             <div className="space-y-4">
                 {loading ? (
-                    <div className="text-center py-10 font-bold text-gray-400">Carregando candidatos...</div>
+                    <div className="space-y-4 animate-pulse">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="bg-gray-200 rounded-xl h-32" />
+                        ))}
+                    </div>
                 ) : candidates.length === 0 ? (
                     <div className="text-center py-10 font-bold text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
                         Ainda não há candidatos para esta vaga.
                     </div>
                 ) : (
                     candidates.map((app) => (
-                        <div key={app.id} className="bg-white border-2 border-gray-100 hover:border-black rounded-xl p-6 transition-all group shadow-sm hover:shadow-md cursor-pointer" onClick={() => navigate(`/company/worker/${app.worker_id}`)}>
+                        <div key={app.id} role="button" tabIndex={0} className="bg-white border-2 border-gray-100 hover:border-black rounded-xl p-6 transition-all group shadow-sm hover:shadow-md cursor-pointer" onClick={() => navigate(`/company/worker/${app.worker_id}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/company/worker/${app.worker_id}`); } }}>
                             <div className="flex flex-col md:flex-row gap-6">
                                 {/* Avatar */}
                                 <div className="flex-shrink-0">
@@ -353,12 +364,18 @@ export default function CompanyJobCandidates() {
                                                             >
                                                                 <MessageSquare size={14} /> Chat
                                                             </button>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'hired'); }}
-                                                                className="p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-green-600 transition-colors"
-                                                            >
-                                                                Contratar
-                                                            </button>
+                                                            <div className="flex flex-col items-end">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'hired'); }}
+                                                                    disabled={companyBalance !== null && companyBalance <= 0}
+                                                                    className="p-1 px-3 bg-black text-white rounded-lg text-xs font-bold uppercase hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-black"
+                                                                >
+                                                                    Contratar
+                                                                </button>
+                                                                {companyBalance !== null && companyBalance <= 0 && (
+                                                                    <p className="text-xs text-red-500 mt-1">Saldo insuficiente para contratar</p>
+                                                                )}
+                                                            </div>
                                                         </>
                                                     )}
 

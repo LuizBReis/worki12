@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { WalletService } from '../../services/walletService';
 import type { WalletTransaction, EscrowTransaction } from '../../services/walletService';
-import { DollarSign, ArrowDownLeft, ArrowUpRight, History, Loader2, Lock, Wallet, TrendingUp } from 'lucide-react';
+import { DollarSign, ArrowDownLeft, ArrowUpRight, History, Lock, Wallet, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DepositModal from '../../components/DepositModal';
 
@@ -61,7 +61,7 @@ export default function CompanyWallet() {
 
         init();
         return () => { isMounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- init e fetchWalletData usam state setters estaveis, navigate estavel
     }, [navigate]);
 
     const formatDate = (dateStr: string) => {
@@ -90,8 +90,17 @@ export default function CompanyWallet() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 max-w-4xl mx-auto animate-pulse">
+            <div>
+                <div className="h-10 bg-gray-200 rounded w-2/5 mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
+            </div>
+            <div className="h-36 bg-gray-200 rounded-2xl" />
+            <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-200 rounded-xl" />
+                ))}
+            </div>
         </div>
     );
 

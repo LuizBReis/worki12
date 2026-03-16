@@ -78,7 +78,7 @@ export default function CompanyCreateJob() {
         if (isEditing) {
             fetchJobData();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchJobData usa state setters estaveis, so precisa re-executar quando id muda
     }, [id]);
 
     const fetchJobData = async () => {
@@ -200,6 +200,7 @@ export default function CompanyCreateJob() {
                 setCompanyBalance(prev => prev - budgetAmount);
             }
 
+            addToast(isEditing ? 'Vaga atualizada com sucesso!' : 'Vaga criada com sucesso!', 'success');
             navigate('/company/dashboard');
         } catch (error: unknown) {
             console.error('Error saving job:', error);
@@ -222,7 +223,7 @@ export default function CompanyCreateJob() {
                 {/* Progress Indicator */}
                 <div className="flex items-center gap-2">
                     {[1, 2, 3].map((s) => (
-                        <div key={s} className={`w-3 h-3 rounded-full border border-black transition-all ${step >= s ? 'bg-black' : 'bg-transparent'}`} />
+                        <div key={s} className={`w-3 h-3 rounded-full border border-black transition-all ${step >= s ? 'bg-black' : 'bg-transparent'}`} aria-label={`Etapa ${s}${step >= s ? ' concluída' : ''}`} />
                     ))}
                 </div>
             </div>
@@ -242,6 +243,7 @@ export default function CompanyCreateJob() {
                                 <label className="text-xs font-bold uppercase tracking-wide">Título da Vaga</label>
                                 <input
                                     type="text"
+                                    aria-label="Título da Vaga"
                                     className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold text-lg placeholder:text-gray-300 transition-all"
                                     placeholder="Ex: Designer UI Senior"
                                     value={formData.title}
@@ -253,6 +255,7 @@ export default function CompanyCreateJob() {
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold uppercase tracking-wide">Categoria</label>
                                     <select
+                                        aria-label="Categoria"
                                         className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold appearance-none"
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -314,6 +317,7 @@ export default function CompanyCreateJob() {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wide">Descrição Completa</label>
                                 <textarea
+                                    aria-label="Descrição Completa"
                                     className="w-full h-32 bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-medium text-sm placeholder:text-gray-300 transition-all resize-none"
                                     placeholder="Descreva o projeto, responsabilidades e objetivos..."
                                     value={formData.description}
@@ -324,6 +328,7 @@ export default function CompanyCreateJob() {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wide">Requisitos</label>
                                 <textarea
+                                    aria-label="Requisitos"
                                     className="w-full h-24 bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-medium text-sm placeholder:text-gray-300 transition-all resize-none"
                                     placeholder="- React Native&#10;- TypeScript&#10;- Figma"
                                     value={formData.requirements}
@@ -371,6 +376,7 @@ export default function CompanyCreateJob() {
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold uppercase tracking-wide">Tipo de Pagamento</label>
                                     <select
+                                        aria-label="Tipo de Pagamento"
                                         className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold appearance-none"
                                         value={formData.budget_type}
                                         onChange={(e) => setFormData({ ...formData, budget_type: e.target.value })}
@@ -386,6 +392,7 @@ export default function CompanyCreateJob() {
                                         <span className="absolute left-4 top-3.5 font-black text-gray-400">R$</span>
                                         <input
                                             type="number"
+                                            aria-label="Valor do orçamento"
                                             className={`w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold text-lg placeholder:text-gray-300 transition-all ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             placeholder="0,00"
                                             value={formData.budget}
@@ -408,6 +415,7 @@ export default function CompanyCreateJob() {
                                         <Calendar className="absolute left-3 top-3.5 text-gray-400" size={20} />
                                         <input
                                             type="date"
+                                            aria-label="Data de início"
                                             className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all"
                                             value={formData.start_date}
                                             onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
@@ -426,6 +434,7 @@ export default function CompanyCreateJob() {
                                         <label className="text-xs font-bold uppercase tracking-wide">Entrada</label>
                                         <input
                                             type="time"
+                                            aria-label="Horário de entrada"
                                             className="w-full bg-white border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold transition-all"
                                             value={formData.work_start_time}
                                             onChange={(e) => setFormData({ ...formData, work_start_time: e.target.value })}
@@ -435,6 +444,7 @@ export default function CompanyCreateJob() {
                                         <label className="text-xs font-bold uppercase tracking-wide">Saída</label>
                                         <input
                                             type="time"
+                                            aria-label="Horário de saída"
                                             className="w-full bg-white border-2 border-transparent focus:border-black outline-none rounded-xl p-3 font-bold transition-all"
                                             value={formData.work_end_time}
                                             onChange={(e) => setFormData({ ...formData, work_end_time: e.target.value })}
@@ -470,6 +480,7 @@ export default function CompanyCreateJob() {
                                     <MapPin className="absolute left-3 top-3.5 text-gray-400" size={20} />
                                     <input
                                         type="text"
+                                        aria-label="Localização Específica"
                                         className="w-full bg-gray-50 border-2 border-transparent focus:border-black outline-none rounded-xl py-3 pl-10 pr-4 font-bold placeholder:text-gray-300 transition-all"
                                         placeholder="Ex: São Paulo, SP (ou deixe vazio se remoto)"
                                         value={formData.location}

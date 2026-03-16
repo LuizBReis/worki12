@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getPasswordStrength } from '../lib/validation';
 
 export default function ResetPassword() {
     const navigate = useNavigate();
@@ -11,12 +12,14 @@ export default function ResetPassword() {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
+    const strength = getPasswordStrength(password);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (password.length < 6) {
-            setError('A senha deve ter pelo menos 6 caracteres.');
+        if (password.length < 8) {
+            setError('A senha deve ter pelo menos 8 caracteres.');
             return;
         }
         if (password !== confirm) {
@@ -29,7 +32,16 @@ export default function ResetPassword() {
         setLoading(false);
 
         if (updateError) {
-            setError('Erro ao redefinir senha. O link pode ter expirado.');
+            const msg = updateError.message || '';
+            if (msg.includes('expired') || msg.includes('Token has expired')) {
+                setError('Link expirado. Solicite um novo link de recuperacao.');
+            } else if (msg.includes('invalid') || msg.includes('Invalid token') || msg.includes('not found')) {
+                setError('Link invalido. Solicite um novo link de recuperacao.');
+            } else if (msg.includes('weak') || msg.includes('too short') || msg.includes('at least')) {
+                setError('Senha muito fraca. Use no minimo 8 caracteres com letras e numeros.');
+            } else {
+                setError('Erro ao redefinir senha. Tente novamente ou solicite um novo link.');
+            }
             return;
         }
 
@@ -76,10 +88,19 @@ export default function ResetPassword() {
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
+                            aria-label="Nova senha"
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
-                            placeholder="Minimo 6 caracteres"
+                            placeholder="Minimo 8 caracteres"
                             autoFocus
                         />
+                        {password.length > 0 && (
+                            <div className="mt-2">
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${strength.color} ${strength.width} transition-all duration-300 rounded-full`} />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Forca: {strength.label}</p>
+                            </div>
+                        )}
                     </div>
 
                     <div>
@@ -88,6 +109,7 @@ export default function ResetPassword() {
                             type="password"
                             value={confirm}
                             onChange={e => setConfirm(e.target.value)}
+                            aria-label="Confirmar senha"
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="Repita a senha"
                         />

@@ -4,12 +4,14 @@ import { supabase } from '../../lib/supabase';
 import { Loader2, ArrowRight, ArrowLeft, Building2, Briefcase, Target } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { WalletService } from '../../services/walletService';
+import { validateCNPJ } from '../../lib/validation';
 
 export default function CompanyOnboarding() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
     const [step, setStep] = useState(1);
+    const [cnpjError, setCnpjError] = useState('');
     const [userId, setUserId] = useState<string | null>(null);
 
     const TOTAL_STEPS = 2;
@@ -78,13 +80,20 @@ export default function CompanyOnboarding() {
     const canProceed = () => {
         switch (step) {
             case 1: return formData.name && formData.cnpj.replace(/\D/g, '').length === 14 && formData.companyType && formData.industry && formData.city;
-            case 2: return true;
+            case 2: return formData.hiringGoal && formData.hiringVolume;
             default: return true;
         }
     };
 
     const handleNext = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (step === 1) {
+            if (!validateCNPJ(formData.cnpj)) {
+                setCnpjError('CNPJ invalido. Verifique os digitos e tente novamente.');
+                return;
+            }
+            setCnpjError('');
+        }
         if (step < TOTAL_STEPS) {
             setStep(step + 1);
         } else {
@@ -167,6 +176,7 @@ export default function CompanyOnboarding() {
                                             required
                                             value={formData.name}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            aria-label="Nome da empresa"
                                             className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             placeholder="Ex: Tech Solutions Ltda"
                                         />
@@ -179,9 +189,11 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.cnpj}
                                                 onChange={e => setFormData({ ...formData, cnpj: formatCnpj(e.target.value) })}
+                                                aria-label="CNPJ"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="00.000.000/0001-00"
                                             />
+                                            {cnpjError && <p className="text-red-600 text-xs font-bold mt-1">{cnpjError}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold uppercase mb-1">Tipo de Empresa *</label>
@@ -189,6 +201,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.companyType}
                                                 onChange={e => setFormData({ ...formData, companyType: e.target.value })}
+                                                aria-label="Tipo de empresa"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             >
                                                 <option value="">Selecione...</option>
@@ -205,6 +218,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.industry}
                                                 onChange={e => setFormData({ ...formData, industry: e.target.value })}
+                                                aria-label="Setor"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                             >
                                                 <option value="">Selecione...</option>
@@ -220,6 +234,7 @@ export default function CompanyOnboarding() {
                                                 required
                                                 value={formData.city}
                                                 onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                                aria-label="Cidade"
                                                 className="w-full bg-gray-50 border-2 border-transparent focus:border-black rounded-xl p-3 font-bold outline-none transition-all"
                                                 placeholder="Ex: São Paulo"
                                             />
@@ -246,6 +261,7 @@ export default function CompanyOnboarding() {
                                                         type="radio"
                                                         name="goal"
                                                         value={opt}
+                                                        aria-label={opt}
                                                         checked={formData.hiringGoal === opt}
                                                         onChange={e => setFormData({ ...formData, hiringGoal: e.target.value })}
                                                         className="accent-black w-5 h-5"
@@ -261,7 +277,7 @@ export default function CompanyOnboarding() {
                                         <div className="flex gap-4">
                                             {['1-5', '6-20', '20+'].map(opt => (
                                                 <label key={opt} className={`flex-1 border-2 rounded-xl p-4 cursor-pointer transition-all flex flex-col items-center justify-center font-bold text-center ${formData.hiringVolume === opt ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-black'}`}>
-                                                    <input type="radio" name="volume" value={opt} checked={formData.hiringVolume === opt} onChange={e => setFormData({ ...formData, hiringVolume: e.target.value })} className="hidden" />
+                                                    <input type="radio" name="volume" value={opt} aria-label={`${opt} vagas por mês`} checked={formData.hiringVolume === opt} onChange={e => setFormData({ ...formData, hiringVolume: e.target.value })} className="hidden" />
                                                     <span className="text-lg">{opt}</span>
                                                     <span className="text-[10px] uppercase font-normal opacity-70">Vagas</span>
                                                 </label>
@@ -285,19 +301,24 @@ export default function CompanyOnboarding() {
                                 <div />
                             )}
 
-                            <button
-                                type="submit"
-                                disabled={loading || !canProceed()}
-                                className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-primary hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? (
-                                    <Loader2 className="animate-spin" />
-                                ) : (
-                                    <>
-                                        {step === TOTAL_STEPS ? 'Finalizar' : 'Próximo'} <ArrowRight size={20} />
-                                    </>
+                            <div className="flex flex-col items-end gap-1">
+                                <button
+                                    type="submit"
+                                    disabled={loading || !canProceed()}
+                                    className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-primary hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            {step === TOTAL_STEPS ? 'Finalizar' : 'Próximo'} <ArrowRight size={20} />
+                                        </>
+                                    )}
+                                </button>
+                                {step === 2 && !canProceed() && (
+                                    <p className="text-xs text-red-500 font-medium">Selecione o objetivo e o volume de contratacao</p>
                                 )}
-                            </button>
+                            </div>
                         </div>
 
                     </form>

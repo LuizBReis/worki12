@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +29,16 @@ interface WorkerProfile {
     updated_at?: Date;
 }
 
+interface FormData {
+    full_name: string;
+    city: string;
+    phone: string;
+    bio: string;
+    pix_key: string;
+    primary_role: string;
+    roles: string;
+}
+
 export default function Profile() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -46,7 +56,7 @@ export default function Profile() {
     const [passwordError, setPasswordError] = useState<string | null>(null);
 
     // Editing State
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormData>({
         full_name: '',
         city: '',
         phone: '',
@@ -55,6 +65,41 @@ export default function Profile() {
         primary_role: '',
         roles: '' // comma separated string for editing
     });
+
+    // Track initial form data for dirty detection
+    const initialFormDataRef = useRef<FormData>({
+        full_name: '',
+        city: '',
+        phone: '',
+        bio: '',
+        pix_key: '',
+        primary_role: '',
+        roles: ''
+    });
+
+    const isDirty = isEditing && (
+        formData.full_name !== initialFormDataRef.current.full_name ||
+        formData.city !== initialFormDataRef.current.city ||
+        formData.phone !== initialFormDataRef.current.phone ||
+        formData.bio !== initialFormDataRef.current.bio ||
+        formData.pix_key !== initialFormDataRef.current.pix_key ||
+        formData.primary_role !== initialFormDataRef.current.primary_role ||
+        formData.roles !== initialFormDataRef.current.roles
+    );
+
+    // Warn user about unsaved changes before leaving
+    const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
+        e.preventDefault();
+    }, []);
+
+    useEffect(() => {
+        if (isDirty) {
+            window.addEventListener('beforeunload', handleBeforeUnload);
+        }
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isDirty, handleBeforeUnload]);
 
     const [stats, setStats] = useState({
         completedJobs: 0,
@@ -77,7 +122,7 @@ export default function Profile() {
                 console.error('Error fetching profile:', error);
             } else {
                 setProfile(data);
-                setFormData({
+                const loadedFormData: FormData = {
                     full_name: data.full_name || '',
                     city: data.city || '',
                     phone: data.phone || '',
@@ -85,7 +130,9 @@ export default function Profile() {
                     pix_key: data.pix_key || '',
                     primary_role: data.primary_role || '',
                     roles: data.roles ? data.roles.join(', ') : ''
-                });
+                };
+                setFormData(loadedFormData);
+                initialFormDataRef.current = loadedFormData;
                 setStats({
                     completedJobs: data.completed_jobs_count || 0,
                     totalEarnings: data.earnings_total || 0,
@@ -175,6 +222,7 @@ export default function Profile() {
             if (error) throw error;
 
             setProfile({ ...profile, ...updates });
+            initialFormDataRef.current = { ...formData };
             setIsEditing(false);
             addToast('Perfil atualizado com sucesso!', 'success');
         } catch (error) {
@@ -209,8 +257,19 @@ export default function Profile() {
     };
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-8 pb-12 max-w-4xl mx-auto animate-pulse">
+            <div className="flex items-center gap-6">
+                <div className="w-24 h-24 bg-gray-200 rounded-full" />
+                <div className="flex-1 space-y-3">
+                    <div className="h-8 bg-gray-200 rounded w-1/3" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+            </div>
+            <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-14 bg-gray-200 rounded-xl" />
+                ))}
+            </div>
         </div>
     );
 
@@ -241,6 +300,7 @@ export default function Profile() {
                     ref={coverInputRef}
                     className="hidden"
                     accept="image/*"
+                    aria-label="Upload foto de capa"
                     onChange={(e) => handleUpload(e, 'cover')}
                     disabled={uploading}
                 />
@@ -266,6 +326,7 @@ export default function Profile() {
                                     ref={fileInputRef}
                                     className="hidden"
                                     accept="image/*"
+                                    aria-label="Upload foto de perfil"
                                     onChange={(e) => handleUpload(e, 'avatar')}
                                     disabled={uploading}
                                 />
@@ -282,6 +343,7 @@ export default function Profile() {
                                     type="text"
                                     value={formData.full_name}
                                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                    aria-label="Nome completo"
                                     className="text-3xl font-black uppercase tracking-tight text-white drop-shadow-md bg-transparent border-b border-white mb-2 w-full outline-none"
                                 />
                             ) : (
@@ -295,6 +357,7 @@ export default function Profile() {
                                         type="text"
                                         value={formData.city}
                                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        aria-label="Cidade"
                                         className="bg-transparent border-b border-white/50 text-white w-24 outline-none"
                                     />
                                 ) : (
@@ -394,6 +457,7 @@ export default function Profile() {
                                         type="tel"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        aria-label="Telefone"
                                         className="border-b border-gray-300 w-full outline-none focus:border-black"
                                         placeholder="(00) 00000-0000"
                                     />
@@ -423,12 +487,14 @@ export default function Profile() {
                                         value={formData.primary_role}
                                         onChange={(e) => setFormData({ ...formData, primary_role: e.target.value })}
                                         placeholder="Função Principal (ex: Bartender)"
+                                        aria-label="Funcao principal"
                                         className="w-full border p-2 rounded-lg"
                                     />
                                     <textarea
                                         value={formData.roles}
                                         onChange={(e) => setFormData({ ...formData, roles: e.target.value })}
                                         placeholder="Outras habilidades (separe por vírgula)"
+                                        aria-label="Especialidades"
                                         className="w-full border p-2 rounded-lg h-20"
                                     />
                                     <p className="text-xs text-gray-400">Separe as especialidades por vírgula.</p>
@@ -453,6 +519,7 @@ export default function Profile() {
                                 <textarea
                                     value={formData.bio}
                                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                                    aria-label="Sobre voce"
                                     className="w-full border p-2 rounded-lg h-32"
                                     placeholder="Conte um pouco sobre sua experiência..."
                                 />

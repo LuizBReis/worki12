@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
+import { logError, logWarn } from '../lib/logger';
 
 export function useJobApplication() {
     const [applyingId, setApplyingId] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function useJobApplication() {
                 // We proceed to try insert, as insert policy might allow different things than select policy
                 // depending on configuration. But usually if select fails, we shouldn't block blindly.
                 // However, let's assume if it errors, we just try to apply.
-                console.warn('Check application error (RLS?):', checkError.message);
+                logWarn('Check application error (RLS?)', checkError.message);
             }
 
             if (existing) {
@@ -95,7 +96,7 @@ export function useJobApplication() {
                         });
 
                     if (convError) {
-                        console.error('Error creating conversation:', convError);
+                        logError('Error creating conversation', convError);
                     }
                 }
             }
@@ -104,7 +105,7 @@ export function useJobApplication() {
             if (onSuccess) onSuccess();
 
         } catch (err: unknown) {
-            console.error('Error applying:', err);
+            logError('Error applying', err);
 
             const message = err instanceof Error ? err.message : 'Ocorreu um erro ao aplicar. Tente novamente.';
 

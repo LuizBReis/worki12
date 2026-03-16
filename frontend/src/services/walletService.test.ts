@@ -274,4 +274,38 @@ describe('WalletService methods', () => {
     expect(result.success).toBe(true)
     expect(result.totalSynced).toBe(3)
   })
+
+  it('getBalance retorna saldo da wallet existente', async () => {
+    mockSingle.mockResolvedValueOnce({ data: { balance: 350.75 }, error: null })
+
+    const { WalletService } = await import('./walletService')
+    const balance = await WalletService.getBalance('user-with-balance')
+
+    expect(balance).toBe(350.75)
+    expect(mockFrom).toHaveBeenCalledWith('wallets')
+  })
+
+  it('withdrawFunds valida valor minimo retornando erro para valor zero', async () => {
+    const { invokeFunction } = await import('./api')
+    const mockInvoke = vi.mocked(invokeFunction)
+    mockInvoke.mockRejectedValueOnce(new Error('Valor minimo nao atingido'))
+
+    const { WalletService } = await import('./walletService')
+    const result = await WalletService.withdrawFunds(0, '12345678900', 'CPF')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Valor minimo nao atingido')
+  })
+
+  it('withdrawFunds valida valor minimo retornando erro para valor negativo', async () => {
+    const { invokeFunction } = await import('./api')
+    const mockInvoke = vi.mocked(invokeFunction)
+    mockInvoke.mockRejectedValueOnce(new Error('Valor invalido'))
+
+    const { WalletService } = await import('./walletService')
+    const result = await WalletService.withdrawFunds(-50, '12345678900', 'CPF')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Valor invalido')
+  })
 })

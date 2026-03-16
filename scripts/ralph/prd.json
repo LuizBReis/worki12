@@ -14,7 +14,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "CRITICAL: Current code does JSON.parse(atob(token.split('.')[1])) without signature verification"
     },
     {
@@ -29,7 +29,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Current WITH CHECK subquery is redundant and confusing. Restrict columns explicitly."
     },
     {
@@ -44,7 +44,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "CRITICAL: Current code can lose user money if Asaas succeeds but DB rollback fails"
     },
     {
@@ -59,7 +59,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "User names injected directly into HTML like: <h1>${workerName}</h1>"
     },
     {
@@ -73,7 +73,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "No validation before passing userId to credit_deposit RPC"
     },
     {
@@ -87,7 +87,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Currently allows release for 'hired' status without requiring job completion"
     },
     {
@@ -102,7 +102,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Current trigger does RAISE WARNING and RETURN NEW, silently leaving money locked"
     },
     {
@@ -116,7 +116,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "while(hasMore) loop has no upper bound"
     },
     {
@@ -131,7 +131,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Currently only checks string length (11 or 14 digits)"
     },
     {
@@ -146,7 +146,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Currently hardcoded in 2 separate files that can diverge"
     },
     {
@@ -160,7 +160,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -175,7 +175,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -189,7 +189,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -203,7 +203,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": "Current validation: email.includes('@')"
     },
     {
@@ -218,7 +218,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "notes": "Currently only validates length"
     },
     {
@@ -235,7 +235,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -250,7 +250,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 17,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -263,7 +263,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 18,
-      "passes": false,
+      "passes": true,
       "notes": "canProceed() currently returns true always for step 2"
     },
     {
@@ -277,7 +277,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 19,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -291,7 +291,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 20,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -306,7 +306,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 21,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -321,7 +321,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 22,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -335,7 +335,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 23,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -351,7 +351,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 24,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -365,7 +365,7 @@
         "Build passes with no type errors: cd frontend && npm run build"
       ],
       "priority": 25,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -379,7 +379,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 26,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -393,7 +393,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 27,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -407,7 +407,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 28,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -421,7 +421,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 29,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -436,7 +436,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 30,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -451,7 +451,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 31,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -466,7 +466,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 32,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -481,7 +481,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 33,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -496,7 +496,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 34,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -511,7 +511,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 35,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -527,7 +527,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 36,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -543,7 +543,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 37,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -560,7 +560,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 38,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -575,7 +575,7 @@
         "Build passes: cd frontend && npm run build"
       ],
       "priority": 39,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -590,7 +590,7 @@
         "No ESLint warnings remaining"
       ],
       "priority": 40,
-      "passes": false,
+      "passes": true,
       "notes": "Final validation task - only mark passes when everything is clean"
     }
   ]

@@ -2,7 +2,10 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, ASAAS_API_URL, getAsaasHeaders } from '../_shared/asaas.ts';
 
-const ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
+const DEFAULT_ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
+const ADMIN_EMAILS = Deno.env.get('ADMIN_EMAILS')
+    ? Deno.env.get('ADMIN_EMAILS')!.split(',').map(e => e.trim())
+    : DEFAULT_ADMIN_EMAILS;
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
@@ -17,13 +20,9 @@ serve(async (req) => {
             });
         }
 
-        // Allow service_role JWT OR admin user email
+        // Allow service_role key OR admin user email
         const token = authHeader.replace('Bearer ', '');
-        let isServiceRole = false;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            isServiceRole = payload.role === 'service_role';
-        } catch { /* not a valid JWT, continue with user auth */ }
+        const isServiceRole = token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
         if (!isServiceRole) {
             const supabaseAnon = createClient(

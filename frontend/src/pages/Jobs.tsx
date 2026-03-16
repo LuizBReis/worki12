@@ -1,19 +1,49 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Search, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobApplication } from '../hooks/useJobApplication';
 
+interface JobWithCompany {
+    id: string;
+    display_code?: number;
+    title: string;
+    description?: string;
+    location: string;
+    start_date: string;
+    created_at?: string;
+    work_start_time?: string;
+    work_end_time?: string;
+    estimated_hours?: number;
+    has_lunch?: boolean;
+    budget: number;
+    budget_period?: string;
+    candidates_count?: number;
+    status: string;
+    company?: {
+        name: string;
+        logo_url?: string;
+        rating_average?: number;
+        reviews_count?: number;
+    };
+}
+
 export default function Jobs() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [jobs, setJobs] = useState<any[]>([]);
+    const [jobs, setJobs] = useState<JobWithCompany[]>([]);
     const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [selectedRole, setSelectedRole] = useState('Todos');
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     // Custom Hook
     const { applyingId, applyForJob } = useJobApplication();
@@ -68,17 +98,23 @@ export default function Jobs() {
 
     // Filter Logic
     const filteredJobs = jobs.filter(job => {
-        const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.company?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.location.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = job.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            job.company?.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            job.location.toLowerCase().includes(debouncedSearch.toLowerCase());
         const matchesRole = selectedRole === 'Todos' || job.title.toLowerCase().includes(selectedRole.toLowerCase());
 
         return matchesSearch && matchesRole;
     });
 
     if (loading) return (
-        <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="animate-spin" size={32} />
+        <div className="flex flex-col gap-6 pb-24 max-w-5xl mx-auto animate-pulse">
+            <div className="h-10 bg-gray-200 rounded w-1/3" />
+            <div className="h-12 bg-gray-200 rounded-xl" />
+            <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-200 rounded-2xl" />
+                ))}
+            </div>
         </div>
     );
 

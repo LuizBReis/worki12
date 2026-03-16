@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, ArrowRight, Mail, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getPasswordStrength } from '../lib/validation';
 
 export default function Login() {
     const [searchParams] = useSearchParams();
     const type = searchParams.get('type') || 'work'; // 'work' or 'hire'
+    const reason = searchParams.get('reason');
     const navigate = useNavigate();
 
     const [isSignUp, setIsSignUp] = useState(false);
@@ -25,6 +27,11 @@ export default function Login() {
 
         try {
             if (isSignUp) {
+                if (password.length < 8) {
+                    setError('A senha deve ter pelo menos 8 caracteres.');
+                    setLoading(false);
+                    return;
+                }
                 // Sign Up
                 const { data, error: signUpError } = await supabase.auth.signUp({
                     email,
@@ -62,7 +69,16 @@ export default function Login() {
                 }
             }
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.');
+            const msg = err instanceof Error ? err.message : '';
+            if (msg.includes('Invalid login credentials')) {
+                setError('Email ou senha incorretos.');
+            } else if (msg.includes('Email not confirmed')) {
+                setError('Confirme seu email antes de fazer login.');
+            } else if (msg.includes('User already registered')) {
+                setError('Este email ja esta cadastrado. Faca login.');
+            } else {
+                setError('Erro ao fazer login. Tente novamente.');
+            }
         } finally {
             setLoading(false);
         }
@@ -103,6 +119,12 @@ export default function Login() {
                         </p>
                     </div>
 
+                    {reason === 'session_expired' && !error && !successMessage && (
+                        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-xl text-sm font-medium">
+                            Sua sessao expirou. Faca login novamente para continuar.
+                        </div>
+                    )}
+
                     {error && (
                         <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-xl text-sm font-medium">
                             {error}
@@ -125,6 +147,7 @@ export default function Login() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    aria-label="Email"
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="nome@exemplo.com"
                                 />
@@ -140,11 +163,23 @@ export default function Login() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    minLength={6}
+                                    minLength={8}
+                                    aria-label="Senha"
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="••••••••"
                                 />
                             </div>
+                            {isSignUp && password.length > 0 && (() => {
+                                const strength = getPasswordStrength(password);
+                                return (
+                                    <div className="mt-2">
+                                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className={`h-full ${strength.color} ${strength.width} transition-all duration-300 rounded-full`} />
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">Forca: {strength.label}</p>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <button
