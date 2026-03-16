@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('@sentry/react', () => ({
   captureException: vi.fn(),
@@ -12,7 +12,35 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('logError', () => {
+describe('logError - em ambiente DEV (PROD=false)', () => {
+  it('NAO chama Sentry.captureException quando import.meta.env.PROD e false', () => {
+    const error = new Error('erro dev')
+    logError('Contexto dev', error)
+
+    expect(Sentry.captureException).not.toHaveBeenCalled()
+    expect(Sentry.captureMessage).not.toHaveBeenCalled()
+  })
+
+  it('chama console.error em modo DEV', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = new Error('teste console')
+    logError('Contexto', error)
+
+    expect(consoleSpy).toHaveBeenCalledWith('Contexto', error)
+    consoleSpy.mockRestore()
+  })
+})
+
+describe('logError - em ambiente PROD (PROD=true)', () => {
+  beforeEach(() => {
+    vi.stubEnv('PROD', true)
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('chama Sentry.captureException quando error e instancia de Error', () => {
     const error = new Error('erro de teste')
     logError('Contexto do erro', error)
@@ -36,18 +64,34 @@ describe('logError', () => {
 
     expect(Sentry.captureMessage).toHaveBeenCalledWith('Apenas mensagem', 'error')
   })
+})
 
-  it('chama console.error em modo DEV', () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const error = new Error('teste console')
-    logError('Contexto', error)
+describe('logWarn - em ambiente DEV (PROD=false)', () => {
+  it('NAO chama Sentry.captureMessage quando import.meta.env.PROD e false', () => {
+    logWarn('Aviso dev', 'detalhe')
 
-    expect(consoleSpy).toHaveBeenCalledWith('Contexto', error)
+    expect(Sentry.captureMessage).not.toHaveBeenCalled()
+  })
+
+  it('chama console.warn em modo DEV', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    logWarn('Aviso', 'detalhe')
+
+    expect(consoleSpy).toHaveBeenCalledWith('Aviso', 'detalhe')
     consoleSpy.mockRestore()
   })
 })
 
-describe('logWarn', () => {
+describe('logWarn - em ambiente PROD (PROD=true)', () => {
+  beforeEach(() => {
+    vi.stubEnv('PROD', true)
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('chama Sentry.captureMessage com nivel warning', () => {
     logWarn('Aviso de teste', 'detalhe')
 
@@ -64,13 +108,5 @@ describe('logWarn', () => {
       'Aviso sem detalhe: ',
       'warning'
     )
-  })
-
-  it('chama console.warn em modo DEV', () => {
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    logWarn('Aviso', 'detalhe')
-
-    expect(consoleSpy).toHaveBeenCalledWith('Aviso', 'detalhe')
-    consoleSpy.mockRestore()
   })
 })
