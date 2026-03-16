@@ -56,6 +56,48 @@ serve(async (req) => {
             if (cleanDoc.length !== 11 && cleanDoc.length !== 14) {
                 throw new Error('CPF (11 digitos) ou CNPJ (14 digitos) é obrigatório para criar conta de pagamento.');
             }
+
+            // Validate CPF/CNPJ checksum
+            if (cleanDoc.length === 11) {
+                // CPF validation
+                if (/^(\d)\1{10}$/.test(cleanDoc)) {
+                    throw new Error('CPF invalido: todos os digitos sao iguais.');
+                }
+                let sum = 0;
+                for (let i = 0; i < 9; i++) sum += parseInt(cleanDoc[i]) * (10 - i);
+                let check = 11 - (sum % 11);
+                if (check >= 10) check = 0;
+                if (check !== parseInt(cleanDoc[9])) {
+                    throw new Error('CPF invalido: digito verificador incorreto.');
+                }
+                sum = 0;
+                for (let i = 0; i < 10; i++) sum += parseInt(cleanDoc[i]) * (11 - i);
+                check = 11 - (sum % 11);
+                if (check >= 10) check = 0;
+                if (check !== parseInt(cleanDoc[10])) {
+                    throw new Error('CPF invalido: digito verificador incorreto.');
+                }
+            } else {
+                // CNPJ validation
+                if (/^(\d)\1{13}$/.test(cleanDoc)) {
+                    throw new Error('CNPJ invalido: todos os digitos sao iguais.');
+                }
+                const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+                let sum = 0;
+                for (let i = 0; i < 12; i++) sum += parseInt(cleanDoc[i]) * weights1[i];
+                let check = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+                if (check !== parseInt(cleanDoc[12])) {
+                    throw new Error('CNPJ invalido: digito verificador incorreto.');
+                }
+                const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+                sum = 0;
+                for (let i = 0; i < 13; i++) sum += parseInt(cleanDoc[i]) * weights2[i];
+                check = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+                if (check !== parseInt(cleanDoc[13])) {
+                    throw new Error('CNPJ invalido: digito verificador incorreto.');
+                }
+            }
+
             const finalDoc = cleanDoc;
 
             const customerPayload = {
