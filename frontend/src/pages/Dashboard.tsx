@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import PageMeta from '../components/PageMeta';
 import {
     Briefcase, Clock, Star, TrendingUp, Award, Zap,
     ChevronRight, CheckCircle2, AlertCircle, Search, Filter
@@ -165,6 +166,7 @@ export default function Dashboard() {
 
     return (
         <div className="flex flex-col gap-8 pb-12 font-sans text-accent">
+            <PageMeta title="Dashboard" />
 
             {/* --- WELCOME HEADER (Restored) --- */}
             <div className="flex flex-col md:flex-row justify-between items-center bg-black text-white p-6 rounded-3xl shadow-[4px_4px_0px_0px_rgba(34,197,94,1)] border-2 border-black relative overflow-hidden">
