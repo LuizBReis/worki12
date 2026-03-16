@@ -88,6 +88,13 @@ serve(async (req) => {
             }
 
             const userId = payment.externalReference;
+
+            // Validate externalReference is a valid UUID before using as user_id
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(userId)) {
+                console.warn('Invalid externalReference (not a UUID):', userId);
+                return new Response('Ignored - Invalid externalReference format', { status: 200 });
+            }
             const paymentId = payment.id;
             const amount = payment.value;
 
