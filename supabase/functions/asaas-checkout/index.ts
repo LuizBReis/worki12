@@ -41,16 +41,22 @@ serve(async (req) => {
         if (jobError || !job) throw new Error('Job not found');
         if (job.company_id !== user.id) throw new Error('Not authorized');
 
-        // 2. Verify workerId has a hired/completed application for this job
+        // 2. Verify workerId has a completed application with confirmed checkout for this job
         const { data: app, error: appError } = await supabaseAdmin
             .from('applications')
-            .select('worker_id')
+            .select('worker_id, status, company_checkout_confirmed_at, worker_checkout_at')
             .eq('job_id', jobId)
             .eq('worker_id', workerId)
-            .in('status', ['hired', 'in_progress', 'completed'])
             .single();
 
         if (appError || !app) throw new Error('No valid application found');
+
+        // Escrow release requires completed status OR both parties confirmed checkout
+        const isCompleted = app.status === 'completed';
+        const isBothConfirmed = app.company_checkout_confirmed_at && app.worker_checkout_at;
+        if (!isCompleted && !isBothConfirmed) {
+            throw new Error('O trabalho precisa estar finalizado (status completed ou checkout confirmado por ambas as partes) para liberar o pagamento.');
+        }
 
         // Get or create worker wallet
         let { data: workerWallet } = await supabaseAdmin
