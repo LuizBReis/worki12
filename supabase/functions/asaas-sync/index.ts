@@ -47,12 +47,16 @@ serve(async (req) => {
 
         const statuses = ['RECEIVED', 'CONFIRMED'];
 
+        const MAX_PAGES = 50; // Safety limit: max 50 pages * 100 items = 5000 payments per status
+
         for (const status of statuses) {
             let offset = 0;
             const limit = 100;
             let hasMore = true;
+            let page = 0;
 
-            while (hasMore) {
+            while (hasMore && page < MAX_PAGES) {
+                page++;
                 const asaasRes = await fetch(`${ASAAS_API_URL}/payments?externalReference=${user.id}&status=${status}&limit=${limit}&offset=${offset}`, {
                     headers: getAsaasHeaders()
                 });
@@ -92,6 +96,10 @@ serve(async (req) => {
 
                 hasMore = payments.length === limit;
                 offset += limit;
+            }
+
+            if (page >= MAX_PAGES) {
+                console.warn(`Sync atingiu limite maximo de ${MAX_PAGES} paginas para status ${status}. Pode haver pagamentos nao sincronizados.`);
             }
         }
 
