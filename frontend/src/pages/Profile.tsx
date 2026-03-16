@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera, CreditCard } from 'lucide-react';
+import { User, MapPin, Briefcase, Star, ShieldCheck, Phone, Edit2, Loader2, Award, Save, X, Camera, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import { getPasswordStrength } from '../lib/validation';
@@ -183,6 +183,29 @@ export default function Profile() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleChangePassword = async () => {
+        if (newPassword.length < 8) {
+            setPasswordError('A senha deve ter pelo menos 8 caracteres.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setPasswordError('As senhas não coincidem.');
+            return;
+        }
+        setPasswordLoading(true);
+        setPasswordError(null);
+        const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
+        setPasswordLoading(false);
+        if (pwError) {
+            logError('Erro ao alterar senha', pwError);
+            addToast('Senha muito fraca. Use pelo menos 8 caracteres com letras e números.', 'error');
+            return;
+        }
+        addToast('Senha alterada com sucesso.', 'success');
+        setNewPassword('');
+        setConfirmPassword('');
     };
 
     if (loading) return (
