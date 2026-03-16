@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Mail, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const COOLDOWN_SECONDS = 60;
 
 export default function ForgotPassword() {
     const navigate = useNavigate();
@@ -9,13 +12,29 @@ export default function ForgotPassword() {
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
     const [error, setError] = useState('');
+    const [cooldown, setCooldown] = useState(0);
+    const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const startCooldown = useCallback(() => {
+        setCooldown(COOLDOWN_SECONDS);
+        if (cooldownRef.current) clearInterval(cooldownRef.current);
+        cooldownRef.current = setInterval(() => {
+            setCooldown(prev => {
+                if (prev <= 1) {
+                    if (cooldownRef.current) clearInterval(cooldownRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (!email.trim() || !email.includes('@')) {
-            setError('Informe um email valido.');
+        if (!email.trim() || !EMAIL_REGEX.test(email.trim())) {
+            setError('Informe um email valido (ex: nome@dominio.com).');
             return;
         }
 
@@ -26,10 +45,15 @@ export default function ForgotPassword() {
         setLoading(false);
 
         if (resetError) {
-            setError('Erro ao enviar email. Tente novamente.');
+            if (resetError.message.includes('rate')) {
+                setError('Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.');
+            } else {
+                setError('Erro ao enviar email. Verifique o endereco e tente novamente.');
+            }
             return;
         }
 
+        startCooldown();
         setSent(true);
     };
 
@@ -74,27 +98,30 @@ export default function ForgotPassword() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="text-xs font-bold uppercase block mb-1">Email</label>
+                        <label htmlFor="forgot-email" className="text-xs font-bold uppercase block mb-1">Email</label>
                         <input
+                            id="forgot-email"
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="seu@email.com"
+                            aria-label="Endereco de email para recuperacao de senha"
+                            aria-describedby={error ? 'forgot-error' : undefined}
                             autoFocus
                         />
                     </div>
 
                     {error && (
-                        <p className="text-red-600 text-sm font-bold">{error}</p>
+                        <p id="forgot-error" className="text-red-600 text-sm font-bold" role="alert">{error}</p>
                     )}
 
                     <button
                         type="submit"
-                        disabled={loading || !email.trim()}
+                        disabled={loading || !email.trim() || cooldown > 0}
                         className="w-full bg-black text-white py-3 rounded-xl font-bold uppercase hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : 'Enviar Link de Recuperacao'}
+                        {loading ? <Loader2 className="animate-spin" size={20} /> : cooldown > 0 ? `Aguarde ${cooldown}s` : 'Enviar Link de Recuperacao'}
                     </button>
                 </form>
             </div>

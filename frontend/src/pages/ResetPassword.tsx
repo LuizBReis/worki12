@@ -1,7 +1,21 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^a-zA-Z0-9]/.test(pw)) score++;
+
+    if (score <= 1) return { score, label: 'Fraca', color: 'bg-red-500' };
+    if (score <= 2) return { score, label: 'Razoavel', color: 'bg-orange-500' };
+    if (score <= 3) return { score, label: 'Boa', color: 'bg-yellow-500' };
+    return { score, label: 'Forte', color: 'bg-green-500' };
+}
 
 export default function ResetPassword() {
     const navigate = useNavigate();
@@ -11,12 +25,14 @@ export default function ResetPassword() {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
+    const strength = useMemo(() => getPasswordStrength(password), [password]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (password.length < 6) {
-            setError('A senha deve ter pelo menos 6 caracteres.');
+        if (password.length < 8) {
+            setError('A senha deve ter pelo menos 8 caracteres.');
             return;
         }
         if (password !== confirm) {
@@ -29,7 +45,13 @@ export default function ResetPassword() {
         setLoading(false);
 
         if (updateError) {
-            setError('Erro ao redefinir senha. O link pode ter expirado.');
+            if (updateError.message.includes('expired') || updateError.message.includes('invalid')) {
+                setError('O link de redefinicao expirou. Solicite um novo link.');
+            } else if (updateError.message.includes('same')) {
+                setError('A nova senha nao pode ser igual a senha anterior.');
+            } else {
+                setError('Erro ao redefinir senha. Tente solicitar um novo link de recuperacao.');
+            }
             return;
         }
 
@@ -71,30 +93,45 @@ export default function ResetPassword() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="text-xs font-bold uppercase block mb-1">Nova Senha</label>
+                        <label htmlFor="reset-password" className="text-xs font-bold uppercase block mb-1">Nova Senha</label>
                         <input
+                            id="reset-password"
                             type="password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
-                            placeholder="Minimo 6 caracteres"
+                            placeholder="Minimo 8 caracteres"
+                            aria-label="Nova senha"
+                            aria-describedby="password-strength"
                             autoFocus
                         />
+                        {password.length > 0 && (
+                            <div className="mt-2" id="password-strength">
+                                <div className="flex gap-1 mb-1">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= strength.score ? strength.color : 'bg-gray-200'}`} />
+                                    ))}
+                                </div>
+                                <p className="text-xs font-bold text-gray-500">Forca: {strength.label}</p>
+                            </div>
+                        )}
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold uppercase block mb-1">Confirmar Senha</label>
+                        <label htmlFor="reset-confirm" className="text-xs font-bold uppercase block mb-1">Confirmar Senha</label>
                         <input
+                            id="reset-confirm"
                             type="password"
                             value={confirm}
                             onChange={e => setConfirm(e.target.value)}
                             className="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-black outline-none"
                             placeholder="Repita a senha"
+                            aria-label="Confirmar nova senha"
                         />
                     </div>
 
                     {error && (
-                        <p className="text-red-600 text-sm font-bold">{error}</p>
+                        <p className="text-red-600 text-sm font-bold" role="alert">{error}</p>
                     )}
 
                     <button

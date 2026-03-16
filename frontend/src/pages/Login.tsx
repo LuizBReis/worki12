@@ -1,7 +1,29 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, ArrowRight, Mail, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+
+function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^a-zA-Z0-9]/.test(pw)) score++;
+    if (score <= 1) return { score, label: 'Fraca', color: 'bg-red-500' };
+    if (score <= 2) return { score, label: 'Razoavel', color: 'bg-orange-500' };
+    if (score <= 3) return { score, label: 'Boa', color: 'bg-yellow-500' };
+    return { score, label: 'Forte', color: 'bg-green-500' };
+}
+
+function translateAuthError(msg: string): string {
+    if (msg.includes('Invalid login credentials')) return 'Email ou senha incorretos. Verifique suas credenciais.';
+    if (msg.includes('Email not confirmed')) return 'Email nao confirmado. Verifique sua caixa de entrada.';
+    if (msg.includes('User already registered')) return 'Este email ja esta cadastrado. Tente fazer login.';
+    if (msg.includes('Password should be at least')) return 'A senha deve ter pelo menos 8 caracteres.';
+    if (msg.includes('rate')) return 'Muitas tentativas. Aguarde alguns minutos.';
+    return 'Ocorreu um erro. Tente novamente.';
+}
 
 export default function Login() {
     const [searchParams] = useSearchParams();
@@ -16,12 +38,19 @@ export default function Login() {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const isHire = type === 'hire';
+    const strength = useMemo(() => getPasswordStrength(password), [password]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
         setSuccessMessage(null);
+
+        if (isSignUp && password.length < 8) {
+            setError('A senha deve ter pelo menos 8 caracteres.');
+            setLoading(false);
+            return;
+        }
 
         try {
             if (isSignUp) {
@@ -62,7 +91,8 @@ export default function Login() {
                 }
             }
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Ocorreu um erro. Tente novamente.');
+            const msg = err instanceof Error ? err.message : '';
+            setError(translateAuthError(msg));
         } finally {
             setLoading(false);
         }
@@ -117,14 +147,16 @@ export default function Login() {
 
                     <form className="space-y-4" onSubmit={handleSubmit}>
                         <div className="space-y-1">
-                            <label className="text-xs font-bold uppercase tracking-wide">Email</label>
+                            <label htmlFor="login-email" className="text-xs font-bold uppercase tracking-wide">Email</label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-3.5 text-black" size={20} strokeWidth={2.5} />
                                 <input
+                                    id="login-email"
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
+                                    aria-label="Endereco de email"
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="nome@exemplo.com"
                                 />
@@ -132,19 +164,32 @@ export default function Login() {
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-bold uppercase tracking-wide">Senha</label>
+                            <label htmlFor="login-password" className="text-xs font-bold uppercase tracking-wide">Senha</label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-3.5 text-black" size={20} strokeWidth={2.5} />
                                 <input
+                                    id="login-password"
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    minLength={6}
+                                    minLength={8}
+                                    aria-label="Senha"
+                                    aria-describedby={isSignUp && password.length > 0 ? 'login-pw-strength' : undefined}
                                     className="w-full bg-gray-100 border-2 border-transparent focus:border-black focus:bg-white outline-none rounded-xl py-3 pl-10 pr-4 font-bold transition-all placeholder:font-medium"
                                     placeholder="••••••••"
                                 />
                             </div>
+                            {isSignUp && password.length > 0 && (
+                                <div className="mt-1" id="login-pw-strength">
+                                    <div className="flex gap-1 mb-1">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <div key={i} className={`h-1 flex-1 rounded-full ${i <= strength.score ? strength.color : 'bg-gray-200'}`} />
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] font-bold text-gray-400">Forca: {strength.label} {password.length < 8 && '- Minimo 8 caracteres'}</p>
+                                </div>
+                            )}
                         </div>
 
                         <button
