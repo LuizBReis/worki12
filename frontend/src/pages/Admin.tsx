@@ -6,10 +6,12 @@ import { Loader2, Users, Briefcase, DollarSign, ShieldCheck, ArrowLeft, Lock, Lo
 import { invokeFunction } from '../services/api';
 import { logError } from '../lib/logger';
 
-const DEFAULT_ADMIN_EMAILS = ['luizguilhermebarretodosreis@yahoo.com.br', 'oliveira9138@gmail.com'];
 const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS
     ? (import.meta.env.VITE_ADMIN_EMAILS as string).split(',').map((e: string) => e.trim())
-    : DEFAULT_ADMIN_EMAILS;
+    : [];
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 60_000; // 1 minuto
 
 interface AsaasBalance {
     currentBalance: number;
@@ -92,6 +94,9 @@ export default function Admin() {
     const [escrows, setEscrows] = useState<RichEscrow[]>([]);
     const [loadingTab, setLoadingTab] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [loginAttempts, setLoginAttempts] = useState(0);
+    const [lockoutUntil, setLockoutUntil] = useState(0);
+    const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
     const loadDashboard = useCallback(async () => {
         try {
@@ -151,24 +156,81 @@ export default function Admin() {
         setLoading(false);
     }, [loadDashboard]);
 
+    // Cooldown timer for rate limiting
+    useEffect(() => {
+        if (lockoutUntil <= Date.now()) {
+            setCooldownSeconds(0);
+            return;
+        }
+        const interval = setInterval(() => {
+            const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+            if (remaining <= 0) {
+                setCooldownSeconds(0);
+                clearInterval(interval);
+            } else {
+                setCooldownSeconds(remaining);
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [lockoutUntil]);
+
+    const isRateLimited = cooldownSeconds > 0;
+
     const handleLogin = async (e: FormEvent) => {
         e.preventDefault();
         setLoginError('');
+
+        // Check rate limiting
+        if (isRateLimited) {
+            setLoginError('Muitas tentativas. Aguarde antes de tentar novamente.');
+            return;
+        }
+
         setLoginLoading(true);
+
+        if (ADMIN_EMAILS.length === 0) {
+            setLoginError('Nenhum email de administrador configurado.');
+            setLoginLoading(false);
+            return;
+        }
 
         if (!ADMIN_EMAILS.includes(email)) {
             setLoginError('Este email nao tem permissao de administrador.');
             setLoginLoading(false);
+            const newAttempts = loginAttempts + 1;
+            setLoginAttempts(newAttempts);
+            if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+                setLockoutUntil(Date.now() + LOCKOUT_DURATION_MS);
+                setCooldownSeconds(Math.ceil(LOCKOUT_DURATION_MS / 1000));
+                setLoginError('Muitas tentativas. Aguarde 1 minuto antes de tentar novamente.');
+            } else {
+                // Exponential delay: 1s, 2s, 4s, 8s...
+                const delayMs = Math.min(Math.pow(2, newAttempts - 1) * 1000, LOCKOUT_DURATION_MS);
+                setLockoutUntil(Date.now() + delayMs);
+                setCooldownSeconds(Math.ceil(delayMs / 1000));
+            }
             return;
         }
 
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
+            const newAttempts = loginAttempts + 1;
+            setLoginAttempts(newAttempts);
             setLoginError(error.message);
             setLoginLoading(false);
+            if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+                setLockoutUntil(Date.now() + LOCKOUT_DURATION_MS);
+                setCooldownSeconds(Math.ceil(LOCKOUT_DURATION_MS / 1000));
+                setLoginError('Muitas tentativas. Aguarde 1 minuto antes de tentar novamente.');
+            } else {
+                const delayMs = Math.min(Math.pow(2, newAttempts - 1) * 1000, LOCKOUT_DURATION_MS);
+                setLockoutUntil(Date.now() + delayMs);
+                setCooldownSeconds(Math.ceil(delayMs / 1000));
+            }
             return;
         }
 
+        setLoginAttempts(0);
         setNeedsLogin(false);
         setAuthorized(true);
         await loadDashboard();
@@ -233,11 +295,11 @@ export default function Admin() {
                         )}
                         <button
                             type="submit"
-                            disabled={loginLoading}
+                            disabled={loginLoading || isRateLimited}
                             className="w-full py-3 bg-black text-white font-bold uppercase rounded-lg hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {loginLoading ? <Loader2 className="animate-spin" size={16} /> : <LogIn size={16} />}
-                            Entrar
+                            {loginLoading ? <Loader2 className="animate-spin" size={16} /> : isRateLimited ? <Lock size={16} /> : <LogIn size={16} />}
+                            {isRateLimited ? `Aguarde ${cooldownSeconds}s` : 'Entrar'}
                         </button>
                     </form>
                 </div>
