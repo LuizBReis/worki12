@@ -265,7 +265,15 @@ export default function Profile() {
         setDeleting(true);
         const { error } = await supabase.functions.invoke('delete-account', { body: {} });
         if (error) {
-            addToast(error.message || 'Erro ao excluir conta. Tente novamente.', 'error');
+            let msg = error.message || 'Erro ao excluir conta. Tente novamente.';
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const errData = await error.context.json();
+                    msg = errData.error || msg;
+                } catch { /* parse error ignorado */ }
+            }
+            logError(error, 'Profile.handleDeleteAccount');
+            addToast(msg, 'error');
             setDeleting(false);
             return;
         }

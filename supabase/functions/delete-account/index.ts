@@ -42,6 +42,25 @@ serve(async (req) => {
 
     const isWorker = !!workerData;
 
+    // 2. Verificar saldo positivo na carteira (workers e empresas)
+    const { data: walletData } = await supabaseAdmin
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', userId)
+      .single();
+
+    if (walletData && Number(walletData.balance) > 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'Você tem saldo disponível na sua carteira. Saque seus fundos antes de deletar sua conta.',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
     if (!isWorker) {
       // Verificar se é empresa com escrow ativo
       // escrow_transactions não tem company_id — buscar via jobs.company_id
