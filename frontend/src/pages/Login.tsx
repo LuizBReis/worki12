@@ -74,7 +74,7 @@ export default function Login() {
             if (msg.includes('Invalid login credentials')) {
                 setError('Email ou senha incorretos.');
             } else if (msg.includes('Email not confirmed')) {
-                setError('Confirme seu email antes de fazer login.');
+                setError('Por favor, verifique seu email antes de fazer login.');
             } else if (msg.includes('User already registered')) {
                 setError('Este email ja esta cadastrado. Faca login.');
             } else {
