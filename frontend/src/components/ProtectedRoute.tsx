@@ -154,7 +154,10 @@ export default function ProtectedRoute() {
 
     if (roleRedirect) return <Navigate to={roleRedirect} replace />;
 
-    if (tosAccepted === false) return (
+    // Pular gate de TOS durante onboarding para nao confundir o usuario
+    const isOnboardingRoute = location.pathname.includes('/onboarding');
+
+    if (tosAccepted === false && !isOnboardingRoute) return (
         <>
             <TosGateModal userRole={detectedRole} onAccepted={() => setTosAccepted(true)} />
             <Outlet />
