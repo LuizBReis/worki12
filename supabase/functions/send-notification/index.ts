@@ -11,6 +11,25 @@ serve(async (req) => {
         return new Response('ok', { headers: corsHeaders });
     }
 
+    // Auth validation: only service_role can call this function
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+        return new Response(
+            JSON.stringify({ error: 'Authorization header required' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (token !== serviceRoleKey) {
+        return new Response(
+            JSON.stringify({ error: 'Service role required' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+    }
+
     try {
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
