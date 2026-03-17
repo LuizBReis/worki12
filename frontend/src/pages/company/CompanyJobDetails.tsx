@@ -240,13 +240,20 @@ export default function CompanyJobDetails() {
                             <div className="bg-blue-50 border-2 border-blue-100 rounded-xl p-6">
                                 <h3 className="font-black uppercase text-blue-800 mb-4">Performance</h3>
                                 <div className="space-y-4">
-                                    <button
-                                        onClick={() => navigate(`/company/jobs/${id}/candidates`)}
-                                        className="w-full flex items-center justify-between hover:bg-white p-2 rounded-lg transition-all cursor-pointer group"
-                                    >
-                                        <span className="text-sm font-bold text-blue-600 flex items-center gap-2"><Users size={16} /> Candidatos</span>
-                                        <span className="text-2xl font-black text-blue-900 group-hover:scale-110 transition-transform">{job.candidates_count || 0}</span>
-                                    </button>
+                                    {(job.candidates_count || 0) > 0 ? (
+                                        <button
+                                            onClick={() => navigate(`/company/jobs/${id}/candidates`)}
+                                            className="w-full flex items-center justify-between hover:bg-white p-2 rounded-lg transition-all cursor-pointer group"
+                                        >
+                                            <span className="text-sm font-bold text-blue-600 flex items-center gap-2"><Users size={16} /> Candidatos</span>
+                                            <span className="text-2xl font-black text-blue-900 group-hover:scale-110 transition-transform">{job.candidates_count}</span>
+                                        </button>
+                                    ) : (
+                                        <div className="p-2">
+                                            <span className="text-sm font-bold text-blue-600 flex items-center gap-2 mb-2"><Users size={16} /> Candidatos</span>
+                                            <p className="text-sm text-gray-500 font-medium">Nenhum candidato para esta vaga ainda.</p>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm font-bold text-blue-600 flex items-center gap-2"><Eye size={16} /> Visualizações</span>
                                         <span className="text-2xl font-black text-blue-900">{job.views || 0}</span>
