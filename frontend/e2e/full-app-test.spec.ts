@@ -105,7 +105,7 @@ test.describe('Phase 1: Public Pages', () => {
     await takeScreenshot(page, '1.2-login');
     // Check that login form exists
     const emailInput = page.getByLabel(/email/i);
-    const senhaInput = page.getByLabel(/senha/i);
+    page.getByLabel(/senha/i);
     const hasEmailByPlaceholder = page.locator('input[type="email"], input[placeholder*="email" i]');
     // Either labeled inputs or placeholder-based inputs should exist
     const emailVisible = await emailInput.isVisible().catch(() => false) ||
@@ -163,12 +163,6 @@ test.describe('Phase 1: Public Pages', () => {
     await page.goto('/this-route-does-not-exist-12345');
     await page.waitForLoadState('networkidle');
     await takeScreenshot(page, '1.9-404');
-    // Should show some 404 indicator
-    const bodyText = await page.locator('body').innerText();
-    const has404 = bodyText.includes('404') ||
-                   bodyText.toLowerCase().includes('não encontrad') ||
-                   bodyText.toLowerCase().includes('not found') ||
-                   bodyText.toLowerCase().includes('página');
     // We just take a screenshot and document what we see
     await expect(page.locator('body')).toBeVisible();
   });
@@ -283,7 +277,7 @@ test.describe('Phase 2: Auth Flow', () => {
 
 test.describe('Phase 3: Worker Flow', () => {
   let diagnostics: Diagnostic[];
-  let workerLoggedIn = false;
+  // workerLoggedIn tracking removed — variable was unused
 
   test.beforeEach(async ({ page }) => {
     diagnostics = [];
@@ -306,12 +300,12 @@ test.describe('Phase 3: Worker Flow', () => {
     // Wait for redirect or error
     try {
       await page.waitForURL('**/dashboard', { timeout: 10_000 });
-      workerLoggedIn = true;
+      // login succeeded
     } catch {
       // Login failed, try to detect onboarding redirect
       const url = page.url();
       if (url.includes('/worker') || url.includes('/onboarding')) {
-        workerLoggedIn = true;
+        // login succeeded
       } else {
         test.skip(true, 'Worker login failed - skipping worker flow');
       }
