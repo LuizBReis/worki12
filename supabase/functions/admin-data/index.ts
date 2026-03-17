@@ -202,6 +202,16 @@ serve(async (req) => {
         if (action === 'create_deposit') {
             const { user_id, amount } = body;
             if (!user_id || !amount) throw new Error('user_id and amount required');
+            if (typeof amount !== 'number') {
+                return new Response(JSON.stringify({ error: 'Amount must be a number' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
+                });
+            }
+            if (amount <= 0) {
+                return new Response(JSON.stringify({ error: 'Amount must be positive' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
+                });
+            }
 
             const { data: wallet } = await supabaseAdmin
                 .from('wallets').select('id, asaas_customer_id').eq('user_id', user_id).single();
@@ -240,6 +250,16 @@ serve(async (req) => {
         if (action === 'admin_credit') {
             const { user_id, amount, payment_id } = body;
             if (!user_id || !amount) throw new Error('user_id and amount required');
+            if (typeof amount !== 'number') {
+                return new Response(JSON.stringify({ error: 'Amount must be a number' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
+                });
+            }
+            if (amount <= 0) {
+                return new Response(JSON.stringify({ error: 'Amount must be positive' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
+                });
+            }
 
             const refId = payment_id || `admin-credit-${Date.now()}`;
             const { data, error } = await supabaseAdmin.rpc('credit_deposit', {
