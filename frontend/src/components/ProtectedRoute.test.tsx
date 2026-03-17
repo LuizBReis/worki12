@@ -66,18 +66,18 @@ describe('ProtectedRoute — TOS gate', () => {
   it('renderiza TosGateModal quando tosAccepted é false', async () => {
     const { supabase } = await import('../lib/supabase')
 
-    // Session exists
+    // Session exists — worker user
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
-      data: { session: { user: { id: 'user-1' } } as never },
+      data: { session: { user: { id: 'user-1', user_metadata: { user_type: 'work' } } } as never },
       error: null,
     })
 
-    // Worker with accepted_tos = false
+    // Worker with onboarding_completed=true, accepted_tos=false
     vi.mocked(supabase.from).mockReturnValue({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           single: vi.fn(() =>
-            Promise.resolve({ data: { accepted_tos: false }, error: null })
+            Promise.resolve({ data: { onboarding_completed: true, accepted_tos: false }, error: null })
           ),
         })),
       })),
@@ -93,18 +93,18 @@ describe('ProtectedRoute — TOS gate', () => {
   it('renderiza Outlet quando tosAccepted é true', async () => {
     const { supabase } = await import('../lib/supabase')
 
-    // Session exists
+    // Session exists — worker user
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
-      data: { session: { user: { id: 'user-2' } } as never },
+      data: { session: { user: { id: 'user-2', user_metadata: { user_type: 'work' } } } as never },
       error: null,
     })
 
-    // Worker with accepted_tos = true
+    // Worker with onboarding_completed=true, accepted_tos=true
     vi.mocked(supabase.from).mockReturnValue({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           single: vi.fn(() =>
-            Promise.resolve({ data: { accepted_tos: true }, error: null })
+            Promise.resolve({ data: { onboarding_completed: true, accepted_tos: true }, error: null })
           ),
         })),
       })),

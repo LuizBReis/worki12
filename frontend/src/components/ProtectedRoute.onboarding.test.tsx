@@ -38,6 +38,7 @@ function renderRoute(path = '/dashboard') {
             <Routes>
                 <Route element={<ProtectedRoute />}>
                     <Route path="/dashboard" element={<div data-testid="outlet-content">Conteudo Protegido</div>} />
+                    <Route path="/company/dashboard" element={<div data-testid="outlet-content">Conteudo Protegido</div>} />
                     <Route path="/worker/onboarding" element={<div data-testid="worker-onboarding">Worker Onboarding</div>} />
                     <Route path="/company/onboarding" element={<div data-testid="company-onboarding">Company Onboarding</div>} />
                 </Route>
@@ -63,7 +64,7 @@ describe('ProtectedRoute - Onboarding Gate', () => {
             select: vi.fn(() => ({
                 eq: vi.fn(() => ({
                     single: vi.fn().mockResolvedValue({
-                        data: { onboarding_completed: true },
+                        data: { onboarding_completed: true, accepted_tos: true },
                         error: null,
                     }),
                 })),
@@ -109,14 +110,14 @@ describe('ProtectedRoute - Onboarding Gate', () => {
             select: vi.fn(() => ({
                 eq: vi.fn(() => ({
                     single: vi.fn().mockResolvedValue({
-                        data: { onboarding_completed: true },
+                        data: { onboarding_completed: true, accepted_tos: true },
                         error: null,
                     }),
                 })),
             })),
         })
 
-        renderRoute('/dashboard')
+        renderRoute('/company/dashboard')
 
         await waitFor(() => {
             expect(screen.getByTestId('outlet-content')).toBeInTheDocument()
