@@ -54,8 +54,8 @@ This combination gives you complete observability: frontend UI + browser runtime
 
 ### Test Users
 ```
-Worker:  e2e_worker@test.worki.com  / TestWorker123!
-Company: e2e_company@test.worki.com / TestCompany123!
+Worker:  e2e.worker.test@gmail.com  / TestWorker123!
+Company: e2e.company.test@gmail.com / TestCompany123!
 ```
 
 ### App Routes — Worker
@@ -286,19 +286,19 @@ Test interactions between worker and company:
 
 ### PHASE 6: CAPTURE EDGE FUNCTION LOGS
 
-After running all tests, capture Supabase edge function logs:
+After running all tests, capture Supabase edge function logs via CLI:
 
 ```bash
-# If local Supabase is running:
-supabase functions logs jobs-api --limit 50 2>&1
-supabase functions logs applications-api --limit 50 2>&1
-supabase functions logs profiles-api --limit 50 2>&1
-supabase functions logs delete-account --limit 50 2>&1
-supabase functions logs send-notification --limit 50 2>&1
-
-# If using remote Supabase:
-supabase functions logs jobs-api --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
+# Get logs from each edge function
+npx supabase functions logs jobs-api --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
+npx supabase functions logs applications-api --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
+npx supabase functions logs profiles-api --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
+npx supabase functions logs delete-account --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
+npx supabase functions logs send-notification --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
+npx supabase functions logs asaas-webhook --project-ref vrklakcbkcsonarmhqhp --limit 50 2>&1
 ```
+
+**If Supabase MCP is available**, use the MCP tools to query logs and database directly. The MCP provides richer access to Supabase data than the CLI.
 
 **Parse logs for errors:** Look for HTTP 4xx/5xx responses, uncaught exceptions, RLS violations, missing JWT errors.
 

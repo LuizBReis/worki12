@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const WORKER_EMAIL = 'e2e_worker@test.worki.com';
+const WORKER_EMAIL = 'e2e.worker.test@gmail.com';
 const WORKER_PASSWORD = 'TestWorker123!';
-const COMPANY_EMAIL = 'e2e_company@test.worki.com';
+const COMPANY_EMAIL = 'e2e.company.test@gmail.com';
 const COMPANY_PASSWORD = 'TestCompany123!';
 
 test.describe('Autenticacao', () => {
