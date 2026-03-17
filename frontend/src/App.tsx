@@ -16,7 +16,6 @@ const CompanyLayout = lazy(() => import('./layouts/CompanyLayout'));
 // Lazy Load Pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
 const CompanyOnboarding = lazy(() => import('./pages/company/CompanyOnboarding'));
 const WorkerOnboarding = lazy(() => import('./pages/worker/WorkerOnboarding'));
 const WorkerDashboard = lazy(() => import('./pages/worker/WorkerDashboard'));
@@ -46,6 +45,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Help = lazy(() => import('./pages/Help'));
 const Notifications = lazy(() => import('./pages/Notifications'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 // Loading Component - Skeleton placeholder
 const PageLoader = () => (
@@ -91,7 +91,7 @@ function HomeRedirect() {
 
   if (checking) return <div className="h-screen flex items-center justify-center bg-[#F4F4F0] animate-pulse"><div className="h-12 w-32 bg-gray-200 rounded-xl" /></div>;
 
-  return <Onboarding />;
+  return <LandingPage />;
 }
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
