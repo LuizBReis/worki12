@@ -1,0 +1,67 @@
+# Worki — Supabase Project Configuration
+# Ref: vrklakcbkcsonarmhqhp
+# Docs: https://supabase.com/docs/guides/cli/config
+
+[project]
+id = "vrklakcbkcsonarmhqhp"
+
+[api]
+# Port to use for the API URL
+port = 54321
+# Schemas to expose in your API
+schemas = ["public", "graphql_public"]
+# Extra schemas to add to the search_path of every request
+extra_search_path = ["public", "extensions"]
+# The maximum number of rows returns from a view, table, or stored procedure
+max_rows = 1000
+
+[db]
+# Port to use for the local database URL
+port = 54322
+# The database major version to use
+major_version = 15
+
+[studio]
+# Port to use for Supabase Studio
+port = 54323
+
+[auth]
+# The base URL of your website (used for email confirmations, etc)
+site_url = "http://localhost:5173"
+# Allow/disallow new user signups
+enable_signup = true
+# Minimum password length
+minimum_password_length = 6
+
+[auth.email]
+# Allow signing in with email
+enable_signup = true
+# Enable email confirmations
+enable_confirmations = false
+# Seconds before a signup confirmation link expires (default: 86400 = 24h)
+max_frequency = 60
+
+[auth.external.google]
+enabled = false
+
+[storage]
+# The maximum file size allowed (default: 50MB)
+file_size_limit = "50MiB"
+
+[realtime]
+# Enable Realtime
+enabled = true
+
+[edge_runtime]
+# Policy for Edge Functions (per_worker = one Deno worker per function)
+policy = "per_worker"
+
+# IMPORTANT: Secrets are NOT stored here.
+# Configure secrets in the Supabase Dashboard or via:
+#   supabase secrets set KEY=VALUE
+# Required secrets:
+#   - ASAAS_API_KEY
+#   - ADMIN_EMAILS
+#   - SUPABASE_SERVICE_ROLE_KEY (auto-configured)
+#   - SUPABASE_URL (auto-configured)
+#   - SUPABASE_ANON_KEY (auto-configured)
