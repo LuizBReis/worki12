@@ -22,6 +22,14 @@ vi.mock('../lib/logger', () => ({
     logError: vi.fn(),
 }))
 
+// Mock ToastContext
+vi.mock('../contexts/ToastContext', () => ({
+    useToast: () => ({
+        addToast: vi.fn(),
+        removeToast: vi.fn(),
+    }),
+}))
+
 import ProtectedRoute from './ProtectedRoute'
 
 function renderRoute(path = '/dashboard') {
