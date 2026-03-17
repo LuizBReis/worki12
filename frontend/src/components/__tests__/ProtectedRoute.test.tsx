@@ -53,7 +53,7 @@ describe('ProtectedRoute', () => {
     mockFrom.mockReturnValue({
       select: () => ({
         eq: () => ({
-          single: () => Promise.resolve({ data: { onboarding_completed: true }, error: null }),
+          single: () => Promise.resolve({ data: { onboarding_completed: true, accepted_tos: true }, error: null }),
         }),
       }),
     })
@@ -64,7 +64,7 @@ describe('ProtectedRoute', () => {
 
     render(<ProtectedRoute />)
 
-    const loadingContainer = document.querySelector('.animate-pulse')
+    const loadingContainer = document.querySelector('.animate-spin')
     expect(loadingContainer).toBeInTheDocument()
     expect(screen.queryByTestId('outlet')).not.toBeInTheDocument()
     expect(screen.queryByTestId('navigate')).not.toBeInTheDocument()

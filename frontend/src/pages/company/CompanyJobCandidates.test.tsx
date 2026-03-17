@@ -258,12 +258,12 @@ describe('CompanyJobCandidates — modal de avaliação (review)', () => {
       error: null,
     } as Awaited<ReturnType<typeof supabase.auth.getUser>>)
 
-    // App with in_progress status and both checkins confirmed — "Finalizar Job" button visible
+    // App with completed status — "Avaliar" button visible
     const appWithCheckins = [{
       id: 'app-3',
       job_id: 'job-123',
       worker_id: 'worker-3',
-      status: 'in_progress',
+      status: 'completed',
       cover_letter: 'Pronto para trabalhar.',
       created_at: new Date().toISOString(),
       worker: {
@@ -319,8 +319,8 @@ describe('CompanyJobCandidates — modal de avaliação (review)', () => {
       expect(screen.getByText('Pedro Santos')).toBeInTheDocument()
     })
 
-    // Click "Finalizar Job" button — opens the rating modal
-    fireEvent.click(screen.getByText('Finalizar Job'))
+    // Click "Avaliar" button — opens the rating modal
+    fireEvent.click(screen.getByText('Avaliar'))
 
     // Rating modal should be open
     await waitFor(() => {
@@ -328,7 +328,7 @@ describe('CompanyJobCandidates — modal de avaliação (review)', () => {
     })
 
     // Submit the review
-    fireEvent.click(screen.getByText('Enviar Avaliação e Finalizar'))
+    fireEvent.click(screen.getByText('Enviar Avaliação'))
 
     await waitFor(() => {
       expect(mockAddToast).toHaveBeenCalledWith(
