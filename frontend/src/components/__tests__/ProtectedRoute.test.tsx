@@ -35,6 +35,13 @@ vi.mock('../../lib/logger', () => ({
   logError: vi.fn(),
 }))
 
+vi.mock('../../contexts/ToastContext', () => ({
+  useToast: () => ({
+    addToast: vi.fn(),
+    removeToast: vi.fn(),
+  }),
+}))
+
 describe('ProtectedRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks()
