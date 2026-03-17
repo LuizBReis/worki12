@@ -125,10 +125,12 @@ function App() {
                   <Route path="/esqueci-senha" element={<ForgotPassword />} />
                   <Route path="/redefinir-senha" element={<ResetPassword />} />
                   <Route path="/ajuda" element={<Help />} />
-                  <Route path="/admin" element={<Admin />} />
 
                   {/* Protected Routes */}
                   <Route element={<ProtectedRoute />}>
+
+                    {/* Admin Route - protected, Admin.tsx checks email authorization */}
+                    <Route path="/admin" element={<Admin />} />
 
                     {/* Onboarding Routes - still protected as they need user session but not full layout yet if incomplete */}
                     <Route path="/company/onboarding" element={<CompanyOnboarding />} />
