@@ -54,17 +54,19 @@ Ideia → Spec → Sprint → Dev → Review → QA → Security → DONE
 
 ```
 .claude/
-├── agents/                     # 7 agentes autônomos
+├── agents/                     # 8 agentes autônomos
 │   ├── mvp-auditor.md          # Agent 0: Auditoria MVP (823 linhas, opus)
 │   ├── spec-agent.md           # Agent 1: Spec writer (442 linhas, sonnet)
 │   ├── sprint-planner.md       # Agent 2: Task decomposition (496 linhas, sonnet)
 │   ├── dev-agent.md            # Agent 3: Implementação (779 linhas, opus)
 │   ├── code-reviewer.md        # Agent 4: Code review (626 linhas, sonnet)
 │   ├── qa-tester.md            # Agent 5: QA testing (595 linhas, sonnet)
-│   └── security-auditor.md     # Agent 6: Security audit (611 linhas, sonnet)
+│   ├── security-auditor.md     # Agent 6: Security audit (611 linhas, sonnet)
+│   └── e2e-runner.md           # Agent 7: Real-user E2E testing (opus)
 │
 ├── commands/                   # Slash commands
 │   ├── audit.md                # /project:audit — roda MVP auditor
+│   ├── e2e.md                  # /project:e2e — roda E2E runner
 │   └── run.md                  # /project:run — roda pipeline completa
 │
 ├── pipeline-config.md          # IDs do GitHub Projects (stages, fields, options)
@@ -202,7 +204,7 @@ Seguir a seção [Pré-requisitos](#3-pré-requisitos).
 
 ---
 
-## 5. Os 7 Agentes
+## 5. Os 8 Agentes
 
 ### Agent 0: MVP Readiness Auditor
 
@@ -292,6 +294,27 @@ Faz checkout do branch do PR e valida CADA acceptance criterion com evidência `
 | **Output** | `docs/security/FEAT-NNN-TN.md` + git tag |
 
 READ-ONLY com mentalidade de atacante. OWASP Top 10, RLS, JWT, CORS, secrets, financial bypass. Cria git tag `release/FEAT-NNN-YYYYMMDD` ao aprovar.
+
+### Agent 7: E2E Runner (Real-User Testing)
+
+| | |
+|---|---|
+| **Arquivo** | `.claude/agents/e2e-runner.md` |
+| **Modelo** | **opus** |
+| **Comando** | `/project:e2e` |
+| **Quando usar** | Após pipeline completa, antes de deploy |
+| **Input** | App rodando (dev server + Supabase) |
+| **Output** | `docs/e2e/E2E-RUN-REPORT.md` + GitHub Issues para cada bug |
+
+O agente mais poderoso: abre um **browser real** via Playwright, loga como worker e company, navega CADA rota, clica CADA botão, preenche CADA form. Captura 3 camadas de diagnóstico:
+
+1. **Frontend visual** — screenshots de cada página e cada erro
+2. **Browser console** — `console.error`, `page.on('pageerror')`, network failures
+3. **Edge function logs** — `supabase functions logs` com erros do servidor
+
+Para cada falha, cria um GitHub Issue com **contexto completo**: rota, ação, esperado vs obtido, screenshot, console log, edge function log, e stack trace. Qualquer dev pode corrigir o bug em uma única passagem.
+
+**O app só está pronto quando o E2E Runner completa o fluxo inteiro de worker E company com ZERO erros.**
 
 ---
 
@@ -648,6 +671,7 @@ Use bash .claude/move-stage.sh para todas as transições.
 | 4 | code-reviewer | sonnet | review | qa/dev | code-reviewer.md (626 linhas) |
 | 5 | qa-tester | sonnet | qa | security/dev | qa-tester.md (595 linhas) |
 | 6 | security-auditor | sonnet | security | done/dev | security-auditor.md (611 linhas) |
+| 7 | e2e-runner | opus | (app rodando) | backlog (bugs) | e2e-runner.md |
 
 ### Status Option IDs (GitHub Projects)
 
@@ -689,6 +713,7 @@ type:feature, type:bugfix, type:tech-debt
 | code-reviewer | PR diff + spec | PR review comment | review → qa ou dev |
 | qa-tester | Spec + code (branch) | `docs/qa/FEAT-NNN-TN.md` | qa → security ou dev |
 | security-auditor | PR diff + code | `docs/security/FEAT-NNN-TN.md` + git tag | security → done ou dev |
+| e2e-runner | App rodando (browser) | `docs/e2e/E2E-RUN-REPORT.md` + issues | — (cria bugs no backlog) |
 
 ### Diagrama de Fluxo
 
