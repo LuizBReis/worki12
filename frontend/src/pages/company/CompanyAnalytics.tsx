@@ -2,6 +2,7 @@ import { BarChart2, Eye, Users, CheckCircle, TrendingUp, Download, Calendar } fr
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { format, subDays, eachDayOfInterval, isSameDay } from 'date-fns';
+import { logError } from '../../lib/logger'
 
 export default function CompanyAnalytics() {
     const [loading, setLoading] = useState(true);
@@ -74,7 +75,7 @@ export default function CompanyAnalytics() {
                 setChartData(chart);
             }
         } catch (error) {
-            console.error('Error fetching analytics:', error);
+            logError('Error fetching analytics:', error);
         } finally {
             setLoading(false);
         }

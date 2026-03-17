@@ -9,6 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import RateModal from '../components/RateModal';
 import JobLifecycleStepper from '../components/JobLifecycleStepper';
 import { useToast } from '../contexts/ToastContext';
+import { logError } from '../lib/logger'
 
 type Step = { label: string; status: 'complete' | 'active' | 'pending' }
 
@@ -124,7 +125,7 @@ export default function MyJobs() {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching applications:', error);
+            logError('Error fetching applications:', error);
         } else {
             const applied: JobApplication[] = [];
             const in_progress: JobApplication[] = [];
@@ -200,7 +201,7 @@ export default function MyJobs() {
 
                         isWithinWorkHours = isWithinInterval(now, { start: startBuffer, end: endBuffer });
                     } catch (e) {
-                        console.error('Error parsing work hours:', e);
+                        logError('Error parsing work hours:', e);
                     }
                 }
 
@@ -241,7 +242,7 @@ export default function MyJobs() {
             addToast('Candidatura cancelada.', 'success');
             await fetchJobs();
         } catch (err) {
-            console.error('Error cancelling application:', err);
+            logError('Error cancelling application:', err);
             addToast('Erro ao cancelar candidatura. Tente novamente.', 'error');
         } finally {
             setActionLoading(null);
@@ -262,7 +263,7 @@ export default function MyJobs() {
             if (error) throw error;
             await fetchJobs();
         } catch (err) {
-            console.error('Error checking in:', err);
+            logError('Error checking in:', err);
             addToast('Erro ao fazer check-in. Tente novamente.', 'error');
         } finally {
             setActionLoading(null);
@@ -280,7 +281,7 @@ export default function MyJobs() {
             if (error) throw error;
             await fetchJobs();
         } catch (err) {
-            console.error('Error checking out:', err);
+            logError('Error checking out:', err);
             addToast('Erro ao fazer check-out. Tente novamente.', 'error');
         } finally {
             setActionLoading(null);
@@ -312,7 +313,7 @@ export default function MyJobs() {
             setReviewedJobIds(prev => new Set(prev).add(selectedJobToRate.job_id));
             addToast('Avaliação enviada com sucesso!', 'success');
         } catch (error) {
-            console.error('Error submitting review:', error);
+            logError('Error submitting review:', error);
             addToast('Erro ao enviar avaliação.', 'error');
             throw error;
         }

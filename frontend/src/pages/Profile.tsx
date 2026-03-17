@@ -124,7 +124,7 @@ export default function Profile() {
                 .single();
 
             if (error) {
-                console.error('Error fetching profile:', error);
+                logError('Error fetching profile:', error);
             } else {
                 setProfile(data);
                 const loadedFormData: FormData = {
@@ -196,7 +196,7 @@ export default function Profile() {
             addToast(`${type === 'avatar' ? 'Foto de perfil' : 'Capa'} atualizada!`, 'success');
         } catch (error) {
             addToast('Erro ao fazer upload!', 'error');
-            console.error(error);
+            logError('Erro inesperado', error);
         } finally {
             setUploading(false);
         }
@@ -232,7 +232,7 @@ export default function Profile() {
             addToast('Perfil atualizado com sucesso!', 'success');
         } catch (error) {
             addToast('Erro ao atualizar perfil!', 'error');
-            console.error(error);
+            logError('Erro inesperado', error);
         } finally {
             setLoading(false);
         }

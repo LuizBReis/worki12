@@ -86,7 +86,7 @@ export default function CompanyProfile() {
                     initialCompanyRef.current = { ...data };
                 }
             } catch (error: unknown) {
-                console.error('Error loading profile:', error);
+                logError('Error loading profile:', error);
                 addToast('Erro ao carregar perfil.', 'error');
             } finally {
                 setLoading(false);
@@ -117,7 +117,7 @@ export default function CompanyProfile() {
             addToast('Perfil atualizado com sucesso!', 'success');
             setIsEditing(false);
         } catch (error: unknown) {
-            console.error('Error updating profile:', error);
+            logError('Error updating profile:', error);
             addToast('Erro ao atualizar perfil.', 'error');
         } finally {
             setSaving(false);
@@ -206,7 +206,7 @@ export default function CompanyProfile() {
             addToast(`${type === 'logo' ? 'Logo' : 'Capa'} atualizada com sucesso!`, 'success');
 
         } catch (error: unknown) {
-            console.error('Error uploading image:', error);
+            logError('Error uploading image:', error);
             addToast('Erro ao fazer upload da imagem.', 'error');
         } finally {
             setUploading(null);

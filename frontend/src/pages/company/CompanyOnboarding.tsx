@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { WalletService } from '../../services/walletService';
 import { validateCNPJ } from '../../lib/validation';
 import PageMeta from '../../components/PageMeta';
+import { logError } from '../../lib/logger'
 
 export default function CompanyOnboarding() {
     const navigate = useNavigate();
@@ -131,7 +132,7 @@ export default function CompanyOnboarding() {
 
             navigate('/company/dashboard');
         } catch (err: unknown) {
-            console.error('Error saving company profile:', err);
+            logError('Error saving company profile:', err);
             addToast(err instanceof Error ? err.message : 'Erro ao salvar perfil. Tente novamente.', 'error');
         } finally {
             setLoading(false);

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Star, XCircle, Loader2 } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { logError } from '../lib/logger'
 
 interface RateModalProps {
     isOpen: boolean;
@@ -36,7 +37,7 @@ export default function RateModal({ isOpen, onClose, onSubmit, targetName, targe
             setComment('');
             onClose();
         } catch (error) {
-            console.error(error);
+            logError('Erro inesperado', error);
         } finally {
             setSubmitting(false);
         }

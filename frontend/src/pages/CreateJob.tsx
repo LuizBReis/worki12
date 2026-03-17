@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, DollarSign, MapPin, Calendar, Loader2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { logError } from '../lib/logger'
 
 export default function CreateJob() {
     const navigate = useNavigate();
@@ -64,7 +65,7 @@ export default function CreateJob() {
 
             navigate('/company/dashboard');
         } catch (error) {
-            console.error('Error creating job:', error);
+            logError('Error creating job:', error);
             addToast('Erro ao criar vaga. Verifique os dados.', 'error');
         } finally {
             setLoading(false);

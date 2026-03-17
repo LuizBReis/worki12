@@ -4,6 +4,7 @@ import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
 import { supabase } from '../lib/supabase';
 import { useEffect, useState, useCallback } from 'react';
+import { logError } from '../lib/logger'
 
 export default function CompanyLayout() {
     const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function CompanyLayout() {
                 navigate('/company/onboarding');
             }
         } catch (err) {
-            console.error('Error checking company status:', err);
+            logError('Error checking company status:', err);
         } finally {
             setLoading(false);
         }

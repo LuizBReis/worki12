@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Calendar, Star, Briefcase, Award, Zap, MessageSquare
 import PageMeta from '../../components/PageMeta';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { logError } from '../../lib/logger'
 
 export default function WorkerPublicProfile() {
     const { id } = useParams();
@@ -119,7 +120,7 @@ export default function WorkerPublicProfile() {
             setHistory(historyData || []);
 
         } catch (error) {
-            console.error('Erro ao carregar perfil do worker:', error);
+            logError('Erro ao carregar perfil do worker:', error);
         } finally {
             setLoading(false);
         }

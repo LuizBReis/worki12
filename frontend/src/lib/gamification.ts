@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logError } from '../lib/logger'
 
 export const LEVELS = [
     { level: 1, minXp: 0 },
@@ -50,7 +51,7 @@ export const addXP = async (userId: string, amount: number) => {
 
         return { newXp, newLevel };
     } catch (error) {
-        console.error('Error adding XP:', error);
+        logError('Error adding XP:', error);
         return null;
     }
 };

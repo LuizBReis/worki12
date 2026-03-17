@@ -6,6 +6,7 @@ import { Loader2, ArrowRight, ArrowLeft, User, Briefcase, Star, Clock, Target } 
 import { useToast } from '../../contexts/ToastContext';
 import { WalletService } from '../../services/walletService';
 import PageMeta from '../../components/PageMeta';
+import { logError } from '../../lib/logger'
 
 export default function WorkerOnboarding() {
     const navigate = useNavigate();
@@ -154,7 +155,7 @@ export default function WorkerOnboarding() {
 
             navigate('/dashboard');
         } catch (err: unknown) {
-            console.error('Error saving worker profile:', err);
+            logError('Error saving worker profile:', err);
             addToast(err instanceof Error ? err.message : 'Erro ao salvar perfil. Tente novamente.', 'error');
         } finally {
             setLoading(false);
