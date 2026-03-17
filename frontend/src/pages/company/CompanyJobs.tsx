@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WalletService } from '../../services/walletService';
 import { useToast } from '../../contexts/ToastContext';
+import { logError } from '../../lib/logger'
 
 export default function CompanyJobs() {
     const navigate = useNavigate();
@@ -73,7 +74,7 @@ export default function CompanyJobs() {
                 setJobs(jobsWithCounts);
             }
         } catch (error) {
-            console.error(error);
+            logError('Erro ao carregar vagas', error);
         } finally {
             setLoading(false);
         }

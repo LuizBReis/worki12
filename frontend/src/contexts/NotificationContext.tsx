@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { logError } from '../lib/logger'
 
 export interface Notification {
     id: string;
@@ -120,7 +121,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             .update({ read_at: new Date().toISOString() })
             .eq('id', id);
 
-        if (error) console.error('Error marking notification as read:', error);
+        if (error) logError('Error marking notification as read:', error);
     };
 
     const markAllAsRead = async () => {
@@ -135,7 +136,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             .eq('user_id', user?.id)
             .is('read_at', null);
 
-        if (error) console.error('Error marking all as read:', error);
+        if (error) logError('Error marking all as read:', error);
     };
 
     return (

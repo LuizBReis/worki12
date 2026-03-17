@@ -1,5 +1,6 @@
 
 import { supabase } from '../lib/supabase';
+import { logError, logWarn } from '../lib/logger'
 
 export const AnalyticsService = {
     /**
@@ -16,7 +17,7 @@ export const AnalyticsService = {
             const { error: rpcError } = await supabase.rpc('increment_job_view', { job_id: jobId });
 
             if (rpcError) {
-                console.warn('Analytics: increment_job_view RPC failed (may not exist yet):', rpcError.message);
+                logWarn('Analytics: increment_job_view RPC failed (may not exist yet):', rpcError.message);
             }
 
             // 2. Log Granular Event
@@ -35,7 +36,7 @@ export const AnalyticsService = {
             }
 
         } catch (error) {
-            console.error('Analytics Error:', error);
+            logError('Analytics Error:', error);
         }
     },
 
@@ -53,7 +54,7 @@ export const AnalyticsService = {
             const { error: rpcError } = await supabase.rpc('increment_worker_view', { worker_id: workerId });
 
             if (rpcError) {
-                console.warn('Analytics: increment_worker_view RPC failed:', rpcError.message);
+                logWarn('Analytics: increment_worker_view RPC failed:', rpcError.message);
             }
 
             // 2. Log Granular Event
@@ -69,7 +70,7 @@ export const AnalyticsService = {
             if (eventError) console.debug('Analytics: Event log failed:', eventError.message);
 
         } catch (error) {
-            console.error('Analytics Error:', error);
+            logError('Analytics Error:', error);
         }
     },
 
@@ -89,7 +90,7 @@ export const AnalyticsService = {
                     metadata
                 });
         } catch (error) {
-            console.error('Analytics Error:', error);
+            logError('Analytics Error:', error);
         }
     }
 };

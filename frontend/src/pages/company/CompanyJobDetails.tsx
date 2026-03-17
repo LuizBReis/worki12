@@ -83,7 +83,7 @@ export default function CompanyJobDetails() {
 
             setJob({ ...data, candidates_count: count || 0 });
         } catch (error) {
-            console.error('Error fetching job:', error);
+            logError('Error fetching job:', error);
             navigate('/company/jobs');
         } finally {
             setLoading(false);

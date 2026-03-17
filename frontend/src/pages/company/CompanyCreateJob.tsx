@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { WalletService } from '../../services/walletService';
 import { ArrowLeft, Check, ChevronRight, Wand2, MapPin, DollarSign, Briefcase, Zap, Calendar, Clock, Globe, Wallet, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import { logError } from '../../lib/logger'
 
 export default function CompanyCreateJob() {
     const navigate = useNavigate();
@@ -67,7 +68,7 @@ export default function CompanyCreateJob() {
                 setCompanyBalance(wallet?.balance || 0);
             }
         } catch (error) {
-            console.error('Error loading balance:', error);
+            logError('Error loading balance:', error);
         } finally {
             setBalanceLoading(false);
         }
@@ -112,7 +113,7 @@ export default function CompanyCreateJob() {
                 });
             }
         } catch (error) {
-            console.error('Error fetching job:', error);
+            logError('Error fetching job:', error);
             navigate('/company/jobs');
         }
     };
@@ -203,7 +204,7 @@ export default function CompanyCreateJob() {
             addToast(isEditing ? 'Vaga atualizada com sucesso!' : 'Vaga criada com sucesso!', 'success');
             navigate('/company/dashboard');
         } catch (error: unknown) {
-            console.error('Error saving job:', error);
+            logError('Error saving job:', error);
             addToast(error instanceof Error ? error.message : 'Erro ao salvar vaga. Verifique os dados.', 'error');
         } finally {
             setLoading(false);

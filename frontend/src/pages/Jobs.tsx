@@ -6,6 +6,7 @@ import PageMeta from '../components/PageMeta';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobApplication } from '../hooks/useJobApplication';
+import { logError } from '../lib/logger'
 
 interface JobWithCompany {
     id: string;
@@ -104,7 +105,7 @@ export default function Jobs() {
                 .order('created_at', { ascending: false });
 
             const { data, error } = await query;
-            if (error) console.error('Error fetching jobs:', error);
+            if (error) logError('Error fetching jobs:', error);
             else setJobs(data || []);
 
             setLoading(false);

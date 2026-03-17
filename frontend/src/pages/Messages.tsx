@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '../contexts/ToastContext';
+import { logError } from '../lib/logger'
 
 interface ConversationItem {
     id: string;
@@ -95,7 +96,7 @@ export default function Messages() {
                 .order('createdat', { ascending: false });
 
             if (error) {
-                console.error('Error fetching conversations:', error);
+                logError('Error fetching conversations:', error);
                 setLoading(false);
                 return;
             }
@@ -187,7 +188,7 @@ export default function Messages() {
                 .order('createdat', { ascending: true });
 
             if (error) {
-                console.error('Error fetching messages:', error);
+                logError('Error fetching messages:', error);
                 return;
             }
 
@@ -271,7 +272,7 @@ export default function Messages() {
             });
 
         if (error) {
-            console.error('Error sending message:', error);
+            logError('Error sending message:', error);
             setNewMessage(messageContent); // Restore message on error
             addToast('Erro ao enviar mensagem. Tente novamente.', 'error');
         }
