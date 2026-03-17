@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/logger';
+import { useToast } from '../contexts/ToastContext';
 import { Loader2 } from 'lucide-react';
 import TosGateModal from './TosGateModal';
 
@@ -12,7 +13,9 @@ export default function ProtectedRoute() {
     const [onboardingRedirect, setOnboardingRedirect] = useState<string | null>(null);
     const [tosAccepted, setTosAccepted] = useState<boolean | null>(null);
     const [detectedRole, setDetectedRole] = useState<'worker' | 'company'>('worker');
+    const [roleRedirect, setRoleRedirect] = useState<string | null>(null);
     const location = useLocation();
+    const { addToast } = useToast();
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -133,6 +136,23 @@ export default function ProtectedRoute() {
 
     if (!user) return <Navigate to="/" replace />;
     if (onboardingRedirect) return <Navigate to={onboardingRedirect} replace />;
+
+    // Role isolation: prevent wrong role from accessing wrong routes
+    if (user && !roleRedirect) {
+        const userType = user.user_metadata?.user_type;
+        const pathname = location.pathname;
+        const workerOnlyPaths = ['/dashboard', '/jobs', '/my-jobs', '/wallet', '/messages', '/profile', '/notifications'];
+
+        if (userType === 'work' && pathname.startsWith('/company/')) {
+            addToast('Você não tem permissão para acessar esta página.', 'error');
+            setRoleRedirect('/dashboard');
+        } else if (userType === 'hire' && workerOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+            addToast('Você não tem permissão para acessar esta página.', 'error');
+            setRoleRedirect('/company/dashboard');
+        }
+    }
+
+    if (roleRedirect) return <Navigate to={roleRedirect} replace />;
 
     if (tosAccepted === false) return (
         <>
