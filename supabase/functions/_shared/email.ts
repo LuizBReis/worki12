@@ -3,6 +3,7 @@
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const FROM_EMAIL = 'Worki <noreply@worki.com.br>';
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://worki.com.br';
 
 interface EmailPayload {
     to: string;
@@ -69,7 +70,7 @@ export function hiredEmail(workerName: string, jobTitle: string, companyName: st
                 <h1 style="color:#00A651">Parabens, ${w}!</h1>
                 <p>Voce foi contratado para a vaga <strong>${j}</strong> pela empresa <strong>${c}</strong>.</p>
                 <p>Acesse a plataforma para ver os detalhes e iniciar o check-in no dia do trabalho.</p>
-                <a href="https://worki.com.br/my-jobs" style="display:inline-block;background:#00A651;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Meus Jobs</a>
+                <a href="${APP_URL}/my-jobs" style="display:inline-block;background:#00A651;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Meus Jobs</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
             </div>
         `,
@@ -88,7 +89,7 @@ export function paymentReceivedEmail(workerName: string, amount: string, jobTitl
                 <h1 style="color:#00A651">Pagamento Recebido!</h1>
                 <p>Ola ${w}, voce recebeu <strong>R$ ${a}</strong> pelo trabalho <strong>${j}</strong>.</p>
                 <p>O valor ja esta disponivel na sua carteira. Voce pode sacar via PIX a qualquer momento.</p>
-                <a href="https://worki.com.br/wallet" style="display:inline-block;background:#00A651;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Carteira</a>
+                <a href="${APP_URL}/wallet" style="display:inline-block;background:#00A651;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Carteira</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
             </div>
         `,
@@ -105,7 +106,7 @@ export function depositConfirmedEmail(companyName: string, amount: string): Emai
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
                 <h1 style="color:#2563EB">Deposito Confirmado!</h1>
                 <p>Ola ${c}, seu deposito de <strong>R$ ${a}</strong> foi confirmado e ja esta disponivel na sua carteira.</p>
-                <a href="https://worki.com.br/company/wallet" style="display:inline-block;background:#2563EB;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Carteira</a>
+                <a href="${APP_URL}/company/wallet" style="display:inline-block;background:#2563EB;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Carteira</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
             </div>
         `,
@@ -124,7 +125,7 @@ export function newApplicationEmail(companyName: string, workerName: string, job
                 <h1 style="color:#2563EB">Nova Candidatura!</h1>
                 <p>Ola ${c}, <strong>${w}</strong> se candidatou para a vaga <strong>${j}</strong>.</p>
                 <p>Acesse a plataforma para ver o perfil do candidato.</p>
-                <a href="https://worki.com.br/company/jobs" style="display:inline-block;background:#2563EB;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Candidaturas</a>
+                <a href="${APP_URL}/company/jobs" style="display:inline-block;background:#2563EB;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px">Ver Candidaturas</a>
                 <p style="color:#999;margin-top:24px;font-size:12px">Worki - Marketplace de Freelancers</p>
             </div>
         `,
