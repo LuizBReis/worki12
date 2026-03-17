@@ -16,7 +16,6 @@ const CompanyLayout = lazy(() => import('./layouts/CompanyLayout'));
 // Lazy Load Pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
 const CompanyOnboarding = lazy(() => import('./pages/company/CompanyOnboarding'));
 const WorkerOnboarding = lazy(() => import('./pages/worker/WorkerOnboarding'));
 const WorkerDashboard = lazy(() => import('./pages/worker/WorkerDashboard'));
