@@ -170,6 +170,19 @@ export default function WorkerOnboarding() {
             <PageMeta title="Criar Conta" />
 
             <div className="w-full max-w-2xl">
+                {/* Exit button */}
+                <div className="flex justify-end mb-4">
+                    <button
+                        onClick={async () => {
+                            await supabase.auth.signOut();
+                            window.location.href = '/';
+                        }}
+                        className="text-sm font-bold text-gray-400 hover:text-black transition-colors flex items-center gap-1"
+                    >
+                        <ArrowLeft size={14} /> Sair e voltar
+                    </button>
+                </div>
+
                 {/* Header */}
                 <div className="text-center mb-10">
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-2">Bem-vindo ao Worki</h1>
