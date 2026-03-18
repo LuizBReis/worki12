@@ -91,7 +91,7 @@ function HomeRedirect() {
 
   if (checking) return <div className="h-screen flex items-center justify-center bg-[#F4F4F0] animate-pulse"><div className="h-12 w-32 bg-gray-200 rounded-xl" /></div>;
 
-  return <Login />;
+  return <LandingPage />;
 }
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
