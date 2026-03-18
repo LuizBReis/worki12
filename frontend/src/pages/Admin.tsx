@@ -373,6 +373,7 @@ const TYPE_LABELS: Record<string, string> = {
     escrow_reserve: 'Reserva Escrow',
     escrow_release: 'Liberacao Escrow',
     initial_balance: 'Saldo Inicial',
+    platform_fee: 'Taxa Plataforma',
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -381,6 +382,7 @@ const TYPE_COLORS: Record<string, string> = {
     escrow_reserve: 'bg-orange-100 text-orange-800',
     escrow_release: 'bg-blue-100 text-blue-800',
     initial_balance: 'bg-gray-100 text-gray-800',
+    platform_fee: 'bg-purple-100 text-purple-800',
 };
 
 function UserBadge({ info }: { info: UserInfo | null }) {
@@ -398,8 +400,36 @@ function UserBadge({ info }: { info: UserInfo | null }) {
     );
 }
 
+interface FinancialSummary {
+    asaas: { currentBalance: number; pendingBalance: number } | null;
+    totalWalletBalances: number;
+    totalEscrowReserved: number;
+    totalPlatformFees: number;
+    depositCount: number;
+    withdrawalCount: number;
+    estimatedAsaasCost: number;
+    netProfit: number;
+}
+
 function DashboardTab({ stats, transactions }: { stats: Stats | null; transactions: RichTransaction[] }) {
     const [filterType, setFilterType] = useState<string>('all');
+    const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null);
+    const [loadingFinancial, setLoadingFinancial] = useState(false);
+
+    const loadFinancialSummary = useCallback(async () => {
+        setLoadingFinancial(true);
+        try {
+            const data = await invokeFunction<FinancialSummary>('admin-data', { action: 'financial_summary' });
+            setFinancialSummary(data);
+        } catch (err) {
+            logError('Failed to load financial summary', err);
+        }
+        setLoadingFinancial(false);
+    }, []);
+
+    useEffect(() => {
+        loadFinancialSummary();
+    }, [loadFinancialSummary]);
 
     const filtered = filterType === 'all'
         ? transactions
@@ -407,6 +437,33 @@ function DashboardTab({ stats, transactions }: { stats: Stats | null; transactio
 
     return (
         <>
+            {/* Financial Summary - Receita Worki */}
+            <div className="bg-white border-2 border-purple-300 rounded-2xl p-6 mb-6">
+                <h2 className="text-lg font-black uppercase mb-4 text-purple-800">Receita Worki (Taxas de Servico)</h2>
+                {loadingFinancial ? (
+                    <div className="flex justify-center py-4"><Loader2 className="animate-spin" size={24} /></div>
+                ) : financialSummary ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-xl border-2 bg-purple-50 border-purple-200">
+                            <p className="text-[10px] font-bold uppercase text-purple-600 mb-1">Receita Total (taxas)</p>
+                            <p className="text-2xl font-black text-purple-800">{formatMoney(financialSummary.totalPlatformFees)}</p>
+                        </div>
+                        <div className="p-4 rounded-xl border-2 bg-red-50 border-red-200">
+                            <p className="text-[10px] font-bold uppercase text-red-600 mb-1">Custo Asaas estimado</p>
+                            <p className="text-2xl font-black text-red-800">{formatMoney(financialSummary.estimatedAsaasCost)}</p>
+                            <p className="text-[10px] text-red-600 mt-1">{financialSummary.depositCount} depositos + {financialSummary.withdrawalCount} saques x R$ 1,99</p>
+                        </div>
+                        <div className={`p-4 rounded-xl border-2 ${financialSummary.netProfit >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                            <p className="text-[10px] font-bold uppercase text-gray-600 mb-1">Lucro Liquido Worki</p>
+                            <p className={`text-2xl font-black ${financialSummary.netProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>{formatMoney(financialSummary.netProfit)}</p>
+                            <p className="text-[10px] text-gray-500 mt-1">Receita taxas - Custo Asaas</p>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-xs text-gray-400">Nao foi possivel carregar resumo financeiro.</p>
+                )}
+            </div>
+
             {/* Wallet Central Asaas - Fluxo de Caixa Real */}
             <div className="bg-white border-2 border-black rounded-2xl p-6 mb-6">
                 <h2 className="text-lg font-black uppercase mb-4">Wallet Central Asaas (Dinheiro Real)</h2>
@@ -466,6 +523,7 @@ function DashboardTab({ stats, transactions }: { stats: Stats | null; transactio
                         <option value="escrow_reserve">Reserva Escrow</option>
                         <option value="escrow_release">Liberacao Escrow</option>
                         <option value="initial_balance">Saldo Inicial</option>
+                        <option value="platform_fee">Taxa Plataforma</option>
                     </select>
                 </div>
                 <div className="overflow-x-auto">
@@ -498,9 +556,9 @@ function DashboardTab({ stats, transactions }: { stats: Stats | null; transactio
                                         <UserBadge info={tx.user_info} />
                                     </td>
                                     <td className={`py-2 text-right font-bold whitespace-nowrap ${
-                                        tx.type === 'credit' || tx.type === 'escrow_release' || tx.type === 'initial_balance' ? 'text-green-600' : 'text-red-600'
+                                        tx.type === 'credit' || tx.type === 'escrow_release' || tx.type === 'initial_balance' ? 'text-green-600' : tx.type === 'platform_fee' ? 'text-purple-600' : 'text-red-600'
                                     }`}>
-                                        {tx.type === 'debit' || tx.type === 'escrow_reserve' ? '- ' : '+ '}
+                                        {tx.type === 'debit' || tx.type === 'escrow_reserve' || tx.type === 'platform_fee' ? '- ' : '+ '}
                                         {formatMoney(tx.amount)}
                                     </td>
                                     <td className="py-2 text-xs text-gray-600 max-w-[200px] truncate">

@@ -87,8 +87,8 @@ export default function LandingPage() {
               },
               {
                 icon: <CreditCard className="w-10 h-10 text-primary" />,
-                title: 'Taxa Justa',
-                description: 'Apenas 5% de taxa sobre saques. Sem mensalidades, sem taxas escondidas, sem cobrança para se cadastrar. Você só paga quando recebe.'
+                title: 'Taxa Justa e Transparente',
+                description: 'Taxa de servico competitiva e transparente. Sem mensalidades, sem cobranças escondidas. Depositos gratis, voce so paga quando contrata ou saca.'
               },
               {
                 icon: <Clock className="w-10 h-10 text-blue-600" />,

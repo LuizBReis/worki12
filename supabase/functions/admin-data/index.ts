@@ -281,6 +281,54 @@ serve(async (req) => {
             }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
+        if (action === 'financial_summary') {
+            // Fetch Asaas real balance
+            let asaasBalance = null;
+            try {
+                const asaasRes = await fetch(`${ASAAS_API_URL}/finance/balance`, {
+                    headers: getAsaasHeaders(),
+                });
+                if (asaasRes.ok) {
+                    const asaasData = await asaasRes.json();
+                    asaasBalance = {
+                        currentBalance: asaasData.balance ?? 0,
+                        pendingBalance: asaasData.statistics?.pending ?? 0,
+                    };
+                }
+            } catch (e) {
+                console.error('Failed to fetch Asaas balance:', e);
+            }
+
+            const [walletsRes, escrowReservedRes, platformFeeRes, depositsRes, withdrawalsRes] = await Promise.all([
+                supabaseAdmin.from('wallets').select('balance'),
+                supabaseAdmin.from('escrow_transactions').select('amount').eq('status', 'reserved'),
+                supabaseAdmin.from('wallet_transactions').select('amount').eq('type', 'platform_fee'),
+                supabaseAdmin.from('wallet_transactions').select('id').eq('type', 'credit'),
+                supabaseAdmin.from('wallet_transactions').select('id').eq('type', 'debit'),
+            ]);
+
+            const totalWalletBalances = (walletsRes.data || []).reduce((s: number, w: { balance: number }) => s + Number(w.balance), 0);
+            const totalEscrowReserved = (escrowReservedRes.data || []).reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
+            const totalPlatformFees = (platformFeeRes.data || []).reduce((s: number, t: { amount: number }) => s + Math.abs(Number(t.amount)), 0);
+            const depositCount = (depositsRes.data || []).length;
+            const withdrawalCount = (withdrawalsRes.data || []).length;
+            const estimatedAsaasCost = (depositCount + withdrawalCount) * 1.99;
+            const netProfit = totalPlatformFees - estimatedAsaasCost;
+
+            return new Response(JSON.stringify({
+                asaas: asaasBalance,
+                totalWalletBalances,
+                totalEscrowReserved,
+                totalPlatformFees,
+                depositCount,
+                withdrawalCount,
+                estimatedAsaasCost: parseFloat(estimatedAsaasCost.toFixed(2)),
+                netProfit: parseFloat(netProfit.toFixed(2)),
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
         });

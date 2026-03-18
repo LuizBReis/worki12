@@ -108,7 +108,11 @@ serve(async (req) => {
 
             const userId = payment.externalReference;
             const paymentId = payment.id;
-            const amount = payment.value;
+            // Use netValue (what Asaas actually credited after gateway fees) if available, fallback to value
+            const amount = (typeof payment.netValue === 'number' && payment.netValue > 0) ? payment.netValue : payment.value;
+            if (payment.netValue !== undefined && payment.netValue !== payment.value) {
+                console.log(`Deposit: gross=${payment.value}, net=${payment.netValue}, gateway_fee=${(payment.value - payment.netValue).toFixed(2)}`);
+            }
 
             // Use atomic RPC - handles dedup via unique constraint
             const { data: credited, error: rpcError } = await supabaseAdmin.rpc('credit_deposit', {

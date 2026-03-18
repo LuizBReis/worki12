@@ -16,7 +16,7 @@ export interface WalletTransaction {
     id: string;
     wallet_id: string;
     amount: number;
-    type: 'credit' | 'debit' | 'escrow_reserve' | 'escrow_release' | 'initial_balance';
+    type: 'credit' | 'debit' | 'escrow_reserve' | 'escrow_release' | 'initial_balance' | 'platform_fee';
     description: string | null;
     reference_id: string | null;
     created_at: string;

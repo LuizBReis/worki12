@@ -33,7 +33,13 @@ export default function Terms() {
           </ul>
 
           <h2 className="text-xl font-bold mt-6">5. Taxas</h2>
-          <p>A Worki cobra uma taxa de <strong>5% (cinco por cento)</strong> sobre o valor de cada saque realizado pelo Worker via PIX. Nao ha taxa para depositos realizados pelas Contratantes. A Worki reserva-se o direito de alterar as taxas, notificando os usuarios com antecedencia minima de 30 dias.</p>
+          <p>A Worki cobra as seguintes taxas para manter a plataforma segura e funcional:</p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>Para Empresas (ao contratar):</strong> Taxa de servico de <strong>8% (oito por cento)</strong> sobre o valor do servico, mais uma taxa fixa de processamento de <strong>R$ 4,00</strong>. As taxas sao cobradas no momento da reserva do escrow.</li>
+            <li><strong>Para Workers (ao sacar):</strong> Taxa de servico de <strong>5% (cinco por cento)</strong> sobre o valor do saque, mais uma taxa fixa de processamento PIX de <strong>R$ 3,00</strong>.</li>
+            <li><strong>Depositos:</strong> Nao ha taxa para depositos realizados pelas Contratantes.</li>
+          </ul>
+          <p className="mt-2">A Worki reserva-se o direito de alterar as taxas, notificando os usuarios com antecedencia minima de 30 dias.</p>
 
           <h2 className="text-xl font-bold mt-6">6. Cancelamentos e Reembolsos</h2>
           <ul className="list-disc pl-6 space-y-2">

@@ -156,8 +156,9 @@ export default function CompanyCreateJob() {
                     return;
                 }
 
-                if (companyBalance < budgetAmount) {
-                    addToast(`Saldo insuficiente. Você tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${budgetAmount.toFixed(2)}.`, 'error');
+                const totalWithFees = parseFloat((budgetAmount + budgetAmount * 0.08 + 4.00).toFixed(2));
+                if (companyBalance < totalWithFees) {
+                    addToast(`Saldo insuficiente. Voce tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${totalWithFees.toFixed(2)} (servico + taxas).`, 'error');
                     setLoading(false);
                     return;
                 }
@@ -197,8 +198,9 @@ export default function CompanyCreateJob() {
                     throw new Error(escrowResult.error || 'Erro ao reservar pagamento');
                 }
 
-                // Update local balance
-                setCompanyBalance(prev => prev - budgetAmount);
+                // Update local balance (amount + 8% service fee + R$4 processing)
+                const deductedTotal = parseFloat((budgetAmount + budgetAmount * 0.08 + 4.00).toFixed(2));
+                setCompanyBalance(prev => prev - deductedTotal);
             }
 
             addToast(isEditing ? 'Vaga atualizada com sucesso!' : 'Vaga criada com sucesso!', 'success');
@@ -350,28 +352,61 @@ export default function CompanyCreateJob() {
                             </h2>
 
                             {/* Balance Card */}
-                            {!isEditing && (
-                                <div className={`p-4 rounded-xl border-2 flex items-center justify-between ${parseFloat(formData.budget || '0') > companyBalance
-                                    ? 'bg-red-50 border-red-300'
-                                    : 'bg-green-50 border-green-300'
-                                    }`}>
-                                    <div className="flex items-center gap-3">
-                                        <Wallet size={24} className={parseFloat(formData.budget || '0') > companyBalance ? 'text-red-500' : 'text-green-600'} />
-                                        <div>
-                                            <span className="text-xs font-bold uppercase text-gray-500 block">Seu Saldo Disponível</span>
-                                            <span className={`text-2xl font-black ${parseFloat(formData.budget || '0') > companyBalance ? 'text-red-600' : 'text-green-700'}`}>
-                                                {balanceLoading ? '...' : `R$ ${companyBalance.toFixed(2).replace('.', ',')}`}
-                                            </span>
+                            {!isEditing && (() => {
+                                const budgetVal = parseFloat(formData.budget || '0');
+                                const serviceFee = parseFloat((budgetVal * 0.08).toFixed(2));
+                                const processingFee = 4.00;
+                                const totalCost = budgetVal > 0 ? parseFloat((budgetVal + serviceFee + processingFee).toFixed(2)) : 0;
+                                const insufficientBalance = totalCost > companyBalance;
+
+                                return (
+                                    <>
+                                        <div className={`p-4 rounded-xl border-2 flex items-center justify-between ${insufficientBalance
+                                            ? 'bg-red-50 border-red-300'
+                                            : 'bg-green-50 border-green-300'
+                                            }`}>
+                                            <div className="flex items-center gap-3">
+                                                <Wallet size={24} className={insufficientBalance ? 'text-red-500' : 'text-green-600'} />
+                                                <div>
+                                                    <span className="text-xs font-bold uppercase text-gray-500 block">Seu Saldo Disponivel</span>
+                                                    <span className={`text-2xl font-black ${insufficientBalance ? 'text-red-600' : 'text-green-700'}`}>
+                                                        {balanceLoading ? '...' : `R$ ${companyBalance.toFixed(2).replace('.', ',')}`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {insufficientBalance && (
+                                                <div className="flex items-center gap-2 text-red-600 text-xs font-bold">
+                                                    <AlertTriangle size={16} />
+                                                    <span>Saldo insuficiente</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                    {parseFloat(formData.budget || '0') > companyBalance && (
-                                        <div className="flex items-center gap-2 text-red-600 text-xs font-bold">
-                                            <AlertTriangle size={16} />
-                                            <span>Saldo insuficiente</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+
+                                        {/* Fee Breakdown */}
+                                        {budgetVal > 0 && (
+                                            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Valor do servico</span>
+                                                    <span className="font-bold">R$ {budgetVal.toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Taxa de servico (8%)</span>
+                                                    <span className="font-bold text-orange-600">R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Taxa de processamento</span>
+                                                    <span className="font-bold text-orange-600">R$ {processingFee.toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                                <div className="flex justify-between border-t-2 border-black pt-2">
+                                                    <span className="font-black uppercase">Total a debitar</span>
+                                                    <span className="font-black text-lg">R$ {totalCost.toFixed(2).replace('.', ',')}</span>
+                                                </div>
+                                                <p className="text-xs text-gray-400 mt-1">A taxa garante pagamento seguro via escrow, verificacao de profissionais e suporte.</p>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">

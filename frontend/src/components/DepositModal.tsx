@@ -134,7 +134,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                             </div>
                             <p className="text-xs font-semibold text-gray-500 mt-3 flex items-start gap-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
                                 <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0" aria-hidden="true"></span>
-                                <span>O valor total depositado sera adicionado ao seu saldo. A taxa da plataforma e cobrada apenas no momento do saque.</span>
+                                <span>Deposito gratis! O valor e adicionado ao seu saldo sem cobranca adicional. Taxas sao aplicadas apenas na contratacao (8% + R$ 4,00) e no saque (5% + R$ 3,00).</span>
                             </p>
                         </div>
                         <button

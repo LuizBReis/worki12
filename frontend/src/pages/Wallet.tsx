@@ -125,9 +125,11 @@ export default function Wallet() {
             return;
         }
 
-        const fee = (amount * 0.05).toFixed(2);
-        const net = (amount * 0.95).toFixed(2);
-        if (!window.confirm(`Confirmar saque de R$ ${amount.toFixed(2)}?\n\nTaxa: R$ ${fee}\nVoce recebera: R$ ${net}\n\nEsta acao nao pode ser desfeita.`)) {
+        const percentFee = parseFloat((amount * 0.05).toFixed(2));
+        const fixedFee = 3.00;
+        const totalFee = parseFloat((fixedFee + percentFee).toFixed(2));
+        const net = parseFloat((amount - totalFee).toFixed(2));
+        if (!window.confirm(`Confirmar saque de R$ ${amount.toFixed(2)}?\n\nTaxa de servico (5%): R$ ${percentFee.toFixed(2)}\nTaxa de processamento PIX: R$ ${fixedFee.toFixed(2)}\nTotal de taxas: R$ ${totalFee.toFixed(2)}\nVoce recebera: R$ ${net.toFixed(2)}\n\nEsta acao nao pode ser desfeita.`)) {
             return;
         }
 
@@ -268,22 +270,35 @@ export default function Wallet() {
                                 />
                             </div>
 
-                            {parseFloat(withdrawAmount) > 0 && (
-                                <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-500">Valor solicitado</span>
-                                        <span className="font-bold">R$ {parseFloat(withdrawAmount).toFixed(2)}</span>
+                            {parseFloat(withdrawAmount) > 0 && (() => {
+                                const wAmt = parseFloat(withdrawAmount);
+                                const wPercentFee = parseFloat((wAmt * 0.05).toFixed(2));
+                                const wFixedFee = 3.00;
+                                const wTotalFee = parseFloat((wFixedFee + wPercentFee).toFixed(2));
+                                const wNet = parseFloat((wAmt - wTotalFee).toFixed(2));
+
+                                return (
+                                    <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Valor do saque</span>
+                                            <span className="font-bold">R$ {wAmt.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Taxa de servico (5%)</span>
+                                            <span className="font-bold text-red-500">- R$ {wPercentFee.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Taxa de processamento PIX</span>
+                                            <span className="font-bold text-red-500">- R$ {wFixedFee.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between border-t pt-1">
+                                            <span className="font-bold">Voce recebe via PIX</span>
+                                            <span className="font-black text-green-600">R$ {wNet.toFixed(2)}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">Taxa fixa de processamento + 5% de servico. Sem surpresas.</p>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-500">Taxa da plataforma (5%)</span>
-                                        <span className="font-bold text-red-500">- R$ {(parseFloat(withdrawAmount) * 0.05).toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between border-t pt-1">
-                                        <span className="font-bold">Voce recebe</span>
-                                        <span className="font-black text-green-600">R$ {(parseFloat(withdrawAmount) * 0.95).toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             <button
                                 onClick={handleWithdraw}

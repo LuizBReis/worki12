@@ -42,9 +42,11 @@ serve(async (req) => {
         if (!userWallet) throw new Error('Wallet not found');
         if (userWallet.balance < amount) throw new Error('Insufficient balance');
 
-        // Calculate Platform Fee
+        // Calculate Platform Fee (R$3 fixed + 5% service fee)
+        const WITHDRAW_FEE_FIXED = 3.00;
         const WITHDRAW_FEE_PERCENTAGE = 5;
-        const feeAmount = parseFloat(((amount * WITHDRAW_FEE_PERCENTAGE) / 100).toFixed(2));
+        const percentageFee = parseFloat(((amount * WITHDRAW_FEE_PERCENTAGE) / 100).toFixed(2));
+        const feeAmount = parseFloat((WITHDRAW_FEE_FIXED + percentageFee).toFixed(2));
         const netAmount = parseFloat((amount - feeAmount).toFixed(2));
 
         // 2. Atomically deduct balance FIRST (will fail if insufficient due to CHECK constraint)
@@ -68,7 +70,7 @@ serve(async (req) => {
                 wallet_id: userWallet.id,
                 amount: -amount,
                 type: 'debit',
-                description: `Saque via Pix (R$ ${feeAmount.toFixed(2)} de taxa, R$ ${netAmount.toFixed(2)} enviado)`,
+                description: `Saque via PIX (taxa R$3,00 + 5% = R$ ${feeAmount.toFixed(2)} total, R$ ${netAmount.toFixed(2)} enviado)`,
                 status: 'pending_transfer'
             })
             .select('id')
