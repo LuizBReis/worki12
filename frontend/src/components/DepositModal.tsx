@@ -48,8 +48,8 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
     const handleInitiate = async () => {
         const value = parseFloat(amount.replace(',', '.'));
-        if (!value || value < 5) {
-            addToast('O valor mínimo para depósito é R$ 5,00', 'error');
+        if (!value || value < 50) {
+            addToast('O valor mínimo para depósito é R$ 50,00', 'error');
             return;
         }
         if (value > 50000) {

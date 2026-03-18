@@ -75,8 +75,8 @@ serve(async (req) => {
 
         const { amount, name, cpfCnpj } = await req.json();
 
-        if (!amount || typeof amount !== 'number' || amount < 5) {
-            throw new Error('Minimum deposit amount is R$ 5.00');
+        if (!amount || typeof amount !== 'number' || amount < 50) {
+            throw new Error('Valor mínimo para depósito é R$ 50,00');
         }
         if (amount > 50000) {
             throw new Error('Maximum deposit amount is R$ 50,000.00');
