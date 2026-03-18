@@ -71,7 +71,7 @@ serve(async (req) => {
 
                 for (const payment of payments) {
                     const paymentId = payment.id;
-                    const amount = payment.value;
+                    const amount = payment.netValue ?? payment.value; // Use netValue (after Asaas fees)
 
                     // Use atomic RPC - handles dedup via unique constraint
                     const { data: credited, error: rpcError } = await supabaseAdmin.rpc('credit_deposit', {
