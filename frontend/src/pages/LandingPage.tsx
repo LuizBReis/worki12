@@ -8,9 +8,26 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F4F4F0]">
       <PageMeta
-        title="Worki - Marketplace de Freelancers"
+        title="Sobre a Worki - Marketplace de Freelancers"
         description="Worki conecta empresas a trabalhadores freelancers. Encontre talentos ou oportunidades de trabalho na sua região. Pagamento seguro via PIX."
       />
+
+      {/* Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-[#F4F4F0]/95 backdrop-blur-sm border-b-2 border-black/10 px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <button onClick={() => navigate('/')} className="text-2xl font-black uppercase tracking-tighter hover:text-primary transition-colors">
+            Worki
+          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/login?type=work')} className="px-4 py-2 font-bold text-sm uppercase hover:text-primary transition-colors">
+              Quero Trabalhar
+            </button>
+            <button onClick={() => navigate('/login?type=hire')} className="px-4 py-2 bg-blue-600 text-white font-bold text-sm uppercase rounded-lg border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all">
+              Quero Contratar
+            </button>
+          </div>
+        </div>
+      </nav>
 
       {/* Hero Section */}
       <section className="relative overflow-hidden px-4 py-20 md:py-32">

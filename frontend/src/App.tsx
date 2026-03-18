@@ -91,7 +91,7 @@ function HomeRedirect() {
 
   if (checking) return <div className="h-screen flex items-center justify-center bg-[#F4F4F0] animate-pulse"><div className="h-12 w-32 bg-gray-200 rounded-xl" /></div>;
 
-  return <LandingPage />;
+  return <Login />;
 }
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -125,6 +125,7 @@ function App() {
                   <Route path="/esqueci-senha" element={<ForgotPassword />} />
                   <Route path="/redefinir-senha" element={<ResetPassword />} />
                   <Route path="/ajuda" element={<Help />} />
+                  <Route path="/sobre" element={<LandingPage />} />
 
                   {/* Protected Routes */}
                   <Route element={<ProtectedRoute />}>

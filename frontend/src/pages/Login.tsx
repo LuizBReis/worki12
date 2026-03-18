@@ -221,6 +221,16 @@ export default function Login() {
                         </button>
                     </div>
 
+                    <div className="mt-6 flex justify-center gap-4 text-xs font-bold text-gray-400">
+                        <a href="/sobre" className="hover:text-black transition-colors">Sobre a Worki</a>
+                        <span>•</span>
+                        <a href="/termos" className="hover:text-black transition-colors">Termos</a>
+                        <span>•</span>
+                        <a href="/privacidade" className="hover:text-black transition-colors">Privacidade</a>
+                        <span>•</span>
+                        <a href="/ajuda" className="hover:text-black transition-colors">Ajuda</a>
+                    </div>
+
                 </div>
             </div>
 
