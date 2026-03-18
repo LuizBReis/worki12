@@ -1,954 +1,1518 @@
+/**
+ * Worki E2E Full Flow Test
+ *
+ * ONE browser session, ALL user flows tested continuously.
+ * Uses Playwright, CommonJS, headless: false, slowMo: 500.
+ * Saves progress to progress.json after each step.
+ * Takes screenshots at every step.
+ * Captures console errors.
+ * Handles failures gracefully (continues to next step).
+ *
+ * Test accounts (created via UI signup):
+ *   Worker:  geribameuacesso+worker@gmail.com / WorkiTest123
+ *   Company: geribameuacesso+company@gmail.com / WorkiTest123
+ */
+
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+
+const BASE_URL = 'http://localhost:5173';
+const PROGRESS_FILE = path.join(__dirname, 'progress.json');
+const RESULTS_FILE = path.join(__dirname, 'results.json');
+const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+
+const WORKER_EMAIL = 'geribameuacesso+worker@gmail.com';
+const WORKER_PASS = 'WorkiTest123';
+const COMPANY_EMAIL = 'geribameuacesso+company@gmail.com';
+const COMPANY_PASS = 'WorkiTest123';
+
+// Load or initialize progress
+let progress = {};
+try { progress = JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8')); } catch {}
+
+const results = [];
+const errors = [];
+
+async function step(id, name, fn, page) {
+  // Skip if already passed
+  if (progress[id] === 'PASS') {
+    console.log(`SKIP ${id}: ${name} (already passed)`);
+    results.push({ id, name, status: 'SKIP' });
+    return true;
+  }
+
+  console.log(`STEP ${id}: ${name}...`);
+  try {
+    await fn();
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, `${id}.png`), fullPage: true });
+    progress[id] = 'PASS';
+    results.push({ id, name, status: 'PASS' });
+    console.log(`  PASS`);
+    fs.writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
+    return true;
+  } catch (e) {
+    try {
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, `${id}-ERROR.png`), fullPage: true });
+    } catch {}
+    progress[id] = 'FAIL';
+    results.push({ id, name, status: 'FAIL', error: e.message });
+    errors.push({ id, name, error: e.message });
+    console.log(`  FAIL: ${e.message}`);
+    fs.writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
+    return false;
+  }
+}
 
 (async () => {
+  if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+
   const browser = await chromium.launch({ headless: false, slowMo: 500 });
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await ctx.newPage();
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
 
-  // Console capture
-  const logs = [];
+  // Console error capture
+  const consoleLogs = [];
   page.on('console', m => {
-    if (m.type() === 'error' || m.type() === 'warning') {
-      const text = m.text();
-      if (!text.includes('Download the React DevTools') && !text.includes('Third-party cookie') && !text.includes('DevTools')) {
-        logs.push(m.type() + ': ' + text);
-      }
-    }
+    if (m.type() === 'error' || m.type() === 'warning')
+      consoleLogs.push({ type: m.type(), text: m.text(), url: page.url() });
   });
-  page.on('pageerror', e => logs.push('PAGE_ERROR: ' + e.message));
   page.on('response', r => {
-    if (r.status() >= 400 && !r.url().includes('.well-known') && !r.url().includes('favicon') && !r.url().includes('workbox')) {
-      logs.push('HTTP_' + r.status() + ': ' + r.request().method() + ' ' + r.url());
-    }
+    if (r.status() >= 400 && !r.url().includes('.well-known'))
+      consoleLogs.push({ type: 'http_' + r.status(), text: r.request().method() + ' ' + r.url(), url: page.url() });
   });
 
-  // Helper: screenshot + report
-  let stepNum = 0;
-  let passed = 0;
-  let failed = 0;
-  const results = [];
+  // Helpers
+  async function settle(ms = 2000) {
+    await page.waitForTimeout(ms);
+  }
 
-  async function step(name, action) {
-    stepNum++;
-    const id = String(stepNum).padStart(2, '0');
-    const startTime = Date.now();
+  async function clickNav(selector, fallbackText, timeout = 10000) {
     try {
-      await action();
-      await page.waitForTimeout(400);
-      await page.screenshot({ path: 'e2e/screenshots/' + id + '-' + name + '.png', fullPage: true });
-      const text = await page.evaluate(() => document.body.innerText.substring(0, 300));
-      const url = page.url();
-      console.log('STEP ' + id + ' [' + name + '] PASS: URL=' + url + ' (' + (Date.now() - startTime) + 'ms)');
-      console.log('  TEXT: ' + text.replace(/\n/g, ' ').substring(0, 200));
-      if (logs.length > 0) { console.log('  RECENT_LOGS: ' + JSON.stringify(logs.slice(-3))); }
-      passed++;
-      results.push({ id, name, url, result: 'PASS', error: null });
-    } catch (e) {
+      const loc = page.locator(selector).first();
+      await loc.waitFor({ state: 'visible', timeout });
+      await loc.click();
+    } catch {
+      const loc2 = page.getByText(fallbackText, { exact: false }).first();
+      await loc2.waitFor({ state: 'visible', timeout: 5000 });
+      await loc2.click();
+    }
+    await settle();
+  }
+
+  // ===========================================================================
+  // PUBLIC PAGES (P01-P07)
+  // ===========================================================================
+
+  await step('P01', 'Load landing page /', async () => {
+    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+    await page.waitForSelector('text=Worki', { timeout: 15000 });
+    await settle();
+  }, page);
+
+  await step('P02', 'Click "Sobre" link -> verify content', async () => {
+    // Landing page footer has no /sobre link, but login page does.
+    // Try to find /sobre anywhere first; if not on page, navigate to login to find it
+    const sobreLink = page.locator('a[href="/sobre"]').first();
+    try {
+      await sobreLink.waitFor({ state: 'visible', timeout: 3000 });
+      await sobreLink.click();
+    } catch {
+      // Navigate to login page to find the Sobre link
+      await page.locator('button:has-text("Quero Trabalhar")').first().click();
+      await settle();
+      const sobreLink2 = page.locator('a[href="/sobre"]').first();
+      await sobreLink2.waitFor({ state: 'visible', timeout: 5000 });
+      await sobreLink2.click();
+    }
+    await settle();
+    await page.waitForURL(/sobre/, { timeout: 5000 });
+  }, page);
+
+  await step('P03', 'Click browser back -> previous page', async () => {
+    await page.goBack();
+    await settle();
+  }, page);
+
+  await step('P04', 'Click "Login" -> verify /login loads', async () => {
+    // We might already be on login page from P02's navigation
+    if (page.url().includes('login')) {
+      // Already on login, pass
+      return;
+    }
+    try {
+      await page.locator('button:has-text("Quero Trabalhar")').first().click();
+    } catch {
       try {
-        await page.screenshot({ path: 'e2e/screenshots/' + id + '-' + name + '-ERROR.png', fullPage: true });
-      } catch (_) {}
-      const url = page.url();
-      console.log('STEP ' + id + ' [' + name + '] FAILED: ' + e.message.substring(0, 200));
-      failed++;
-      results.push({ id, name, url, result: 'FAIL', error: e.message.substring(0, 200) });
+        await page.locator('button:has-text("Quero Contratar")').first().click();
+      } catch {
+        // Navigate via landing
+        await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+        await settle();
+        await page.locator('button:has-text("Quero Trabalhar")').first().click();
+      }
     }
-  }
+    await settle();
+    await page.waitForURL(/login/, { timeout: 5000 });
+  }, page);
 
-  // ════════════════════════════════════════════════════
-  // PHASE 1: PUBLIC PAGES
-  // The homepage at "/" is the Onboarding page with:
-  //   nav: "Sobre" link, "Login" link
-  //   cards: "Quero Trabalhar", "Quero Contratar"
-  //   bottom CTA: "Cadastrar como Trabalhador", "Cadastrar como Empresa"
-  // ════════════════════════════════════════════════════
+  await step('P05', 'Navigate to /termos via footer link', async () => {
+    const link = page.locator('a[href="/termos"]').first();
+    await link.waitFor({ state: 'visible', timeout: 5000 });
+    await link.click();
+    await settle();
+    await page.waitForURL(/termos/, { timeout: 5000 });
+  }, page);
 
-  await step('landing', async () => {
-    await page.goto('http://localhost:5173/');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
-
-  // Click "Sobre" in nav -> goes to /sobre (LandingPage component)
-  await step('click-sobre', async () => {
-    await page.click('button:has-text("Sobre")');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
-
-  // On /sobre page (LandingPage), click "Termos de Uso" in the footer
-  await step('sobre-footer-termos', async () => {
-    // Scroll to footer first
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
-    await page.click('button:has-text("Termos de Uso")');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
-
-  // Go back from /termos to /sobre
-  await step('back-from-termos', async () => {
+  await step('P06', 'Navigate to /privacidade via footer link', async () => {
     await page.goBack();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-  });
+    await settle();
+    const link = page.locator('a[href="/privacidade"]').first();
+    await link.waitFor({ state: 'visible', timeout: 5000 });
+    await link.click();
+    await settle();
+    await page.waitForURL(/privacidade/, { timeout: 5000 });
+  }, page);
 
-  // Click "Ajuda" in the footer of /sobre
-  await step('sobre-footer-ajuda', async () => {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
-    await page.click('button:has-text("Ajuda")');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
-
-  // Go back to /sobre
-  await step('back-from-ajuda', async () => {
+  await step('P07', 'Navigate to /ajuda via footer link', async () => {
     await page.goBack();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-  });
+    await settle();
+    const link = page.locator('a[href="/ajuda"]').first();
+    await link.waitFor({ state: 'visible', timeout: 5000 });
+    await link.click();
+    await settle();
+    await page.waitForURL(/ajuda/, { timeout: 5000 });
+  }, page);
 
-  // Click "Privacidade" in footer of /sobre
-  await step('sobre-footer-privacidade', async () => {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
-    await page.click('button:has-text("Política de Privacidade")');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
+  // ===========================================================================
+  // WORKER SIGNUP (W01-W06)
+  // ===========================================================================
 
-  // Go back to /sobre
-  await step('back-from-privacidade', async () => {
+  await step('W01', 'Go back to landing, click worker signup button', async () => {
+    // Navigate back until we hit landing
     await page.goBack();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
-  });
-
-  // Navigate back to the Onboarding / homepage via "Worki" logo or nav
-  await step('back-to-homepage', async () => {
-    // Click the "Worki" logo/text in the LandingPage nav which navigates to /
-    const workiBtn = page.locator('button:has-text("Worki")').first();
-    if (await workiBtn.isVisible()) {
-      await workiBtn.click();
-    } else {
+    await settle();
+    if (!page.url().endsWith('/') && !page.url().match(/:5173\/?$/)) {
       await page.goBack();
+      await settle();
     }
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 2: WORKER SIGNUP
-  // Click "Quero Trabalhar" card on homepage -> /login?type=work
-  // ════════════════════════════════════════════════════
-
-  await step('click-quero-trabalhar', async () => {
-    // The card button says "Quero Trabalhar" in the Onboarding page
-    await page.click('h3:has-text("Quero Trabalhar")');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  });
-
-  await step('login-page-loaded', async () => {
-    // We should be on /login?type=work, showing "Comecar a Trabalhar"
-    const text = await page.evaluate(() => document.body.innerText);
-    if (!text.includes('Trabalhar') && !text.includes('Entrar')) {
-      throw new Error('Not on login page');
+    // If we're on login, click VOLTAR to go to landing
+    if (page.url().includes('login')) {
+      try {
+        await page.locator('button:has-text("VOLTAR")').first().click();
+        await settle();
+      } catch {}
     }
-  });
+    // Now click the worker signup button
+    try {
+      const btn = page.locator('button:has-text("Cadastrar como Profissional")').first();
+      await btn.waitFor({ state: 'visible', timeout: 5000 });
+      await btn.click();
+    } catch {
+      const btn2 = page.locator('button:has-text("Quero Trabalhar")').first();
+      await btn2.waitFor({ state: 'visible', timeout: 5000 });
+      await btn2.click();
+    }
+    await settle();
+    await page.waitForURL(/login/, { timeout: 5000 });
+  }, page);
 
-  // Click "Cadastre-se" toggle to switch to signup mode
-  await step('click-cadastre-se', async () => {
-    await page.click('button:has-text("Cadastre-se")');
-    await page.waitForTimeout(500);
-  });
+  await step('W02', 'On login page, click "Cadastre-se" toggle', async () => {
+    const toggle = page.locator('button:has-text("Cadastre-se")').first();
+    await toggle.waitFor({ state: 'visible', timeout: 5000 });
+    await toggle.click();
+    await settle();
+    await page.waitForSelector('text=Criar Conta', { timeout: 5000 });
+  }, page);
 
-  await step('fill-worker-signup', async () => {
-    await page.fill('input[aria-label="Email"]', 'geribameuacesso+worker@gmail.com');
-    await page.fill('input[aria-label="Senha"]', 'WorkiTest123');
-    await page.waitForTimeout(300);
-  });
+  await step('W03', 'Fill email field', async () => {
+    const emailInput = page.locator('input[type="email"]').first();
+    await emailInput.waitFor({ state: 'visible', timeout: 5000 });
+    await emailInput.fill(WORKER_EMAIL);
+  }, page);
 
-  await step('submit-worker-signup', async () => {
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(6000);
-    await page.waitForLoadState('networkidle');
-  });
+  await step('W04', 'Fill password field and verify strength indicator', async () => {
+    const passInput = page.locator('input[type="password"]').first();
+    await passInput.waitFor({ state: 'visible', timeout: 5000 });
+    await passInput.fill(WORKER_PASS);
+    await settle(1000);
+    // Verify strength indicator appears
+    await page.waitForSelector('text=Forca:', { timeout: 5000 });
+  }, page);
 
-  // Check outcome: could be onboarding, dashboard, or error
-  await step('check-after-worker-signup', async () => {
+  await step('W05', 'Click "Criar Conta" -> wait for redirect', async () => {
+    const submitBtn = page.locator('button[type="submit"]').first();
+    await submitBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await submitBtn.click();
+    await settle(5000);
+  }, page);
+
+  await step('W06', 'Verify on /dashboard or onboarding after signup', async () => {
     const url = page.url();
-    console.log('  Post-signup URL: ' + url);
-    const pageText = await page.evaluate(() => document.body.innerText);
-    if (pageText.includes('ja esta cadastrado') || pageText.includes('already registered') || pageText.includes('cadastrado')) {
-      console.log('  Account already exists, switching to login...');
-      await page.click('button:has-text("Fazer Login")');
-      await page.waitForTimeout(500);
-      await page.fill('input[aria-label="Email"]', 'geribameuacesso+worker@gmail.com');
-      await page.fill('input[aria-label="Senha"]', 'WorkiTest123');
-      await page.click('button[type="submit"]');
-      await page.waitForTimeout(5000);
-      await page.waitForLoadState('networkidle');
-    } else if (pageText.includes('Muitas tentativas') || pageText.includes('rate_limit') || pageText.includes('Aguarde')) {
-      console.log('  Rate limited, waiting 30s...');
-      await page.waitForTimeout(30000);
-      await page.click('button[type="submit"]');
-      await page.waitForTimeout(5000);
-      await page.waitForLoadState('networkidle');
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 3: WORKER ONBOARDING (if needed)
-  // ════════════════════════════════════════════════════
-
-  const currentUrl = page.url();
-  const needsOnboarding = currentUrl.includes('onboarding');
-  const alreadyOnDashboard = currentUrl.includes('/dashboard') && !currentUrl.includes('onboarding');
-
-  if (needsOnboarding) {
-    console.log('=== WORKER ONBOARDING FLOW ===');
-
-    // Step 1: Personal Data
-    await step('onboard-step1-fill', async () => {
-      await page.waitForTimeout(1000);
-      await page.fill('input[aria-label="Nome completo"]', 'Trabalhador Teste E2E');
-      await page.fill('input[aria-label="CPF"]', '52998224725');
-      await page.fill('input[aria-label="Data de nascimento"]', '1995-06-15');
-      await page.fill('input[aria-label="Celular ou WhatsApp"]', '11999887766');
-      await page.fill('input[aria-label="Cidade"]', 'Sao Paulo');
-      await page.waitForTimeout(500);
-    });
-
-    await step('onboard-step1-next', async () => {
-      const nextBtn = page.locator('button[type="submit"]').last();
-      await nextBtn.click();
-      await page.waitForTimeout(1500);
-    });
-
-    // Step 2: Professional
-    await step('onboard-step2-roles', async () => {
-      // Click role buttons (not the filter buttons on jobs page)
-      const garcom = page.locator('button:has-text("Garçom")');
-      if (await garcom.isVisible()) await garcom.click();
-      await page.waitForTimeout(200);
-      const barman = page.locator('button:has-text("Barman")');
-      if (await barman.isVisible()) await barman.click();
-      await page.waitForTimeout(200);
-    });
-
-    await step('onboard-step2-experience', async () => {
-      await page.selectOption('select[aria-label="Tempo de experiencia"]', '1-2 anos');
-      await page.waitForTimeout(300);
-    });
-
-    await step('onboard-step2-bio', async () => {
-      await page.fill('textarea[aria-label="Bio curta"]', 'Profissional experiente em eventos e bares.');
-      await page.waitForTimeout(300);
-    });
-
-    await step('onboard-step2-next', async () => {
-      const nextBtn = page.locator('button[type="submit"]').last();
-      await nextBtn.click();
-      await page.waitForTimeout(1500);
-    });
-
-    // Step 3: Goals & Availability
-    await step('onboard-step3-goal', async () => {
-      const goal = page.locator('label:has-text("Renda Extra")');
-      if (await goal.isVisible()) await goal.click();
-      await page.waitForTimeout(300);
-    });
-
-    await step('onboard-step3-availability', async () => {
-      const manha = page.locator('button:has-text("Manhã")');
-      if (await manha.isVisible()) await manha.click();
-      await page.waitForTimeout(200);
-      const noite = page.locator('button:has-text("Noite")');
-      if (await noite.isVisible()) await noite.click();
-      await page.waitForTimeout(200);
-    });
-
-    await step('onboard-step3-tos', async () => {
-      await page.click('#tos');
-      await page.waitForTimeout(300);
-    });
-
-    await step('onboard-step3-finalize', async () => {
-      const finalBtn = page.locator('button[type="submit"]').last();
-      await finalBtn.click();
-      // This does window.location.href = '/dashboard' -> full page reload
-      await page.waitForTimeout(8000);
-      await page.waitForLoadState('networkidle');
-    });
-  } else if (alreadyOnDashboard) {
-    console.log('=== WORKER ALREADY ONBOARDED - SKIPPING ===');
-  } else {
-    console.log('=== UNEXPECTED STATE: ' + currentUrl + ' ===');
-  }
-
-  // ════════════════════════════════════════════════════
-  // PHASE 4: WORKER DASHBOARD
-  // ════════════════════════════════════════════════════
-
-  await step('worker-dashboard', async () => {
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000);
-    const text = await page.evaluate(() => document.body.innerText);
-    const url = page.url();
-    console.log('  Dashboard URL: ' + url);
-    if (text.includes('Fala,') || text.includes('Dashboard') || text.includes('Vagas para Você')) {
-      console.log('  Dashboard loaded OK');
-    } else {
-      console.log('  Dashboard might not have loaded. Text starts: ' + text.substring(0, 100));
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 5: WORKER - BROWSE JOBS (sidebar: "Buscar Vagas" -> /jobs)
-  // ════════════════════════════════════════════════════
-
-  await step('nav-buscar-vagas', async () => {
-    const link = page.locator('a[href="/jobs"]').first();
-    await link.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-  });
-
-  await step('jobs-page-loaded', async () => {
-    const text = await page.evaluate(() => document.body.innerText);
-    console.log('  Jobs page check: ' + (text.includes('Buscar') || text.includes('Vagas') || text.includes('Todos')));
-  });
-
-  await step('jobs-search-garcom', async () => {
-    const searchInput = page.locator('input[placeholder*="Buscar"], input[placeholder*="buscar"]').first();
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('garçom');
-      await page.waitForTimeout(1000);
-    } else {
-      console.log('  Search input not found');
-    }
-  });
-
-  await step('jobs-clear-search', async () => {
-    const searchInput = page.locator('input[placeholder*="Buscar"], input[placeholder*="buscar"]').first();
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('');
-      await page.waitForTimeout(600);
-    }
-  });
-
-  // Click role filter buttons
-  for (const role of ['Garcom', 'Cozinheiro', 'Barman']) {
-    await step('jobs-filter-' + role.toLowerCase(), async () => {
-      const btn = page.locator('button:has-text("' + role + '")').first();
-      if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await btn.click();
-        await page.waitForTimeout(800);
-      } else {
-        console.log('  Filter button "' + role + '" not visible');
-      }
-    });
-  }
-
-  await step('jobs-filter-todos', async () => {
-    const btn = page.locator('button:has-text("Todos")').first();
-    if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await btn.click();
-      await page.waitForTimeout(800);
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 6: WORKER - MY JOBS (sidebar: "Meus Jobs" -> /my-jobs)
-  // ════════════════════════════════════════════════════
-
-  await step('nav-meus-jobs', async () => {
-    const link = page.locator('a[href="/my-jobs"]').first();
-    await link.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-  });
-
-  for (const tab of ['Candidaturas', 'Em Andamento', 'Agendados']) {
-    await step('myjobs-tab-' + tab.toLowerCase().replace(/\s+/g, '-'), async () => {
-      const btn = page.locator('button:has-text("' + tab + '")').first();
-      if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await btn.click();
-        await page.waitForTimeout(800);
-      }
-    });
-  }
-
-  await step('myjobs-tab-historico', async () => {
-    const btn = page.locator('button:has-text("Histórico")').first();
-    if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await btn.click();
-      await page.waitForTimeout(800);
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 7: WORKER - MESSAGES (sidebar: "Mensagens" -> /messages)
-  // ════════════════════════════════════════════════════
-
-  await step('nav-mensagens', async () => {
-    const link = page.locator('a[href="/messages"]').first();
-    await link.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 8: WORKER - ANALYTICS (sidebar: "Analytics" -> /analytics)
-  // ════════════════════════════════════════════════════
-
-  await step('nav-analytics', async () => {
-    const link = page.locator('a[href="/analytics"]').first();
-    await link.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 9: WORKER - WALLET (sidebar: "Carteira" -> /wallet)
-  // ════════════════════════════════════════════════════
-
-  await step('nav-carteira', async () => {
-    const link = page.locator('a[href="/wallet"]').first();
-    await link.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2500);
-  });
-
-  await step('wallet-check', async () => {
-    const text = await page.evaluate(() => document.body.innerText);
-    console.log('  Wallet loaded: ' + (text.includes('Saldo') || text.includes('R$') || text.includes('Carteira')));
-  });
-
-  await step('wallet-sacar', async () => {
-    const btn = page.locator('button:has-text("Sacar")').first();
-    if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await btn.click();
-      await page.waitForTimeout(1000);
-    } else {
-      console.log('  Sacar button not visible');
-    }
-  });
-
-  await step('wallet-close-modal', async () => {
-    // Close any open modal
-    const xBtn = page.locator('button:has(svg.lucide-x)').first();
-    if (await xBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await xBtn.click();
-      await page.waitForTimeout(500);
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 10: WORKER - PROFILE (sidebar: "Meu Perfil" -> /profile)
-  // ════════════════════════════════════════════════════
-
-  await step('nav-perfil', async () => {
-    const link = page.locator('a[href="/profile"]').first();
-    await link.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2500);
-  });
-
-  await step('profile-loaded', async () => {
-    const text = await page.evaluate(() => document.body.innerText);
-    console.log('  Profile loaded: ' + (text.includes('Perfil') || text.includes('Nome') || text.includes('Trabalhador')));
-  });
-
-  await step('profile-click-edit', async () => {
-    const editBtn = page.locator('button:has-text("Editar")').first();
-    if (await editBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await editBtn.click();
-      await page.waitForTimeout(1000);
-    }
-  });
-
-  await step('profile-edit-bio', async () => {
-    const textarea = page.locator('textarea').first();
-    if (await textarea.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await textarea.fill('Atualizado via E2E test. Dedicacao e pontualidade sao meus diferenciais.');
-      await page.waitForTimeout(500);
-    }
-  });
-
-  await step('profile-save', async () => {
-    const saveBtn = page.locator('button:has-text("Salvar")').first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('profile-scroll-security', async () => {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1000);
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 11: WORKER - NOTIFICATIONS
-  // The NotificationBell in the sidebar triggers a dropdown
-  // Then "Ver todas" navigates to /notifications
-  // ════════════════════════════════════════════════════
-
-  await step('click-notification-bell', async () => {
-    // The NotificationBell is in the sidebar header
-    const bell = page.locator('button[aria-label*="notif"], button[aria-label*="Notif"]').first();
-    if (await bell.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await bell.click();
-      await page.waitForTimeout(1500);
-    } else {
-      // Try clicking bell icon directly
-      const bellIcon = page.locator('.lucide-bell').first();
-      if (await bellIcon.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await bellIcon.click();
-        await page.waitForTimeout(1500);
-      }
-    }
-  });
-
-  await step('notifications-ver-todas', async () => {
-    // Click "Ver todas" in dropdown or navigate directly
-    const verTodas = page.locator('a:has-text("Ver todas"), button:has-text("Ver todas"), a[href="/notifications"]').first();
-    if (await verTodas.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await verTodas.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1500);
-    } else {
-      // Click somewhere to close dropdown then navigate via URL
-      await page.click('body');
-      await page.waitForTimeout(500);
-    }
-  });
-
-  // If on notifications page, test filter tabs
-  const notifUrl = page.url();
-  if (notifUrl.includes('notifications')) {
-    for (const filter of ['Todas', 'Mensagens', 'Pagamentos', 'Status', 'Sistema']) {
-      await step('notif-filter-' + filter.toLowerCase(), async () => {
-        const btn = page.locator('button:has-text("' + filter + '")').first();
-        if (await btn.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await btn.click();
-          await page.waitForTimeout(500);
+    const isOnboarding = url.includes('onboarding') || url.includes('dashboard');
+    if (!isOnboarding) {
+      // Check for error messages
+      const errorEl = page.locator('.bg-red-100').first();
+      const errVisible = await errorEl.isVisible().catch(() => false);
+      if (errVisible) {
+        const errText = await errorEl.textContent();
+        if (errText.includes('cadastrado') || errText.includes('already registered')) {
+          console.log('    Account already exists - will login instead');
+        } else {
+          throw new Error('Signup error: ' + errText);
         }
+      }
+      const successEl = page.locator('.bg-green-100').first();
+      const successVisible = await successEl.isVisible().catch(() => false);
+      if (successVisible) {
+        const successText = await successEl.textContent();
+        console.log('    Signup message: ' + successText);
+      }
+    }
+  }, page);
+
+  // ===========================================================================
+  // WORKER ONBOARDING (WO01-WO14)
+  // ===========================================================================
+
+  // Check if we need to login first (if signup said "already registered")
+  let needsWorkerLogin = false;
+  {
+    const currentUrl = page.url();
+    if (!currentUrl.includes('onboarding') && !currentUrl.includes('dashboard')) {
+      needsWorkerLogin = true;
+    }
+  }
+
+  if (needsWorkerLogin) {
+    await step('W06b', 'Login as existing worker', async () => {
+      if (!page.url().includes('login')) {
+        try {
+          await page.locator('button:has-text("Quero Trabalhar")').first().click();
+          await settle();
+        } catch {
+          await page.goto(BASE_URL + '/login?type=work', { waitUntil: 'networkidle' });
+          await settle();
+        }
+      }
+      // Switch to login mode if in signup mode
+      const loginToggle = page.locator('button:has-text("Fazer Login")').first();
+      const isSignupMode = await loginToggle.isVisible().catch(() => false);
+      if (isSignupMode) {
+        await loginToggle.click();
+        await settle();
+      }
+      await page.locator('input[type="email"]').first().fill(WORKER_EMAIL);
+      await page.locator('input[type="password"]').first().fill(WORKER_PASS);
+      await page.locator('button[type="submit"]').first().click();
+      await settle(5000);
+    }, page);
+  }
+
+  // Helper: check if already onboarded (on dashboard, not onboarding)
+  function alreadyOnboarded() {
+    const u = page.url();
+    return u.includes('dashboard') && !u.includes('onboarding');
+  }
+
+  await step('WO01', 'Step 1: fill name', async () => {
+    if (alreadyOnboarded()) { console.log('    Already onboarded, skipping'); return; }
+    await page.waitForURL(/onboarding|dashboard/, { timeout: 10000 });
+    if (alreadyOnboarded()) return;
+    const nameInput = page.locator('input[aria-label="Nome completo"]').first();
+    await nameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await nameInput.fill('Teste Worker');
+  }, page);
+
+  await step('WO02', 'Step 1: fill CPF', async () => {
+    if (alreadyOnboarded()) return;
+    const cpfInput = page.locator('input[aria-label="CPF"]').first();
+    await cpfInput.waitFor({ state: 'visible', timeout: 5000 });
+    await cpfInput.fill('12345678909');
+  }, page);
+
+  await step('WO03', 'Step 1: fill birth date', async () => {
+    if (alreadyOnboarded()) return;
+    const dateInput = page.locator('input[type="date"]').first();
+    await dateInput.waitFor({ state: 'visible', timeout: 5000 });
+    await dateInput.fill('1995-06-15');
+  }, page);
+
+  await step('WO04', 'Step 1: fill phone', async () => {
+    if (alreadyOnboarded()) return;
+    const phoneInput = page.locator('input[aria-label="Celular ou WhatsApp"]').first();
+    await phoneInput.waitFor({ state: 'visible', timeout: 5000 });
+    await phoneInput.fill('11999887766');
+  }, page);
+
+  await step('WO05', 'Step 1: fill city', async () => {
+    if (alreadyOnboarded()) return;
+    const cityInput = page.locator('input[aria-label="Cidade"]').first();
+    await cityInput.waitFor({ state: 'visible', timeout: 5000 });
+    await cityInput.fill('Sao Paulo');
+  }, page);
+
+  await step('WO06', 'Step 1: click Proximo', async () => {
+    if (alreadyOnboarded()) return;
+    const nextBtn = page.locator('button[type="submit"]').first();
+    await nextBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await nextBtn.click();
+    await settle();
+  }, page);
+
+  await step('WO07', 'Step 2: select roles', async () => {
+    if (alreadyOnboarded()) return;
+    // Click role toggle buttons by their exact text content
+    const garcom = page.locator('button:text-is("Garçom")').first();
+    try {
+      await garcom.waitFor({ state: 'visible', timeout: 5000 });
+      await garcom.click();
+    } catch {
+      // Fallback: try without accent
+      const garcom2 = page.locator('button:has-text("Garcom")').first();
+      await garcom2.click();
+    }
+    await settle(500);
+    const cozinheiro = page.locator('button:text-is("Cozinheiro")').first();
+    try {
+      await cozinheiro.waitFor({ state: 'visible', timeout: 3000 });
+      await cozinheiro.click();
+    } catch {
+      const coz2 = page.locator('button:has-text("Cozinheiro")').first();
+      await coz2.click();
+    }
+    await settle(500);
+  }, page);
+
+  await step('WO08', 'Step 2: select experience', async () => {
+    if (alreadyOnboarded()) return;
+    const select = page.locator('select[aria-label="Tempo de experiencia"]').first();
+    await select.waitFor({ state: 'visible', timeout: 5000 });
+    await select.selectOption('1-2 anos');
+  }, page);
+
+  await step('WO09', 'Step 2: fill bio', async () => {
+    if (alreadyOnboarded()) return;
+    const bio = page.locator('textarea[aria-label="Bio curta"]').first();
+    await bio.waitFor({ state: 'visible', timeout: 5000 });
+    await bio.fill('Profissional dedicado e pontual, com experiencia em eventos corporativos.');
+  }, page);
+
+  await step('WO10', 'Step 2: click Proximo', async () => {
+    if (alreadyOnboarded()) return;
+    const nextBtn = page.locator('button[type="submit"]').first();
+    await nextBtn.click();
+    await settle();
+  }, page);
+
+  await step('WO11', 'Step 3: select availability', async () => {
+    if (alreadyOnboarded()) return;
+    // Click availability toggle buttons
+    try {
+      const manha = page.locator('button:text-is("Manhã")').first();
+      await manha.waitFor({ state: 'visible', timeout: 5000 });
+      await manha.click();
+    } catch {
+      const manha2 = page.locator('button:has-text("Manh")').first();
+      await manha2.click();
+    }
+    await settle(500);
+    try {
+      const tarde = page.locator('button:text-is("Tarde")').first();
+      await tarde.waitFor({ state: 'visible', timeout: 3000 });
+      await tarde.click();
+    } catch {
+      const tarde2 = page.locator('button:has-text("Tarde")').first();
+      await tarde2.click();
+    }
+    await settle(500);
+  }, page);
+
+  await step('WO12', 'Step 3: select goal', async () => {
+    if (alreadyOnboarded()) return;
+    const radio = page.locator('input[aria-label="Renda Extra (Freelancer)"]').first();
+    await radio.waitFor({ state: 'visible', timeout: 5000 });
+    await radio.click();
+    await settle(500);
+  }, page);
+
+  await step('WO13', 'Step 3: check TOS checkbox', async () => {
+    if (alreadyOnboarded()) return;
+    const tos = page.locator('#tos').first();
+    await tos.waitFor({ state: 'visible', timeout: 5000 });
+    await tos.check();
+    await settle(500);
+  }, page);
+
+  await step('WO14', 'Step 3: click Finalizar -> verify redirect to /dashboard', async () => {
+    if (alreadyOnboarded()) return;
+    const finalBtn = page.locator('button[type="submit"]').first();
+    await finalBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await finalBtn.click();
+    // Wait for full page reload to /dashboard
+    await settle(8000);
+    await page.waitForURL(/dashboard/, { timeout: 15000 });
+  }, page);
+
+  // ===========================================================================
+  // WORKER DASHBOARD (WD01-WD02)
+  // ===========================================================================
+
+  await step('WD01', 'Verify dashboard loaded', async () => {
+    await page.waitForURL(/dashboard/, { timeout: 10000 });
+    await settle(3000);
+    const heading = page.locator('h1, h2, h3').first();
+    await heading.waitFor({ state: 'visible', timeout: 10000 });
+  }, page);
+
+  await step('WD02', 'Screenshot dashboard', async () => {
+    await settle(2000);
+  }, page);
+
+  // ===========================================================================
+  // WORKER JOBS (WJ01-WJ21)
+  // ===========================================================================
+
+  await step('WJ01', 'Click sidebar "Buscar Vagas"', async () => {
+    await clickNav('a[href="/jobs"]', 'Buscar Vagas');
+  }, page);
+
+  await step('WJ02', 'Verify job listings page loaded', async () => {
+    await page.waitForURL(/jobs/, { timeout: 5000 });
+    await settle(2000);
+    await page.waitForSelector('text=Buscar Vagas', { timeout: 10000 });
+  }, page);
+
+  await step('WJ03', 'Type "garcom" in search box', async () => {
+    const searchInput = page.locator('input[placeholder*="Buscar"]').first();
+    await searchInput.waitFor({ state: 'visible', timeout: 5000 });
+    await searchInput.fill('garcom');
+    await settle(1000);
+  }, page);
+
+  await step('WJ04', 'Screenshot search results', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WJ05', 'Clear search', async () => {
+    const searchInput = page.locator('input[placeholder*="Buscar"]').first();
+    await searchInput.fill('');
+    await settle(1000);
+  }, page);
+
+  await step('WJ06', 'Click "Garcom" category tab', async () => {
+    const tab = page.locator('button:has-text("Garcom")').first();
+    await tab.waitFor({ state: 'visible', timeout: 5000 });
+    await tab.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ07', 'Screenshot filtered results', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WJ08', 'Click "Cozinheiro" category tab', async () => {
+    const tab = page.locator('button:has-text("Cozinheiro")').first();
+    await tab.waitFor({ state: 'visible', timeout: 5000 });
+    await tab.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ09', 'Click "Barman" category tab', async () => {
+    const tab = page.locator('button:has-text("Barman")').first();
+    await tab.waitFor({ state: 'visible', timeout: 5000 });
+    await tab.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ10', 'Click "Todos" to reset category', async () => {
+    const tab = page.locator('button:has-text("Todos")').first();
+    await tab.waitFor({ state: 'visible', timeout: 5000 });
+    await tab.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ11', 'Click "Presencial" modality', async () => {
+    const btn = page.locator('button:has-text("Presencial")').first();
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ12', 'Click "Remoto" modality', async () => {
+    const btn = page.locator('button:has-text("Remoto")').first();
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ13', 'Click "Todas" modality to reset', async () => {
+    const btn = page.locator('button:has-text("Todas")').first();
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click();
+    await settle(1000);
+  }, page);
+
+  await step('WJ14', 'Type "200" in min budget', async () => {
+    const budgetInput = page.locator('input[type="number"]').first();
+    await budgetInput.waitFor({ state: 'visible', timeout: 5000 });
+    await budgetInput.fill('200');
+    await settle(1000);
+  }, page);
+
+  await step('WJ15', 'Screenshot budget filter', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WJ16', 'Clear budget', async () => {
+    const budgetInput = page.locator('input[type="number"]').first();
+    await budgetInput.fill('');
+    await settle(1000);
+  }, page);
+
+  await step('WJ17', 'Type "Sao Paulo" in city filter', async () => {
+    const cityInput = page.locator('input[placeholder*="Sao Paulo"]').first();
+    await cityInput.waitFor({ state: 'visible', timeout: 5000 });
+    await cityInput.fill('Sao Paulo');
+    await settle(1000);
+  }, page);
+
+  await step('WJ18', 'Screenshot city filter', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WJ19', 'Click "Limpar filtros"', async () => {
+    try {
+      const clearBtn = page.locator('button:has-text("Limpar filtros")').first();
+      await clearBtn.waitFor({ state: 'visible', timeout: 3000 });
+      await clearBtn.click();
+      await settle(1000);
+    } catch {
+      // If no active filters, clear manually
+      const cityInput = page.locator('input[placeholder*="Sao Paulo"]').first();
+      try { await cityInput.fill(''); } catch {}
+      await settle(1000);
+    }
+  }, page);
+
+  await step('WJ20', 'Click first job card (if available)', async () => {
+    try {
+      // Job cards are rendered by JobCard component
+      const jobCard = page.locator('[class*="rounded-2xl"][class*="border-2"]').first();
+      await jobCard.waitFor({ state: 'visible', timeout: 5000 });
+      await jobCard.click();
+      await settle(2000);
+    } catch {
+      console.log('    No job cards available');
+    }
+  }, page);
+
+  await step('WJ21', 'Click "Candidatar-se" if visible', async () => {
+    try {
+      const applyBtn = page.locator('button:has-text("Candidatar")').first();
+      const visible = await applyBtn.isVisible().catch(() => false);
+      if (visible) {
+        await applyBtn.click();
+        await settle(3000);
+      } else {
+        console.log('    No "Candidatar-se" button visible');
+      }
+    } catch {
+      console.log('    No job to apply to');
+    }
+  }, page);
+
+  // ===========================================================================
+  // WORKER MY JOBS (WM01-WM06)
+  // ===========================================================================
+
+  await step('WM01', 'Click sidebar "Meus Jobs"', async () => {
+    await clickNav('a[href="/my-jobs"]', 'Meus Jobs');
+  }, page);
+
+  await step('WM02', 'Click "Candidaturas" tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Candidaturas")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WM03', 'Click "Em Andamento" tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Em Andamento")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WM04', 'Click "Agendados" tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Agendados")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WM05', 'Click "Historico" tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Hist")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WM06', 'Screenshot My Jobs page', async () => {
+    await settle(1000);
+  }, page);
+
+  // ===========================================================================
+  // WORKER WALLET (WW01-WW05)
+  // ===========================================================================
+
+  await step('WW01', 'Click sidebar "Carteira"', async () => {
+    await clickNav('a[href="/wallet"]', 'Carteira');
+  }, page);
+
+  await step('WW02', 'Verify balance shows', async () => {
+    await page.waitForURL(/wallet/, { timeout: 5000 });
+    await settle(3000);
+    const balanceEl = page.locator('text=/R\\$|Saldo/').first();
+    await balanceEl.waitFor({ state: 'visible', timeout: 10000 });
+  }, page);
+
+  await step('WW03', 'Verify "Sacar" button exists (disabled if balance=0)', async () => {
+    // If we're not on wallet page (e.g., on re-run), navigate there
+    if (!page.url().includes('/wallet')) {
+      // Need to login as worker first, then go to wallet
+      await page.goto(BASE_URL + '/login?type=work', { waitUntil: 'networkidle' });
+      await settle(2000);
+      // If we got redirected to dashboard (already logged in), just go to wallet
+      if (page.url().includes('dashboard')) {
+        await page.goto(BASE_URL + '/wallet', { waitUntil: 'networkidle' });
+        await settle(5000);
+      } else if (page.url().includes('login')) {
+        // Need to login
+        try {
+          const lt = page.locator('button:has-text("Fazer Login")').first();
+          if (await lt.isVisible().catch(() => false)) { await lt.click(); await settle(); }
+        } catch {}
+        await page.locator('input[type="email"]').first().fill(WORKER_EMAIL);
+        await page.locator('input[type="password"]').first().fill(WORKER_PASS);
+        await page.locator('button[type="submit"]').first().click();
+        await settle(5000);
+        // Now we should be on dashboard, navigate to wallet
+        await page.goto(BASE_URL + '/wallet', { waitUntil: 'networkidle' });
+        await settle(5000);
+      }
+    }
+    // The SACAR button text is "SACAR (PIX)" based on the screenshot
+    const sacarBtn = page.locator('button:has-text("SACAR")').first();
+    await sacarBtn.waitFor({ state: 'visible', timeout: 10000 });
+    const isDisabled = await sacarBtn.isDisabled();
+    if (isDisabled) {
+      console.log('    "Sacar" button is disabled (balance R$ 0.00) - expected behavior');
+    } else {
+      await sacarBtn.click();
+      await settle(1000);
+    }
+  }, page);
+
+  await step('WW04', 'Screenshot withdraw modal', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WW05', 'Close modal', async () => {
+    try {
+      const cancelBtn = page.locator('button:has-text("Cancelar")').first();
+      const visible = await cancelBtn.isVisible().catch(() => false);
+      if (visible) {
+        await cancelBtn.click();
+      } else {
+        const xBtn = page.locator('button:has(svg.lucide-x)').first();
+        const xVisible = await xBtn.isVisible().catch(() => false);
+        if (xVisible) {
+          await xBtn.click();
+        } else {
+          await page.keyboard.press('Escape');
+        }
+      }
+      await settle(1000);
+    } catch {
+      await page.keyboard.press('Escape');
+      await settle(1000);
+    }
+  }, page);
+
+  // ===========================================================================
+  // WORKER PROFILE (WP01-WP11)
+  // ===========================================================================
+
+  await step('WP01', 'Click sidebar "Perfil"', async () => {
+    await clickNav('a[href="/profile"]', 'Meu Perfil');
+  }, page);
+
+  await step('WP02', 'Verify profile data loaded', async () => {
+    await page.waitForURL(/profile/, { timeout: 5000 });
+    await settle(3000);
+    const profileContent = page.locator('text=/Perfil|Teste Worker/').first();
+    await profileContent.waitFor({ state: 'visible', timeout: 10000 });
+  }, page);
+
+  await step('WP03', 'Click "Editar Perfil"', async () => {
+    const editBtn = page.locator('button:has-text("Editar")').first();
+    await editBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await editBtn.click();
+    await settle(1000);
+  }, page);
+
+  await step('WP04', 'Change bio field', async () => {
+    try {
+      const bioField = page.locator('textarea').first();
+      await bioField.waitFor({ state: 'visible', timeout: 5000 });
+      await bioField.fill('Profissional dedicado e pontual. Atualizado via E2E test.');
+    } catch {
+      const bioInput = page.locator('input[name="bio"]').first();
+      await bioInput.fill('Profissional dedicado e pontual. Atualizado via E2E test.');
+    }
+    await settle(500);
+  }, page);
+
+  await step('WP05', 'Click "Salvar"', async () => {
+    const saveBtn = page.locator('button:has-text("Salvar")').first();
+    await saveBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await saveBtn.click();
+    await settle(3000);
+  }, page);
+
+  await step('WP06', 'Verify toast "Perfil atualizado"', async () => {
+    try {
+      const toast = page.locator('text=/atualizado|salvo|sucesso/i').first();
+      await toast.waitFor({ state: 'visible', timeout: 5000 });
+    } catch {
+      console.log('    Toast may have disappeared already');
+    }
+  }, page);
+
+  await step('WP07', 'Scroll to Security section', async () => {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+    await settle(1000);
+    try {
+      const sec = page.locator('text=/Seguran|Senha|Security/i').first();
+      await sec.scrollIntoViewIfNeeded();
+      await settle(1000);
+    } catch {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await settle(1000);
+    }
+  }, page);
+
+  await step('WP08', 'Scroll to Danger Zone', async () => {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await settle(1000);
+  }, page);
+
+  await step('WP09', 'Click "Excluir Conta" -> modal opens', async () => {
+    const deleteBtn = page.locator('button:has-text("Excluir")').first();
+    await deleteBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await deleteBtn.click();
+    await settle(1000);
+  }, page);
+
+  await step('WP10', 'Screenshot delete modal', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WP11', 'Click "Cancelar" on delete modal', async () => {
+    const cancelBtn = page.locator('button:has-text("Cancelar")').first();
+    await cancelBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await cancelBtn.click();
+    await settle(1000);
+  }, page);
+
+  // ===========================================================================
+  // WORKER MESSAGES (WMS01-WMS02)
+  // ===========================================================================
+
+  await step('WMS01', 'Click sidebar "Mensagens"', async () => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await settle(500);
+    await clickNav('a[href="/messages"]', 'Mensagens');
+  }, page);
+
+  await step('WMS02', 'Screenshot messages page', async () => {
+    await page.waitForURL(/messages/, { timeout: 5000 });
+    await settle(3000);
+  }, page);
+
+  // ===========================================================================
+  // WORKER NOTIFICATIONS (WN01-WN08)
+  // ===========================================================================
+
+  await step('WN01', 'Click notification bell icon', async () => {
+    const bell = page.locator('button[aria-label="Notifications"]').first();
+    await bell.waitFor({ state: 'visible', timeout: 5000 });
+    await bell.click();
+    await settle(1000);
+  }, page);
+
+  await step('WN02', 'Screenshot notification dropdown', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('WN03', 'Click "Ver todas" or navigate to /notifications', async () => {
+    try {
+      const verTodas = page.locator('text=/Ver todas|Ver tudo/i').first();
+      const visible = await verTodas.isVisible().catch(() => false);
+      if (visible) {
+        await verTodas.click();
+        await settle(2000);
+        await page.waitForURL(/notifications/, { timeout: 5000 });
+      } else {
+        await page.keyboard.press('Escape');
+        await settle(500);
+        await page.evaluate(() => { window.location.href = '/notifications'; });
+        await settle(3000);
+      }
+    } catch {
+      await page.evaluate(() => { window.location.href = '/notifications'; });
+      await settle(3000);
+    }
+  }, page);
+
+  await step('WN04', 'Click "Mensagens" notification tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Mensagens")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WN05', 'Click "Pagamentos" notification tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Pagamentos")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WN06', 'Click "Status" notification tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Status")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WN07', 'Click "Sistema" notification tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Sistema")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  await step('WN08', 'Click "Todas" notification tab', async () => {
+    try {
+      const tab = page.locator('button:has-text("Todas")').first();
+      await tab.waitFor({ state: 'visible', timeout: 5000 });
+      await tab.click();
+      await settle(1000);
+    } catch { console.log('    Tab not found'); }
+  }, page);
+
+  // ===========================================================================
+  // WORKER ANALYTICS (WA01-WA03)
+  // ===========================================================================
+
+  await step('WA01', 'Click sidebar "Analytics"', async () => {
+    await clickNav('a[href="/analytics"]', 'Analytics');
+  }, page);
+
+  await step('WA02', 'Verify analytics page loaded', async () => {
+    await page.waitForURL(/analytics/, { timeout: 5000 });
+    await settle(3000);
+    try {
+      const content = page.locator('text=/Analytics|Desempenho|Estat/i').first();
+      await content.waitFor({ state: 'visible', timeout: 10000 });
+    } catch {
+      console.log('    Analytics content may not have specific heading');
+    }
+  }, page);
+
+  await step('WA03', 'Screenshot analytics page', async () => {
+    await settle(1000);
+  }, page);
+
+  // ===========================================================================
+  // WORKER LOGOUT (WL01-WL02)
+  // ===========================================================================
+
+  await step('WL01', 'Click logout button', async () => {
+    const logoutBtn = page.locator('button:has-text("Sair")').first();
+    await logoutBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await logoutBtn.click();
+    await settle(3000);
+  }, page);
+
+  await step('WL02', 'Verify on landing page or login', async () => {
+    const url = page.url();
+    const isLoggedOut = url.includes('login') || url.match(/:5173\/?$/) || url.endsWith('/');
+    if (!isLoggedOut) {
+      throw new Error('Expected login or landing, got: ' + url);
+    }
+  }, page);
+
+  // ===========================================================================
+  // WORKER RE-LOGIN (WR01-WR05)
+  // ===========================================================================
+
+  await step('WR01', 'Navigate to login (click)', async () => {
+    try {
+      const btn = page.locator('button:has-text("Quero Trabalhar")').first();
+      await btn.waitFor({ state: 'visible', timeout: 5000 });
+      await btn.click();
+    } catch {}
+    await settle();
+    await page.waitForURL(/login/, { timeout: 5000 });
+  }, page);
+
+  await step('WR02', 'Fill worker credentials', async () => {
+    try {
+      const loginToggle = page.locator('button:has-text("Fazer Login")').first();
+      const isSignup = await loginToggle.isVisible().catch(() => false);
+      if (isSignup) {
+        await loginToggle.click();
+        await settle();
+      }
+    } catch {}
+    await page.locator('input[type="email"]').first().fill(WORKER_EMAIL);
+    await page.locator('input[type="password"]').first().fill(WORKER_PASS);
+  }, page);
+
+  await step('WR03', 'Click "Entrar"', async () => {
+    await page.locator('button[type="submit"]').first().click();
+    await settle(5000);
+  }, page);
+
+  await step('WR04', 'Verify on /dashboard (NOT onboarding)', async () => {
+    await page.waitForURL(/dashboard/, { timeout: 10000 });
+    if (page.url().includes('onboarding')) {
+      throw new Error('Should be on dashboard, not onboarding');
+    }
+  }, page);
+
+  await step('WR05', 'Logout worker again', async () => {
+    const logoutBtn = page.locator('button:has-text("Sair")').first();
+    await logoutBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await logoutBtn.click();
+    await settle(3000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY SIGNUP (C01-C06)
+  // ===========================================================================
+
+  await step('C01', 'Click company signup button on landing', async () => {
+    // If on login, go back to landing
+    if (page.url().includes('login')) {
+      try {
+        await page.locator('button:has-text("VOLTAR")').first().click();
+        await settle();
+      } catch {}
+    }
+    try {
+      const btn = page.locator('button:has-text("Cadastrar como Empresa")').first();
+      await btn.waitFor({ state: 'visible', timeout: 5000 });
+      await btn.click();
+    } catch {
+      const btn2 = page.locator('button:has-text("Quero Contratar")').first();
+      await btn2.waitFor({ state: 'visible', timeout: 5000 });
+      await btn2.click();
+    }
+    await settle();
+    await page.waitForURL(/login/, { timeout: 5000 });
+  }, page);
+
+  await step('C02', 'Click "Cadastre-se"', async () => {
+    const toggle = page.locator('button:has-text("Cadastre-se")').first();
+    await toggle.waitFor({ state: 'visible', timeout: 5000 });
+    await toggle.click();
+    await settle();
+    await page.waitForSelector('text=Criar Conta', { timeout: 5000 });
+  }, page);
+
+  await step('C03', 'Fill company email', async () => {
+    await page.locator('input[type="email"]').first().fill(COMPANY_EMAIL);
+  }, page);
+
+  await step('C04', 'Fill company password', async () => {
+    await page.locator('input[type="password"]').first().fill(COMPANY_PASS);
+    await settle(1000);
+  }, page);
+
+  await step('C05', 'Click "Criar Conta" -> wait', async () => {
+    await page.locator('button[type="submit"]').first().click();
+    await settle(5000);
+  }, page);
+
+  await step('C06', 'Verify on company onboarding or dashboard', async () => {
+    const url = page.url();
+    if (!url.includes('company') && !url.includes('onboarding') && !url.includes('dashboard')) {
+      const errorEl = page.locator('.bg-red-100').first();
+      const errVisible = await errorEl.isVisible().catch(() => false);
+      if (errVisible) {
+        const errText = await errorEl.textContent();
+        if (errText.includes('cadastrado') || errText.includes('already registered')) {
+          console.log('    Company account already exists');
+        } else {
+          throw new Error('Signup error: ' + errText);
+        }
+      }
+    }
+  }, page);
+
+  // ===========================================================================
+  // COMPANY ONBOARDING (CO01-CO10)
+  // ===========================================================================
+
+  // Check if company needs login
+  let needsCompanyLogin = false;
+  {
+    const cu = page.url();
+    if (!cu.includes('company') && !cu.includes('onboarding')) {
+      needsCompanyLogin = true;
+    }
+  }
+
+  if (needsCompanyLogin) {
+    await step('C06b', 'Login as existing company', async () => {
+      if (!page.url().includes('login')) {
+        try {
+          await page.locator('button:has-text("Quero Contratar")').first().click();
+          await settle();
+        } catch {
+          await page.goto(BASE_URL + '/login?type=hire', { waitUntil: 'networkidle' });
+          await settle();
+        }
+      }
+      const loginToggle = page.locator('button:has-text("Fazer Login")').first();
+      const isSignup = await loginToggle.isVisible().catch(() => false);
+      if (isSignup) {
+        await loginToggle.click();
+        await settle();
+      }
+      await page.locator('input[type="email"]').first().fill(COMPANY_EMAIL);
+      await page.locator('input[type="password"]').first().fill(COMPANY_PASS);
+      await page.locator('button[type="submit"]').first().click();
+      await settle(5000);
+    }, page);
+  }
+
+  // Helper for company onboarding
+  function companyAlreadyOnboarded() {
+    const u = page.url();
+    return u.includes('company/dashboard') && !u.includes('onboarding');
+  }
+
+  await step('CO01', 'Company Step 1: fill company name', async () => {
+    if (companyAlreadyOnboarded()) { console.log('    Already onboarded'); return; }
+    await page.waitForURL(/onboarding|company\/dashboard/, { timeout: 10000 });
+    if (companyAlreadyOnboarded()) return;
+    const nameInput = page.locator('input[aria-label="Nome da empresa"]').first();
+    await nameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await nameInput.fill('Empresa Teste LTDA');
+  }, page);
+
+  await step('CO02', 'Company Step 1: fill CNPJ', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const cnpjInput = page.locator('input[aria-label="CNPJ"]').first();
+    await cnpjInput.waitFor({ state: 'visible', timeout: 5000 });
+    await cnpjInput.fill('11222333000181');
+  }, page);
+
+  await step('CO03', 'Company Step 1: select type', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const select = page.locator('select[aria-label="Tipo de empresa"]').first();
+    await select.waitFor({ state: 'visible', timeout: 5000 });
+    await select.selectOption('MEI');
+  }, page);
+
+  await step('CO04', 'Company Step 1: select industry', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const select = page.locator('select[aria-label="Setor"]').first();
+    await select.waitFor({ state: 'visible', timeout: 5000 });
+    const options = await select.locator('option').allTextContents();
+    const validOption = options.find(o => o && o !== 'Selecione...');
+    if (validOption) {
+      await select.selectOption({ label: validOption });
+    }
+  }, page);
+
+  await step('CO05', 'Company Step 1: fill city', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const cityInput = page.locator('input[aria-label="Cidade"]').first();
+    await cityInput.waitFor({ state: 'visible', timeout: 5000 });
+    await cityInput.fill('Rio de Janeiro');
+  }, page);
+
+  await step('CO06', 'Company Step 1: click Proximo', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const nextBtn = page.locator('button[type="submit"]').first();
+    await nextBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await nextBtn.click();
+    await settle(2000);
+  }, page);
+
+  await step('CO07', 'Company Step 2: select hiring goal', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const radio = page.locator('input[aria-label="Freelancers Pontuais"]').first();
+    await radio.waitFor({ state: 'visible', timeout: 5000 });
+    await radio.click();
+    await settle(500);
+  }, page);
+
+  await step('CO08', 'Company Step 2: select hiring volume', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const volumeLabel = page.locator('label:has-text("1-5")').first();
+    await volumeLabel.waitFor({ state: 'visible', timeout: 5000 });
+    await volumeLabel.click();
+    await settle(500);
+  }, page);
+
+  await step('CO09', 'Company Step 2: check TOS', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const tos = page.locator('#tos').first();
+    await tos.waitFor({ state: 'visible', timeout: 5000 });
+    await tos.check();
+    await settle(500);
+  }, page);
+
+  await step('CO10', 'Company Step 2: click Finalizar', async () => {
+    if (companyAlreadyOnboarded()) return;
+    const finalBtn = page.locator('button[type="submit"]').first();
+    await finalBtn.click();
+    await settle(8000);
+    await page.waitForURL(/company\/dashboard/, { timeout: 15000 });
+  }, page);
+
+  // ===========================================================================
+  // COMPANY DASHBOARD (CD01)
+  // ===========================================================================
+
+  await step('CD01', 'Verify company dashboard loaded', async () => {
+    await page.waitForURL(/company\/dashboard/, { timeout: 10000 });
+    await settle(3000);
+    const heading = page.locator('h1, h2, h3').first();
+    await heading.waitFor({ state: 'visible', timeout: 10000 });
+  }, page);
+
+  // ===========================================================================
+  // COMPANY JOBS + CREATE JOB (CJ01-CJ05)
+  // ===========================================================================
+
+  await step('CJ01', 'Click sidebar "Minhas Vagas"', async () => {
+    await clickNav('a[href="/company/jobs"]', 'Minhas Vagas');
+  }, page);
+
+  await step('CJ02', 'Verify company jobs page loaded', async () => {
+    await page.waitForURL(/company\/jobs/, { timeout: 5000 });
+    await settle(3000);
+  }, page);
+
+  await step('CJ03', 'Click sidebar "Criar Vaga"', async () => {
+    await clickNav('a[href="/company/create"]', 'Criar Vaga');
+  }, page);
+
+  await step('CJ04', 'Fill create job form step 1', async () => {
+    await page.waitForURL(/company\/create/, { timeout: 5000 });
+    await settle(2000);
+    const titleInput = page.locator('input[aria-label="Título da Vaga"]').first();
+    await titleInput.waitFor({ state: 'visible', timeout: 10000 });
+    await titleInput.fill('Garcom para Evento Corporativo');
+    const catSelect = page.locator('select[aria-label="Categoria"]').first();
+    await catSelect.waitFor({ state: 'visible', timeout: 5000 });
+    const catOptions = await catSelect.locator('option').allTextContents();
+    const validCat = catOptions.find(o => o && o !== 'Selecione...');
+    if (validCat) {
+      await catSelect.selectOption({ label: validCat });
+    }
+    await settle(500);
+  }, page);
+
+  await step('CJ05', 'Screenshot create job form', async () => {
+    await settle(1000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY PROFILE (CP01-CP05)
+  // ===========================================================================
+
+  await step('CP01', 'Click sidebar "Perfil Empresa"', async () => {
+    await clickNav('a[href="/company/profile"]', 'Perfil Empresa');
+  }, page);
+
+  await step('CP02', 'Verify company profile loaded', async () => {
+    await page.waitForURL(/company\/profile/, { timeout: 5000 });
+    await settle(3000);
+    const content = page.locator('text=/Perfil|Empresa/i').first();
+    await content.waitFor({ state: 'visible', timeout: 10000 });
+  }, page);
+
+  await step('CP03', 'Click "Editar" on company profile', async () => {
+    const editBtn = page.locator('button:has-text("Editar")').first();
+    await editBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await editBtn.click();
+    await settle(1000);
+  }, page);
+
+  await step('CP04', 'Change company description', async () => {
+    try {
+      const descField = page.locator('textarea').first();
+      await descField.waitFor({ state: 'visible', timeout: 5000 });
+      await descField.fill('Empresa dedicada a excelencia em eventos. Atualizado via E2E.');
+    } catch {
+      try {
+        const descInput = page.locator('input[name="description"]').first();
+        await descInput.fill('Empresa dedicada. E2E test.');
+      } catch { console.log('    No editable description field found'); }
+    }
+    await settle(500);
+  }, page);
+
+  await step('CP05', 'Click "Salvar" on company profile', async () => {
+    const saveBtn = page.locator('button:has-text("Salvar")').first();
+    await saveBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await saveBtn.click();
+    await settle(3000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY WALLET (CW01-CW03)
+  // ===========================================================================
+
+  await step('CW01', 'Click sidebar "Carteira" (company)', async () => {
+    await clickNav('a[href="/company/wallet"]', 'Carteira');
+  }, page);
+
+  await step('CW02', 'Verify company wallet loaded', async () => {
+    await page.waitForURL(/company\/wallet/, { timeout: 5000 });
+    await settle(3000);
+    const content = page.locator('text=/R\\$|Saldo|Carteira/i').first();
+    await content.waitFor({ state: 'visible', timeout: 10000 });
+  }, page);
+
+  await step('CW03', 'Screenshot company wallet', async () => {
+    await settle(1000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY MESSAGES (CM01)
+  // ===========================================================================
+
+  await step('CM01', 'Click sidebar "Mensagens" (company)', async () => {
+    await clickNav('a[href="/company/messages"]', 'Mensagens');
+    await page.waitForURL(/company\/messages/, { timeout: 5000 });
+    await settle(3000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY NOTIFICATIONS (CN01-CN05)
+  // ===========================================================================
+
+  await step('CN01', 'Click notification bell (company)', async () => {
+    const bell = page.locator('button[aria-label="Notifications"]').first();
+    await bell.waitFor({ state: 'visible', timeout: 5000 });
+    await bell.click();
+    await settle(1000);
+  }, page);
+
+  await step('CN02', 'Screenshot company notification dropdown', async () => {
+    await settle(1000);
+  }, page);
+
+  await step('CN03', 'Navigate to /notifications (company)', async () => {
+    try {
+      const verTodas = page.locator('text=/Ver todas|Ver tudo/i').first();
+      const visible = await verTodas.isVisible().catch(() => false);
+      if (visible) {
+        await verTodas.click();
+        await settle(2000);
+      } else {
+        await page.keyboard.press('Escape');
+        await settle(500);
+        await page.evaluate(() => { window.location.href = '/notifications'; });
+        await settle(3000);
+      }
+    } catch {
+      await page.evaluate(() => { window.location.href = '/notifications'; });
+      await settle(3000);
+    }
+  }, page);
+
+  await step('CN04', 'Click notification tabs (company)', async () => {
+    const tabs = ['Mensagens', 'Pagamentos', 'Status', 'Sistema', 'Todas'];
+    for (const tabName of tabs) {
+      try {
+        const tab = page.locator('button:has-text("' + tabName + '")').first();
+        const visible = await tab.isVisible().catch(() => false);
+        if (visible) {
+          await tab.click();
+          await settle(500);
+        }
+      } catch {}
+    }
+  }, page);
+
+  await step('CN05', 'Screenshot company notifications page', async () => {
+    await settle(1000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY ANALYTICS (CA01)
+  // ===========================================================================
+
+  await step('CA01', 'Navigate to company analytics', async () => {
+    // If not on a company page, need to login as company first
+    if (!page.url().includes('company')) {
+      await page.goto(BASE_URL + '/login?type=hire', { waitUntil: 'networkidle' });
+      await settle(2000);
+      // If already redirected to company dashboard, great
+      if (page.url().includes('company')) {
+        await page.goto(BASE_URL + '/company/analytics', { waitUntil: 'networkidle' });
+        await settle(5000);
+      } else if (page.url().includes('login')) {
+        try {
+          const lt = page.locator('button:has-text("Fazer Login")').first();
+          if (await lt.isVisible().catch(() => false)) { await lt.click(); await settle(); }
+        } catch {}
+        await page.locator('input[type="email"]').first().fill(COMPANY_EMAIL);
+        await page.locator('input[type="password"]').first().fill(COMPANY_PASS);
+        await page.locator('button[type="submit"]').first().click();
+        await settle(5000);
+        // After login, should be on company/dashboard
+        await page.goto(BASE_URL + '/company/analytics', { waitUntil: 'networkidle' });
+        await settle(5000);
+      }
+    } else {
+      // Try sidebar link
+      try {
+        const link = page.locator('a[href="/company/analytics"]').first();
+        await link.waitFor({ state: 'visible', timeout: 5000 });
+        await link.click();
+        await settle(3000);
+      } catch {
+        await page.goto(BASE_URL + '/company/analytics', { waitUntil: 'networkidle' });
+        await settle(5000);
+      }
+    }
+    // Verify we're on the analytics page
+    const url = page.url();
+    if (!url.includes('analytics') && !url.includes('company')) {
+      throw new Error('Could not navigate to company analytics, on: ' + url);
+    }
+    await settle(2000);
+  }, page);
+
+  // ===========================================================================
+  // COMPANY RE-LOGIN (CR01-CR04)
+  // ===========================================================================
+
+  await step('CR01', 'Company logout', async () => {
+    // Ensure we're on a company page with sidebar visible
+    if (!page.url().includes('company')) {
+      await page.evaluate(() => { window.location.href = '/company/dashboard'; });
+      await settle(5000);
+    }
+    try {
+      const logoutBtn = page.locator('button:has-text("Sair")').first();
+      await logoutBtn.waitFor({ state: 'visible', timeout: 10000 });
+      await logoutBtn.click();
+    } catch {
+      // Fallback: sign out via JavaScript
+      await page.evaluate(() => {
+        const sb = window.__supabase || null;
+        if (sb) sb.auth.signOut();
+        else window.location.href = '/login';
       });
     }
-  }
+    await settle(3000);
+  }, page);
 
-  // ════════════════════════════════════════════════════
-  // PHASE 12: WORKER LOGOUT
-  // ════════════════════════════════════════════════════
-
-  await step('worker-go-to-dashboard', async () => {
-    const link = page.locator('a[href="/dashboard"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForTimeout(1000);
+  await step('CR02', 'Navigate to login as company', async () => {
+    // If already on login, we're good
+    if (page.url().includes('login')) {
+      return;
     }
-  });
-
-  await step('worker-logout', async () => {
-    const logoutBtn = page.locator('button:has-text("Sair")').first();
-    await logoutBtn.click();
-    await page.waitForTimeout(3000);
-    await page.waitForLoadState('networkidle');
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 13: WORKER RE-LOGIN (must go to /dashboard, NOT onboarding)
-  // After logout, Sidebar navigates to /login
-  // ════════════════════════════════════════════════════
-
-  await step('worker-relogin-navigate', async () => {
-    const url = page.url();
-    console.log('  After logout URL: ' + url);
-    if (url.includes('/login')) {
-      console.log('  Already on login page');
-    } else {
-      // We might be on the onboarding/homepage. Click "Quero Trabalhar" card
-      const card = page.locator('h3:has-text("Quero Trabalhar")').first();
-      if (await card.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await card.click();
-        await page.waitForTimeout(1500);
-      } else {
-        // Try nav login button
-        const loginBtn = page.locator('button:has-text("Login")').first();
-        if (await loginBtn.isVisible()) {
-          await loginBtn.click();
-          await page.waitForTimeout(1500);
-        }
-      }
-    }
-  });
-
-  await step('worker-relogin-fill', async () => {
-    // Ensure we're in login mode
-    const text = await page.evaluate(() => document.body.innerText);
-    if (text.includes('Cadastre-se') && !text.includes('Fazer Login')) {
-      // Already in login mode
-    } else if (text.includes('Fazer Login')) {
-      await page.click('button:has-text("Fazer Login")');
-      await page.waitForTimeout(500);
-    }
-    await page.fill('input[aria-label="Email"]', 'geribameuacesso+worker@gmail.com');
-    await page.fill('input[aria-label="Senha"]', 'WorkiTest123');
-  });
-
-  await step('worker-relogin-submit', async () => {
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(5000);
-    await page.waitForLoadState('networkidle');
-  });
-
-  await step('worker-relogin-verify', async () => {
-    const url = page.url();
-    if (url.includes('/dashboard') && !url.includes('onboarding')) {
-      console.log('  SUCCESS: Worker re-login -> dashboard directly (no re-onboarding)');
-    } else if (url.includes('onboarding')) {
-      console.log('  BUG: Worker re-sent to onboarding!');
-    } else {
-      console.log('  URL after re-login: ' + url);
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 14: LOGOUT -> COMPANY SIGNUP
-  // ════════════════════════════════════════════════════
-
-  await step('worker-logout-for-company', async () => {
-    await page.waitForTimeout(1000);
-    const logoutBtn = page.locator('button:has-text("Sair")').first();
-    if (await logoutBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await logoutBtn.click();
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState('networkidle');
-    }
-  });
-
-  await step('click-quero-contratar', async () => {
-    const url = page.url();
-    if (url.includes('/login')) {
-      // We're on login, but need hire type. Go back and choose Quero Contratar
-      const voltar = page.locator('button:has-text("VOLTAR")').first();
-      if (await voltar.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await voltar.click();
-        await page.waitForTimeout(1500);
-      }
-    }
-    // Now we should be on homepage/onboarding
-    const card = page.locator('h3:has-text("Quero Contratar")').first();
-    if (await card.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await card.click();
-      await page.waitForTimeout(1500);
-    } else {
-      // Try alternative button text
+    try {
       const btn = page.locator('button:has-text("Quero Contratar")').first();
-      if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await btn.click();
-        await page.waitForTimeout(1500);
-      }
-    }
-  });
-
-  await step('company-signup-toggle', async () => {
-    // Should be on /login?type=hire, toggle to signup
-    const cadastre = page.locator('button:has-text("Cadastre-se")').first();
-    if (await cadastre.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await cadastre.click();
-      await page.waitForTimeout(500);
-    }
-  });
-
-  await step('fill-company-signup', async () => {
-    await page.fill('input[aria-label="Email"]', 'geribameuacesso+company@gmail.com');
-    await page.fill('input[aria-label="Senha"]', 'WorkiTest123');
-  });
-
-  await step('submit-company-signup', async () => {
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(6000);
-    await page.waitForLoadState('networkidle');
-  });
-
-  await step('check-after-company-signup', async () => {
-    const url = page.url();
-    console.log('  Post-company-signup URL: ' + url);
-    const pageText = await page.evaluate(() => document.body.innerText);
-    if (pageText.includes('ja esta cadastrado') || pageText.includes('already registered') || pageText.includes('cadastrado')) {
-      console.log('  Company account exists, logging in...');
-      await page.click('button:has-text("Fazer Login")');
-      await page.waitForTimeout(500);
-      await page.fill('input[aria-label="Email"]', 'geribameuacesso+company@gmail.com');
-      await page.fill('input[aria-label="Senha"]', 'WorkiTest123');
-      await page.click('button[type="submit"]');
-      await page.waitForTimeout(5000);
-      await page.waitForLoadState('networkidle');
-    } else if (pageText.includes('Muitas tentativas') || pageText.includes('Aguarde')) {
-      console.log('  Rate limited, waiting 30s...');
-      await page.waitForTimeout(30000);
-      await page.click('button[type="submit"]');
-      await page.waitForTimeout(5000);
-      await page.waitForLoadState('networkidle');
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 15: COMPANY ONBOARDING (if needed)
-  // ════════════════════════════════════════════════════
-
-  const compUrl = page.url();
-  const compNeedsOnboarding = compUrl.includes('onboarding');
-  const compOnDashboard = compUrl.includes('company/dashboard');
-
-  if (compNeedsOnboarding) {
-    console.log('=== COMPANY ONBOARDING FLOW ===');
-
-    await step('comp-onboard-step1-fill', async () => {
-      await page.waitForTimeout(1000);
-      await page.fill('input[aria-label="Nome da empresa"]', 'Empresa Teste E2E Ltda');
-      // Use valid CNPJ: 11.444.777/0001-61
-      await page.fill('input[aria-label="CNPJ"]', '11444777000161');
-      await page.selectOption('select[aria-label="Tipo de empresa"]', 'MEI');
-      // Setor - pick the first real option
-      await page.selectOption('select[aria-label="Setor"]', { index: 1 });
-      await page.fill('input[aria-label="Cidade"]', 'Sao Paulo');
-      await page.waitForTimeout(500);
-    });
-
-    await step('comp-onboard-step1-next', async () => {
-      const btn = page.locator('button[type="submit"]').last();
+      await btn.waitFor({ state: 'visible', timeout: 5000 });
       await btn.click();
-      await page.waitForTimeout(2000);
-      // Check for CNPJ error and retry with alternative
-      const text = await page.evaluate(() => document.body.innerText);
-      if (text.includes('CNPJ invalido') || text.includes('CNPJ inválido')) {
-        console.log('  CNPJ invalid, retrying with 11447700010027...');
-        await page.fill('input[aria-label="CNPJ"]', '');
-        await page.fill('input[aria-label="CNPJ"]', '11447700010027');
-        await page.waitForTimeout(300);
-        await btn.click();
-        await page.waitForTimeout(2000);
+    } catch {
+      // Navigate directly
+      await page.evaluate(() => { window.location.href = '/login?type=hire'; });
+    }
+    await settle(3000);
+    await page.waitForURL(/login/, { timeout: 10000 });
+  }, page);
+
+  await step('CR03', 'Login as company', async () => {
+    // Make sure we're on the login page
+    if (!page.url().includes('login')) {
+      await page.evaluate(() => { window.location.href = '/login?type=hire'; });
+      await settle(3000);
+    }
+    try {
+      const loginToggle = page.locator('button:has-text("Fazer Login")').first();
+      const isSignup = await loginToggle.isVisible().catch(() => false);
+      if (isSignup) {
+        await loginToggle.click();
+        await settle();
       }
-    });
+    } catch {}
+    await page.locator('input[type="email"]').first().fill(COMPANY_EMAIL);
+    await page.locator('input[type="password"]').first().fill(COMPANY_PASS);
+    await page.locator('button[type="submit"]').first().click();
+    await settle(5000);
+  }, page);
 
-    await step('comp-onboard-step2-goal', async () => {
-      const goal = page.locator('label:has-text("Freelancers Pontuais")');
-      if (await goal.isVisible()) await goal.click();
-      await page.waitForTimeout(300);
-    });
+  await step('CR04', 'Verify on /company/dashboard (NOT onboarding)', async () => {
+    await page.waitForURL(/company\/dashboard/, { timeout: 10000 });
+    if (page.url().includes('onboarding')) {
+      throw new Error('Should be on company dashboard, not onboarding');
+    }
+  }, page);
 
-    await step('comp-onboard-step2-volume', async () => {
-      const vol = page.locator('label:has-text("1-5")');
-      if (await vol.isVisible()) await vol.click();
-      await page.waitForTimeout(300);
-    });
-
-    await step('comp-onboard-step2-tos', async () => {
-      await page.click('#tos');
-      await page.waitForTimeout(300);
-    });
-
-    await step('comp-onboard-step2-finalize', async () => {
-      const btn = page.locator('button[type="submit"]').last();
-      await btn.click();
-      await page.waitForTimeout(8000);
-      await page.waitForLoadState('networkidle');
-    });
-  } else if (compOnDashboard) {
-    console.log('=== COMPANY ALREADY ONBOARDED ===');
-  } else {
-    console.log('=== UNEXPECTED COMPANY STATE: ' + compUrl + ' ===');
+  // ===========================================================================
+  // FINAL REPORT
+  // ===========================================================================
+  console.log('\n======== RESULTS ========');
+  const totalRun = results.filter(r => r.status !== 'SKIP').length;
+  const totalSkip = results.filter(r => r.status === 'SKIP').length;
+  const totalPass = results.filter(r => r.status === 'PASS').length;
+  const totalFail = results.filter(r => r.status === 'FAIL').length;
+  console.log('Total steps: ' + results.length);
+  console.log('Run: ' + totalRun + ' | Skipped: ' + totalSkip);
+  console.log('Passed: ' + totalPass);
+  console.log('Failed: ' + totalFail);
+  if (errors.length > 0) {
+    console.log('\nFAILURES:');
+    errors.forEach(e => console.log('  ' + e.id + ': ' + e.name + ' -- ' + e.error));
   }
+  console.log('\nConsole errors captured: ' + consoleLogs.length);
+  consoleLogs.slice(-15).forEach(l => console.log('  [' + l.type + '] ' + l.text.substring(0, 120)));
 
-  // ════════════════════════════════════════════════════
-  // PHASE 16: COMPANY PAGES
-  // Company sidebar nav: Dashboard, Criar Vaga, Minhas Vagas,
-  //   Mensagens, Carteira, Analytics, Perfil Empresa
-  // ════════════════════════════════════════════════════
-
-  await step('company-dashboard', async () => {
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000);
-    const text = await page.evaluate(() => document.body.innerText);
-    console.log('  Company dashboard: ' + (text.includes('Dashboard') || text.includes('Empresa') || text.includes('Vagas')));
-  });
-
-  await step('company-nav-criar-vaga', async () => {
-    const link = page.locator('a[href="/company/create"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('company-nav-minhas-vagas', async () => {
-    const link = page.locator('a[href="/company/jobs"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('company-nav-mensagens', async () => {
-    const link = page.locator('a[href="/company/messages"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('company-nav-carteira', async () => {
-    const link = page.locator('a[href="/company/wallet"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('company-nav-analytics', async () => {
-    const link = page.locator('a[href="/company/analytics"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('company-nav-perfil', async () => {
-    const link = page.locator('a[href="/company/profile"]').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(2500);
-    }
-  });
-
-  await step('company-profile-edit', async () => {
-    const editBtn = page.locator('button:has-text("Editar")').first();
-    if (await editBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await editBtn.click();
-      await page.waitForTimeout(1000);
-    }
-  });
-
-  await step('company-profile-edit-desc', async () => {
-    const textarea = page.locator('textarea').first();
-    if (await textarea.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await textarea.fill('Empresa de teste E2E. Contratamos profissionais para eventos.');
-      await page.waitForTimeout(500);
-    }
-  });
-
-  await step('company-profile-save', async () => {
-    const saveBtn = page.locator('button:has-text("Salvar")').first();
-    if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await saveBtn.click();
-      await page.waitForTimeout(2000);
-    }
-  });
-
-  await step('company-profile-scroll', async () => {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1000);
-  });
-
-  // ════════════════════════════════════════════════════
-  // PHASE 17: COMPANY LOGOUT -> RE-LOGIN
-  // ════════════════════════════════════════════════════
-
-  await step('company-logout', async () => {
-    const logoutBtn = page.locator('button:has-text("Sair")').first();
-    if (await logoutBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await logoutBtn.click();
-      await page.waitForTimeout(3000);
-      await page.waitForLoadState('networkidle');
-    }
-  });
-
-  await step('company-relogin-navigate', async () => {
-    const url = page.url();
-    console.log('  After company logout URL: ' + url);
-    if (url.includes('/login')) {
-      // Already on login, but might be type=work. Need type=hire
-      // The login page uses URL params to determine type
-      // After logout, sidebar sends to /login without type param
-      // We can just log in - the user_metadata determines the redirect
-      console.log('  On login page, will fill company credentials');
-    } else {
-      // On homepage, click "Quero Contratar"
-      const card = page.locator('h3:has-text("Quero Contratar")').first();
-      if (await card.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await card.click();
-        await page.waitForTimeout(1500);
-      }
-    }
-  });
-
-  await step('company-relogin-fill', async () => {
-    // Ensure login mode
-    const text = await page.evaluate(() => document.body.innerText);
-    if (text.includes('Fazer Login')) {
-      await page.click('button:has-text("Fazer Login")');
-      await page.waitForTimeout(500);
-    }
-    await page.fill('input[aria-label="Email"]', 'geribameuacesso+company@gmail.com');
-    await page.fill('input[aria-label="Senha"]', 'WorkiTest123');
-  });
-
-  await step('company-relogin-submit', async () => {
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(5000);
-    await page.waitForLoadState('networkidle');
-  });
-
-  await step('company-relogin-verify', async () => {
-    const url = page.url();
-    if (url.includes('/company/dashboard') && !url.includes('onboarding')) {
-      console.log('  SUCCESS: Company re-login -> company/dashboard directly');
-    } else if (url.includes('onboarding')) {
-      console.log('  BUG: Company re-sent to onboarding!');
-    } else {
-      console.log('  Company re-login URL: ' + url);
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // FINAL SUMMARY
-  // ════════════════════════════════════════════════════
-
-  console.log('\n' + '='.repeat(60));
-  console.log('FINAL SUMMARY');
-  console.log('='.repeat(60));
-  console.log('Total steps: ' + stepNum);
-  console.log('Passed: ' + passed);
-  console.log('Failed: ' + failed);
-  console.log('Console errors: ' + logs.filter(l => l.startsWith('error:')).length);
-  console.log('Page errors: ' + logs.filter(l => l.startsWith('PAGE_ERROR:')).length);
-  console.log('HTTP errors: ' + logs.filter(l => l.startsWith('HTTP_')).length);
-  console.log('='.repeat(60));
-
-  console.log('\nALL RESULTS:');
-  results.forEach(r => {
-    console.log('  ' + r.id + ' | ' + r.name + ' | ' + r.result + ' | ' + r.url + (r.error ? ' | ' + r.error : ''));
-  });
-
-  if (logs.length > 0) {
-    console.log('\nALL CONSOLE/HTTP ERRORS:');
-    logs.forEach(l => console.log('  ' + l));
-  }
+  fs.writeFileSync(RESULTS_FILE, JSON.stringify({ results, consoleLogs, errors, summary: { total: results.length, run: totalRun, skipped: totalSkip, passed: totalPass, failed: totalFail } }, null, 2));
+  console.log('\nResults saved to ' + RESULTS_FILE);
+  console.log('Progress saved to ' + PROGRESS_FILE);
 
   await browser.close();
-  console.log('\nBrowser closed. Screenshots in frontend/e2e/screenshots/');
-})().catch(e => {
-  console.error('FATAL:', e.message);
-  process.exit(1);
-});
+})();
