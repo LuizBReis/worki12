@@ -30,7 +30,11 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                 if (!user) return;
                 const userType = user.user_metadata?.user_type;
                 if (userType === 'hire') {
-                    const { data } = await supabase.from('companies').select('name, cnpj').eq('owner_id', user.id).single();
+                    // Try owner_id first, fallback to id (legacy accounts)
+                    let { data } = await supabase.from('companies').select('name, cnpj').eq('owner_id', user.id).single();
+                    if (!data) {
+                        ({ data } = await supabase.from('companies').select('name, cnpj').eq('id', user.id).single());
+                    }
                     if (data) setUserDoc({ name: data.name || '', cpfCnpj: data.cnpj || '' });
                 } else {
                     const { data } = await supabase.from('workers').select('full_name, cpf').eq('id', user.id).single();
