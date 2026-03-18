@@ -3,6 +3,7 @@ import { WalletService } from '../services/walletService';
 import { Loader2, X, ExternalLink, QrCode } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { supabase } from '../lib/supabase';
 
 interface DepositModalProps {
     isOpen: boolean;
@@ -15,12 +16,27 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
     const [amount, setAmount] = useState<string>('');
     const [pixUrl, setPixUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [userDoc, setUserDoc] = useState<{ name: string; cpfCnpj: string } | null>(null);
     const trapRef = useFocusTrap(isOpen);
 
     useEffect(() => {
         if (isOpen) {
             const input = trapRef.current?.querySelector<HTMLInputElement>('input');
             input?.focus();
+
+            // Fetch user's CPF/CNPJ from profile
+            (async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+                const userType = user.user_metadata?.user_type;
+                if (userType === 'hire') {
+                    const { data } = await supabase.from('companies').select('name, cnpj').eq('owner_id', user.id).single();
+                    if (data) setUserDoc({ name: data.name || '', cpfCnpj: data.cnpj || '' });
+                } else {
+                    const { data } = await supabase.from('workers').select('full_name, cpf').eq('id', user.id).single();
+                    if (data) setUserDoc({ name: data.full_name || '', cpfCnpj: data.cpf || '' });
+                }
+            })();
         }
     }, [isOpen, trapRef]);
 
@@ -38,8 +54,18 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
         }
 
         setLoading(true);
-        // Calls the backend to generate the Asaas PIX charge and split
-        const result = await WalletService.createDeposit({ amount: value });
+        if (!userDoc?.cpfCnpj) {
+            addToast('CPF ou CNPJ não encontrado no seu perfil. Atualize seu perfil primeiro.', 'error');
+            setLoading(false);
+            return;
+        }
+
+        // Calls the backend to generate the Asaas PIX charge
+        const result = await WalletService.createDeposit({
+            amount: value,
+            name: userDoc.name,
+            cpfCnpj: userDoc.cpfCnpj,
+        });
         setLoading(false);
 
         if (result.pixQrCodeUrl) {
