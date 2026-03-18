@@ -14,7 +14,8 @@ interface DepositModalProps {
 export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) {
     const { addToast } = useToast();
     const [amount, setAmount] = useState<string>('');
-    const [pixUrl, setPixUrl] = useState<string | null>(null);
+    const [billingType, setBillingType] = useState<string>('UNDEFINED');
+    const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [userDoc, setUserDoc] = useState<{ name: string; cpfCnpj: string } | null>(null);
     const trapRef = useFocusTrap(isOpen);
@@ -64,25 +65,26 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
             return;
         }
 
-        // Calls the backend to generate the Asaas PIX charge
+        // Calls the backend to generate the Asaas charge
         const result = await WalletService.createDeposit({
             amount: value,
             name: userDoc.name,
             cpfCnpj: userDoc.cpfCnpj,
+            billingType,
         });
         setLoading(false);
 
-        if (result.pixQrCodeUrl) {
-            setPixUrl(result.pixQrCodeUrl);
-            addToast('Depósito iniciado! Abra a fatura para pagar.', 'success');
+        if (result.invoiceUrl || result.pixQrCodeUrl) {
+            setInvoiceUrl(result.invoiceUrl || result.pixQrCodeUrl || null);
+            addToast('Fatura gerada! Abra para pagar.', 'success');
         } else {
             addToast(result.error || 'Erro ao iniciar depósito', 'error');
         }
     };
 
     const handleClose = () => {
-        if (pixUrl) {
-            onSuccess(); // We trigger success to refresh list or assume pending
+        if (invoiceUrl) {
+            onSuccess();
         }
         onClose();
     };
@@ -117,7 +119,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                     </p>
                 </div>
 
-                {!pixUrl ? (
+                {!invoiceUrl ? (
                     <div className="space-y-6">
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Valor do Deposito (R$)</label>
@@ -168,13 +170,36 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                                 <span>Suas taxas sao cobradas no deposito. Ao contratar, o valor debitado e exatamente o orcamento do job, sem custos extras.</span>
                             </p>
                         </div>
+
+                        {/* Payment method selector */}
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Forma de Pagamento</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { value: 'UNDEFINED', label: 'Todas', desc: 'Escolha na fatura' },
+                                    { value: 'PIX', label: 'PIX', desc: 'Aprovacao instantanea' },
+                                    { value: 'BOLETO', label: 'Boleto', desc: 'Ate 3 dias uteis' },
+                                    { value: 'CREDIT_CARD', label: 'Cartao', desc: 'Aprovacao imediata' },
+                                ].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setBillingType(opt.value)}
+                                        className={`p-3 rounded-xl border-2 text-left transition-all ${billingType === opt.value ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-gray-400'}`}
+                                    >
+                                        <span className="font-bold text-sm block">{opt.label}</span>
+                                        <span className={`text-xs ${billingType === opt.value ? 'text-gray-300' : 'text-gray-400'}`}>{opt.desc}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <button
                             onClick={handleInitiate}
                             disabled={loading || !amount}
                             className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase text-sm hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex justify-center items-center gap-2 shadow-xl shadow-black/10 disabled:opacity-50 disabled:hover:scale-100"
                         >
-                            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Gerar Fatura (PIX, Boleto ou Cartão)'}
-
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Gerar Fatura'}
                         </button>
                     </div>
                 ) : (
@@ -185,13 +210,13 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                         </div>
 
                         <a
-                            href={pixUrl}
+                            href={invoiceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-sm hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] transition-all flex justify-center items-center gap-2 shadow-xl shadow-blue-600/20"
                         >
                             <ExternalLink size={18} />
-                            Abrir Fatura Asaas
+                            Abrir Fatura de Pagamento
                         </a>
 
                         <button

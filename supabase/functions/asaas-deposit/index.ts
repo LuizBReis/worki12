@@ -73,7 +73,7 @@ serve(async (req) => {
             });
         }
 
-        const { amount, name, cpfCnpj } = await req.json();
+        const { amount, name, cpfCnpj, billingType } = await req.json();
 
         if (!amount || typeof amount !== 'number' || amount < 50) {
             throw new Error('Valor mínimo para depósito é R$ 50,00');
@@ -135,18 +135,26 @@ serve(async (req) => {
             await supabaseAdmin.from('wallets').update({ asaas_customer_id: customerId }).eq('user_id', user.id).throwOnError();
         }
 
-        // Create PIX charge on master account - NO split, all money stays in master wallet
+        // Create charge on master account — accepts PIX, Boleto, or Credit Card
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 1);
+        dueDate.setDate(dueDate.getDate() + 3); // 3 days for boleto
 
-        const paymentPayload = {
+        const allowedTypes = ['PIX', 'BOLETO', 'CREDIT_CARD', 'UNDEFINED'];
+        const selectedType = allowedTypes.includes(billingType) ? billingType : 'UNDEFINED';
+
+        const paymentPayload: Record<string, unknown> = {
             customer: customerId,
-            billingType: "PIX",
+            billingType: selectedType,
             value: sanitizedAmount,
             dueDate: dueDate.toISOString().split('T')[0],
             description: `Deposito de Creditos - Worki`,
             externalReference: user.id,
         };
+
+        // Credit card installments (if applicable)
+        if (selectedType === 'CREDIT_CARD' && sanitizedAmount >= 100) {
+            paymentPayload.maxInstallmentCount = Math.min(Math.floor(sanitizedAmount / 50), 6);
+        }
 
         const paymentRes = await fetch(`${ASAAS_API_URL}/payments`, {
             method: 'POST',
@@ -155,11 +163,13 @@ serve(async (req) => {
         });
 
         const paymentData = await paymentRes.json();
-        if (!paymentRes.ok) throw new Error(paymentData.errors?.[0]?.description || 'Error generating PIX');
+        if (!paymentRes.ok) throw new Error(paymentData.errors?.[0]?.description || 'Erro ao gerar cobranca');
 
         return new Response(JSON.stringify({
             success: true,
             paymentId: paymentData.id,
+            invoiceUrl: paymentData.invoiceUrl,
+            billingType: selectedType,
             pixQrCodeUrl: paymentData.invoiceUrl
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

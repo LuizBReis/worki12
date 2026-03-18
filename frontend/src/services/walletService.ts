@@ -125,7 +125,7 @@ export const WalletService = {
         }
     },
 
-    async createDeposit(payload: { amount: number, name?: string, cpfCnpj?: string }): Promise<{ paymentId?: string; pixQrCodeUrl?: string; error?: string }> {
+    async createDeposit(payload: { amount: number, name?: string, cpfCnpj?: string, billingType?: string }): Promise<{ paymentId?: string; invoiceUrl?: string; pixQrCodeUrl?: string; error?: string }> {
         try {
             return await invokeFunction('asaas-deposit', payload);
         } catch (error: unknown) {
