@@ -193,9 +193,9 @@ export default function LandingPage() {
       <footer className="px-4 py-8 bg-gray-100 text-center text-sm text-gray-500 font-medium">
         <p>&copy; {new Date().getFullYear()} Worki — Marketplace de Freelancers. Todos os direitos reservados.</p>
         <div className="flex gap-4 justify-center mt-4">
-          <button onClick={() => navigate('/terms')} className="hover:text-black transition-colors">Termos de Uso</button>
-          <button onClick={() => navigate('/privacy')} className="hover:text-black transition-colors">Política de Privacidade</button>
-          <button onClick={() => navigate('/help')} className="hover:text-black transition-colors">Ajuda</button>
+          <button onClick={() => navigate('/termos')} className="hover:text-black transition-colors">Termos de Uso</button>
+          <button onClick={() => navigate('/privacidade')} className="hover:text-black transition-colors">Política de Privacidade</button>
+          <button onClick={() => navigate('/ajuda')} className="hover:text-black transition-colors">Ajuda</button>
         </div>
       </footer>
     </div>
