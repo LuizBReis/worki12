@@ -8,7 +8,7 @@ const faqs = [
     },
     {
         q: 'Qual a taxa cobrada?',
-        a: 'Empresas: 8% + R$ 4,00 cobrados no deposito. O saldo creditado ja e o valor liquido, e ao contratar o valor debitado e exatamente o orcamento do job. Workers: 5% + R$ 3,00 cobrados no saque via PIX.',
+        a: 'Empresas: 8% de taxa Worki + R$ 4,00 do operador financeiro, cobrados no deposito. O saldo creditado ja e o valor liquido, e ao contratar o valor debitado e exatamente o orcamento do job. Workers: 5% de taxa Worki + R$ 3,00 do operador financeiro, cobrados no saque via PIX.',
     },
     {
         q: 'Como faco para sacar meu saldo?',

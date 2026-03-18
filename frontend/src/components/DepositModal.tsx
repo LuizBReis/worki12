@@ -148,11 +148,11 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                                             <span className="font-bold">R$ {depositVal.toFixed(2).replace('.', ',')}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Taxa de servico (8%)</span>
+                                            <span className="text-gray-600">Taxa de servico Worki (8%)</span>
                                             <span className="font-bold text-red-500">- R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Taxa de processamento</span>
+                                            <span className="text-gray-600">Taxa do operador financeiro</span>
                                             <span className="font-bold text-red-500">- R$ {processingFee.toFixed(2).replace('.', ',')}</span>
                                         </div>
                                         <div className="flex justify-between border-t-2 border-black pt-2">

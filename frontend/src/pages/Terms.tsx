@@ -35,8 +35,8 @@ export default function Terms() {
           <h2 className="text-xl font-bold mt-6">5. Taxas</h2>
           <p>A Worki cobra as seguintes taxas para manter a plataforma segura e funcional:</p>
           <ul className="list-disc pl-6 space-y-2">
-            <li><strong>Para Empresas (no deposito):</strong> Taxa de servico de <strong>8% (oito por cento)</strong> sobre o valor depositado, mais uma taxa fixa de processamento de <strong>R$ 4,00</strong>. As taxas sao cobradas no momento do deposito, e o saldo creditado ja e o valor liquido. Ao contratar, o valor debitado e exatamente o orcamento do job, sem custos extras.</li>
-            <li><strong>Para Workers (no saque):</strong> Taxa de servico de <strong>5% (cinco por cento)</strong> sobre o valor do saque, mais uma taxa fixa de processamento PIX de <strong>R$ 3,00</strong>. O saldo na plataforma e o valor bruto ganho nos jobs.</li>
+            <li><strong>Para Empresas (no deposito):</strong> Taxa de servico Worki de <strong>8% (oito por cento)</strong> sobre o valor depositado, mais uma taxa fixa de <strong>R$ 4,00</strong> cobrada pelo operador financeiro para processamento do pagamento. As taxas sao cobradas no momento do deposito, e o saldo creditado ja e o valor liquido. Ao contratar, o valor debitado e exatamente o orcamento do job, sem custos extras.</li>
+            <li><strong>Para Workers (no saque):</strong> Taxa de servico Worki de <strong>5% (cinco por cento)</strong> sobre o valor do saque, mais uma taxa fixa de <strong>R$ 3,00</strong> cobrada pelo operador financeiro para transferencia via PIX. O saldo na plataforma e o valor bruto ganho nos jobs.</li>
           </ul>
           <p className="mt-2">A Worki reserva-se o direito de alterar as taxas, notificando os usuarios com antecedencia minima de 30 dias.</p>
 

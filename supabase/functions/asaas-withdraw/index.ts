@@ -70,7 +70,7 @@ serve(async (req) => {
                 wallet_id: userWallet.id,
                 amount: -amount,
                 type: 'debit',
-                description: `Saque via PIX (taxa R$3,00 + 5% = R$ ${feeAmount.toFixed(2)} total, R$ ${netAmount.toFixed(2)} enviado)`,
+                description: `Saque via PIX (Worki 5%: R$${percentageFee.toFixed(2)} + operador financeiro: R$${WITHDRAW_FEE_FIXED.toFixed(2)} = R$${feeAmount.toFixed(2)} total, R$${netAmount.toFixed(2)} enviado)`,
                 status: 'pending_transfer'
             })
             .select('id')

@@ -129,7 +129,7 @@ export default function Wallet() {
         const fixedFee = 3.00;
         const totalFee = parseFloat((fixedFee + percentFee).toFixed(2));
         const net = parseFloat((amount - totalFee).toFixed(2));
-        if (!window.confirm(`Confirmar saque de R$ ${amount.toFixed(2)}?\n\nTaxa de servico (5%): R$ ${percentFee.toFixed(2)}\nTaxa de processamento PIX: R$ ${fixedFee.toFixed(2)}\nTotal de taxas: R$ ${totalFee.toFixed(2)}\nVoce recebera: R$ ${net.toFixed(2)}\n\nEsta acao nao pode ser desfeita.`)) {
+        if (!window.confirm(`Confirmar saque de R$ ${amount.toFixed(2)}?\n\nTaxa de servico Worki (5%): R$ ${percentFee.toFixed(2)}\nTaxa do operador financeiro: R$ ${fixedFee.toFixed(2)}\nTotal de taxas: R$ ${totalFee.toFixed(2)}\nVoce recebera: R$ ${net.toFixed(2)}\n\nEsta acao nao pode ser desfeita.`)) {
             return;
         }
 
@@ -284,11 +284,11 @@ export default function Wallet() {
                                             <span className="font-bold">R$ {wAmt.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-500">Taxa de servico (5%)</span>
+                                            <span className="text-gray-500">Taxa de servico Worki (5%)</span>
                                             <span className="font-bold text-red-500">- R$ {wPercentFee.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-500">Taxa de processamento PIX</span>
+                                            <span className="text-gray-500">Taxa do operador financeiro</span>
                                             <span className="font-bold text-red-500">- R$ {wFixedFee.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between border-t pt-1">
