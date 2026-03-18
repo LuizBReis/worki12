@@ -46,7 +46,16 @@ export default function Login() {
 
                 if (signUpError) throw signUpError;
 
-                if (data.user) {
+                if (data.user && data.session) {
+                    // Auto-confirmed: redirect immediately
+                    const userType = data.user.user_metadata?.user_type;
+                    if (userType === 'hire') {
+                        navigate('/company/dashboard');
+                    } else {
+                        navigate('/dashboard');
+                    }
+                } else if (data.user) {
+                    // Email confirmation required
                     setSuccessMessage('Conta criada! Verifique seu email para confirmar.');
                 }
             } else {
