@@ -77,6 +77,8 @@ export default function Login() {
                 setError('Por favor, verifique seu email antes de fazer login.');
             } else if (msg.includes('User already registered')) {
                 setError('Este email ja esta cadastrado. Faca login.');
+            } else if (msg.includes('rate_limit') || msg.includes('429') || msg.includes('over_email_send_rate_limit') || (err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 429)) {
+                setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
             } else {
                 setError('Erro ao fazer login. Tente novamente.');
             }
