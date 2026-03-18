@@ -135,7 +135,11 @@ export default function ProtectedRoute() {
     }
 
     if (!user) return <Navigate to="/" replace />;
-    if (onboardingRedirect) return <Navigate to={onboardingRedirect} replace />;
+
+    // Redirect to onboarding if not completed, but only if not already on the onboarding page
+    if (onboardingRedirect && location.pathname !== onboardingRedirect) {
+        return <Navigate to={onboardingRedirect} replace />;
+    }
 
     // Role isolation: prevent wrong role from accessing wrong routes
     if (user && !roleRedirect) {

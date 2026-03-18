@@ -113,6 +113,7 @@ export default function CompanyOnboarding() {
                 .from('companies')
                 .upsert({
                     id: userId,
+                    owner_id: userId,
                     name: formData.name,
                     cnpj: formData.cnpj.replace(/\D/g, ''),
                     company_type: formData.companyType,
@@ -130,7 +131,8 @@ export default function CompanyOnboarding() {
             // Create wallet for the company
             await WalletService.getOrCreateWallet(userId, 'company');
 
-            navigate('/company/dashboard');
+            // Full page reload to reset ProtectedRoute state after onboarding completion
+            window.location.href = '/company/dashboard';
         } catch (err: unknown) {
             logError('Error saving company profile:', err);
             addToast(err instanceof Error ? err.message : 'Erro ao salvar perfil. Tente novamente.', 'error');

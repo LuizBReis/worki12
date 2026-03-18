@@ -153,7 +153,8 @@ export default function WorkerOnboarding() {
             // Create wallet for the worker
             await WalletService.getOrCreateWallet(userId, 'worker');
 
-            navigate('/dashboard');
+            // Full page reload to reset ProtectedRoute state after onboarding completion
+            window.location.href = '/dashboard';
         } catch (err: unknown) {
             logError('Error saving worker profile:', err);
             addToast(err instanceof Error ? err.message : 'Erro ao salvar perfil. Tente novamente.', 'error');
