@@ -14,12 +14,20 @@ export default function Onboarding() {
           <img src="/worki.icon.png" alt="Worki Logo" className="w-8 h-8 object-contain" />
           <span className="text-2xl font-black tracking-tighter uppercase">Worki.</span>
         </div>
-        <button
-          onClick={() => navigate('/login')}
-          className="font-bold underline decoration-2 underline-offset-4 hover:decoration-primary transition-all"
-        >
-          Login
-        </button>
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => navigate('/sobre')}
+            className="font-bold text-gray-500 hover:text-black transition-colors"
+          >
+            Sobre
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="font-bold underline decoration-2 underline-offset-4 hover:decoration-primary transition-all"
+          >
+            Login
+          </button>
+        </div>
       </nav>
 
       {/* Hero Marquee - Abstract Representation without external lib */}
