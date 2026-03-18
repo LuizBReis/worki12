@@ -197,11 +197,11 @@ describe('Wallet - Calculo de taxa 5%', () => {
     const amountInput = screen.getByPlaceholderText('0.00')
     fireEvent.change(amountInput, { target: { value: '200' } })
 
-    // Fee = 200 * 0.05 = 10.00, Net = 200 * 0.95 = 190.00
+    // Fee = 200 * 0.05 = 10.00, Fixed = 3.00, Net = 200 - 10 - 3 = 187.00
     await waitFor(() => {
-      expect(screen.getByText('Taxa da plataforma (5%)')).toBeInTheDocument()
+      expect(screen.getByText('Taxa de servico (5%)')).toBeInTheDocument()
       expect(screen.getByText('- R$ 10.00')).toBeInTheDocument()
-      expect(screen.getByText('R$ 190.00')).toBeInTheDocument()
+      expect(screen.getByText('R$ 187.00')).toBeInTheDocument()
     })
   })
 })

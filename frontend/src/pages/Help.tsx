@@ -8,7 +8,7 @@ const faqs = [
     },
     {
         q: 'Qual a taxa cobrada?',
-        a: 'Empresas: 8% + R$ 4,00 ao contratar (cobrado no escrow). Workers: 5% + R$ 3,00 ao sacar via PIX. Depositos sao gratis.',
+        a: 'Empresas: 8% + R$ 4,00 cobrados no deposito. O saldo creditado ja e o valor liquido, e ao contratar o valor debitado e exatamente o orcamento do job. Workers: 5% + R$ 3,00 cobrados no saque via PIX.',
     },
     {
         q: 'Como faco para sacar meu saldo?',

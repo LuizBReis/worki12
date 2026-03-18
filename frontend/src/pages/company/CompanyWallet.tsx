@@ -78,15 +78,29 @@ export default function CompanyWallet() {
             case 'escrow_reserve': return <Lock size={20} />;
             case 'escrow_release': return <ArrowUpRight size={20} />;
             case 'credit': return <ArrowDownLeft size={20} />;
+            case 'platform_fee': return <DollarSign size={20} />;
             default: return <DollarSign size={20} />;
         }
     };
 
     const getTransactionColor = (type: string, amount: number) => {
+        if (type === 'platform_fee') {
+            return 'text-orange-600 bg-orange-100';
+        }
         if (type === 'initial_balance' || type === 'credit' || amount > 0) {
             return 'text-green-600 bg-green-100';
         }
         return 'text-red-600 bg-red-100';
+    };
+
+    const getTransactionLabel = (t: WalletTransaction) => {
+        if (t.type === 'credit') {
+            return t.description || 'Deposito via PIX';
+        }
+        if (t.type === 'platform_fee') {
+            return t.description || 'Taxa de servico';
+        }
+        return t.description || t.type;
     };
 
     if (loading) return (
@@ -199,11 +213,11 @@ export default function CompanyWallet() {
                                     {getTransactionIcon(t.type)}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-sm">{t.description || t.type}</h4>
+                                    <h4 className="font-bold text-sm">{getTransactionLabel(t)}</h4>
                                     <p className="text-xs text-gray-400">{formatDate(t.created_at)}</p>
                                 </div>
                             </div>
-                            <span className={`text-lg font-black ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <span className={`text-lg font-black ${t.type === 'platform_fee' ? 'text-orange-600' : t.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {t.amount >= 0 ? '+' : ''} R$ {Math.abs(t.amount).toFixed(2).replace('.', ',')}
                             </span>
                         </div>

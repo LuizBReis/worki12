@@ -156,9 +156,8 @@ export default function CompanyCreateJob() {
                     return;
                 }
 
-                const totalWithFees = parseFloat((budgetAmount + budgetAmount * 0.08 + 4.00).toFixed(2));
-                if (companyBalance < totalWithFees) {
-                    addToast(`Saldo insuficiente. Voce tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${totalWithFees.toFixed(2)} (servico + taxas).`, 'error');
+                if (companyBalance < budgetAmount) {
+                    addToast(`Saldo insuficiente. Voce tem R$ ${companyBalance.toFixed(2)} mas precisa de R$ ${budgetAmount.toFixed(2)}.`, 'error');
                     setLoading(false);
                     return;
                 }
@@ -198,9 +197,8 @@ export default function CompanyCreateJob() {
                     throw new Error(escrowResult.error || 'Erro ao reservar pagamento');
                 }
 
-                // Update local balance (amount + 8% service fee + R$4 processing)
-                const deductedTotal = parseFloat((budgetAmount + budgetAmount * 0.08 + 4.00).toFixed(2));
-                setCompanyBalance(prev => prev - deductedTotal);
+                // Update local balance (exact budget amount, fees already paid on deposit)
+                setCompanyBalance(prev => prev - budgetAmount);
             }
 
             addToast(isEditing ? 'Vaga atualizada com sucesso!' : 'Vaga criada com sucesso!', 'success');
@@ -354,10 +352,7 @@ export default function CompanyCreateJob() {
                             {/* Balance Card */}
                             {!isEditing && (() => {
                                 const budgetVal = parseFloat(formData.budget || '0');
-                                const serviceFee = parseFloat((budgetVal * 0.08).toFixed(2));
-                                const processingFee = 4.00;
-                                const totalCost = budgetVal > 0 ? parseFloat((budgetVal + serviceFee + processingFee).toFixed(2)) : 0;
-                                const insufficientBalance = totalCost > companyBalance;
+                                const insufficientBalance = budgetVal > companyBalance;
 
                                 return (
                                     <>
@@ -382,26 +377,14 @@ export default function CompanyCreateJob() {
                                             )}
                                         </div>
 
-                                        {/* Fee Breakdown */}
+                                        {/* Budget info - no extra fees */}
                                         {budgetVal > 0 && (
                                             <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Valor do servico</span>
-                                                    <span className="font-bold">R$ {budgetVal.toFixed(2).replace('.', ',')}</span>
+                                                <div className="flex justify-between border-b border-gray-200 pb-2">
+                                                    <span className="font-black uppercase">Orcamento do servico</span>
+                                                    <span className="font-black text-lg">R$ {budgetVal.toFixed(2).replace('.', ',')}</span>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Taxa de servico (8%)</span>
-                                                    <span className="font-bold text-orange-600">R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Taxa de processamento</span>
-                                                    <span className="font-bold text-orange-600">R$ {processingFee.toFixed(2).replace('.', ',')}</span>
-                                                </div>
-                                                <div className="flex justify-between border-t-2 border-black pt-2">
-                                                    <span className="font-black uppercase">Total a debitar</span>
-                                                    <span className="font-black text-lg">R$ {totalCost.toFixed(2).replace('.', ',')}</span>
-                                                </div>
-                                                <p className="text-xs text-gray-400 mt-1">A taxa garante pagamento seguro via escrow, verificacao de profissionais e suporte.</p>
+                                                <p className="text-xs text-gray-400 mt-1">Taxas ja foram cobradas no deposito. O valor debitado do seu saldo e exatamente o orcamento, sem custos extras.</p>
                                             </div>
                                         )}
                                     </>

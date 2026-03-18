@@ -120,7 +120,7 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                 {!pixUrl ? (
                     <div className="space-y-6">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Valor do Depósito (R$)</label>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Valor do Deposito (R$)</label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
                                 <input
@@ -132,9 +132,40 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
                                     placeholder="0.00"
                                 />
                             </div>
-                            <p className="text-xs font-semibold text-gray-500 mt-3 flex items-start gap-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
+
+                            {/* Fee breakdown */}
+                            {(() => {
+                                const depositVal = parseFloat(amount.replace(',', '.')) || 0;
+                                if (depositVal <= 0) return null;
+                                const serviceFee = parseFloat((depositVal * 0.08).toFixed(2));
+                                const processingFee = 4.00;
+                                const creditAmount = Math.max(0, parseFloat((depositVal - serviceFee - processingFee).toFixed(2)));
+
+                                return (
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-3 space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Valor depositado</span>
+                                            <span className="font-bold">R$ {depositVal.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Taxa de servico (8%)</span>
+                                            <span className="font-bold text-red-500">- R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Taxa de processamento</span>
+                                            <span className="font-bold text-red-500">- R$ {processingFee.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                        <div className="flex justify-between border-t-2 border-black pt-2">
+                                            <span className="font-black uppercase">Credito adicionado ao saldo</span>
+                                            <span className="font-black text-lg text-green-600">R$ {creditAmount.toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            <p className="text-xs font-semibold text-gray-500 mt-3 flex items-start gap-1.5 bg-blue-50 p-3 rounded-xl border border-blue-100">
                                 <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0" aria-hidden="true"></span>
-                                <span>Deposito gratis! O valor e adicionado ao seu saldo sem cobranca adicional. Taxas sao aplicadas apenas na contratacao (8% + R$ 4,00) e no saque (5% + R$ 3,00).</span>
+                                <span>Suas taxas sao cobradas no deposito. Ao contratar, o valor debitado e exatamente o orcamento do job, sem custos extras.</span>
                             </p>
                         </div>
                         <button

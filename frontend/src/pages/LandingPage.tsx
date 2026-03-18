@@ -88,7 +88,7 @@ export default function LandingPage() {
               {
                 icon: <CreditCard className="w-10 h-10 text-primary" />,
                 title: 'Taxa Justa e Transparente',
-                description: 'Taxa de servico competitiva e transparente. Sem mensalidades, sem cobranças escondidas. Depositos gratis, voce so paga quando contrata ou saca.'
+                description: 'Taxa de servico competitiva e transparente. Sem mensalidades, sem cobranças escondidas. Empresas pagam taxas no deposito e contratam sem custos extras. Workers pagam apenas no saque.'
               },
               {
                 icon: <Clock className="w-10 h-10 text-blue-600" />,

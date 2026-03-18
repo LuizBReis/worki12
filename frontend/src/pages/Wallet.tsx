@@ -295,7 +295,7 @@ export default function Wallet() {
                                             <span className="font-bold">Voce recebe via PIX</span>
                                             <span className="font-black text-green-600">R$ {wNet.toFixed(2)}</span>
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-1">Taxa fixa de processamento + 5% de servico. Sem surpresas.</p>
+                                        <p className="text-xs text-gray-400 mt-1">Taxas cobradas apenas no saque. Seu saldo na plataforma e o valor bruto ganho nos jobs.</p>
                                     </div>
                                 );
                             })()}
