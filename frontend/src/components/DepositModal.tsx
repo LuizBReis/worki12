@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { WalletService } from '../services/walletService';
-import { Loader2, X, ExternalLink, QrCode } from 'lucide-react';
+import { Loader2, X, ExternalLink, CreditCard, Landmark, Smartphone, Wallet } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { supabase } from '../lib/supabase';
@@ -11,10 +11,21 @@ interface DepositModalProps {
     onSuccess: () => void;
 }
 
+const PAYMENT_METHODS = [
+    { value: 'PIX', label: 'PIX', icon: Smartphone, tag: 'Instantaneo' },
+    { value: 'CREDIT_CARD', label: 'Cartao de Credito', icon: CreditCard, tag: 'Imediato' },
+    { value: 'BOLETO', label: 'Boleto Bancario', icon: Landmark, tag: '1-3 dias' },
+    { value: 'UNDEFINED', label: 'Escolher depois', icon: Wallet, tag: 'Na fatura' },
+];
+
+const SERVICE_FEE_PCT = 0.08;
+const PROCESSING_FEE = 4.00;
+const MIN_DEPOSIT = 50;
+
 export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) {
     const { addToast } = useToast();
     const [amount, setAmount] = useState<string>('');
-    const [billingType, setBillingType] = useState<string>('UNDEFINED');
+    const [billingType, setBillingType] = useState<string>('PIX');
     const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [userDoc, setUserDoc] = useState<{ name: string; cpfCnpj: string } | null>(null);
@@ -22,16 +33,15 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
     useEffect(() => {
         if (isOpen) {
-            const input = trapRef.current?.querySelector<HTMLInputElement>('input');
-            input?.focus();
+            setAmount('');
+            setBillingType('PIX');
+            setInvoiceUrl(null);
 
-            // Fetch user's CPF/CNPJ from profile
             (async () => {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
                 const userType = user.user_metadata?.user_type;
                 if (userType === 'hire') {
-                    // Try owner_id first, fallback to id (legacy accounts)
                     let { data } = await supabase.from('companies').select('name, cnpj').eq('owner_id', user.id).single();
                     if (!data) {
                         ({ data } = await supabase.from('companies').select('name, cnpj').eq('id', user.id).single());
@@ -47,27 +57,24 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
     if (!isOpen) return null;
 
+    const depositVal = parseFloat(amount.replace(',', '.')) || 0;
+    const serviceFee = parseFloat((depositVal * SERVICE_FEE_PCT).toFixed(2));
+    const creditAmount = depositVal > 0 ? Math.max(0, parseFloat((depositVal - serviceFee - PROCESSING_FEE).toFixed(2))) : 0;
+    const isValid = depositVal >= MIN_DEPOSIT && depositVal <= 50000;
+
     const handleInitiate = async () => {
-        const value = parseFloat(amount.replace(',', '.'));
-        if (!value || value < 50) {
-            addToast('O valor mínimo para depósito é R$ 50,00', 'error');
+        if (!isValid) {
+            addToast(`Valor minimo: R$ ${MIN_DEPOSIT},00`, 'error');
             return;
         }
-        if (value > 50000) {
-            addToast('O valor máximo para depósito é R$ 50.000,00', 'error');
+        if (!userDoc?.cpfCnpj) {
+            addToast('CPF ou CNPJ nao encontrado. Atualize seu perfil.', 'error');
             return;
         }
 
         setLoading(true);
-        if (!userDoc?.cpfCnpj) {
-            addToast('CPF ou CNPJ não encontrado no seu perfil. Atualize seu perfil primeiro.', 'error');
-            setLoading(false);
-            return;
-        }
-
-        // Calls the backend to generate the Asaas charge
         const result = await WalletService.createDeposit({
-            amount: value,
+            amount: depositVal,
             name: userDoc.name,
             cpfCnpj: userDoc.cpfCnpj,
             billingType,
@@ -76,154 +83,170 @@ export default function DepositModal({ isOpen, onClose, onSuccess }: DepositModa
 
         if (result.invoiceUrl || result.pixQrCodeUrl) {
             setInvoiceUrl(result.invoiceUrl || result.pixQrCodeUrl || null);
-            addToast('Fatura gerada! Abra para pagar.', 'success');
         } else {
-            addToast(result.error || 'Erro ao iniciar depósito', 'error');
+            addToast(result.error || 'Erro ao gerar fatura', 'error');
         }
     };
 
     const handleClose = () => {
-        if (invoiceUrl) {
-            onSuccess();
-        }
+        if (invoiceUrl) onSuccess();
         onClose();
     };
 
     return (
         <div
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
             onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
         >
             <div
                 ref={trapRef}
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby="deposit-modal-title"
-                className="bg-white rounded-3xl w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-200 shadow-2xl"
+                aria-labelledby="deposit-title"
+                className="bg-white rounded-2xl w-full max-w-[440px] relative animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden"
             >
-                <button
-                    onClick={handleClose}
-                    aria-label="Fechar"
-                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition-colors bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center"
-                >
-                    <X size={20} />
-                </button>
-
-                <div className="flex flex-col items-center mb-6">
-                    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4 shadow-sm border border-blue-100">
-                        <QrCode size={32} />
-                    </div>
-                    <h3 id="deposit-modal-title" className="text-2xl font-black uppercase text-gray-900 tracking-tight text-center">Adicionar Créditos</h3>
-                    <p className="text-sm font-medium text-gray-500 text-center mt-2 max-w-[280px]">
-                        Compre créditos pagando no PIX, Boleto ou Cartão de Crédito. O saldo entra assim que o pagamento for aprovado.
-                    </p>
+                {/* Header — compact, Stripe-like */}
+                <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <h3 id="deposit-title" className="text-lg font-bold text-gray-900">Adicionar creditos</h3>
+                    <button
+                        onClick={handleClose}
+                        aria-label="Fechar"
+                        className="text-gray-400 hover:text-gray-900 transition-colors w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-200"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
                 {!invoiceUrl ? (
-                    <div className="space-y-6">
+                    <div className="p-6 space-y-5">
+
+                        {/* Amount input */}
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Valor do Deposito (R$)</label>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Valor</label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">R$</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">R$</span>
                                 <input
                                     type="number"
-                                    aria-label="Valor do depósito"
+                                    aria-label="Valor do deposito"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
-                                    className="w-full border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-4 focus:border-black focus:ring-0 outline-none font-black text-2xl text-gray-900 transition-all placeholder:text-gray-300"
-                                    placeholder="0.00"
+                                    min={MIN_DEPOSIT}
+                                    className="w-full border border-gray-300 rounded-lg pl-12 pr-4 py-3 focus:border-black focus:ring-1 focus:ring-black outline-none font-bold text-xl text-gray-900 transition-all placeholder:text-gray-300 placeholder:font-normal"
+                                    placeholder={`${MIN_DEPOSIT},00`}
+                                    autoFocus
                                 />
                             </div>
+                            {depositVal > 0 && depositVal < MIN_DEPOSIT && (
+                                <p className="text-xs text-red-500 mt-1 font-medium">Minimo R$ {MIN_DEPOSIT},00</p>
+                            )}
+                        </div>
 
-                            {/* Fee breakdown */}
-                            {(() => {
-                                const depositVal = parseFloat(amount.replace(',', '.')) || 0;
-                                if (depositVal <= 0) return null;
-                                const serviceFee = parseFloat((depositVal * 0.08).toFixed(2));
-                                const processingFee = 4.00;
-                                const creditAmount = Math.max(0, parseFloat((depositVal - serviceFee - processingFee).toFixed(2)));
-
-                                return (
-                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-3 space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Valor depositado</span>
-                                            <span className="font-bold">R$ {depositVal.toFixed(2).replace('.', ',')}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Taxa de servico Worki (8%)</span>
-                                            <span className="font-bold text-red-500">- R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Taxa do operador financeiro</span>
-                                            <span className="font-bold text-red-500">- R$ {processingFee.toFixed(2).replace('.', ',')}</span>
-                                        </div>
-                                        <div className="flex justify-between border-t-2 border-black pt-2">
-                                            <span className="font-black uppercase">Credito adicionado ao saldo</span>
-                                            <span className="font-black text-lg text-green-600">R$ {creditAmount.toFixed(2).replace('.', ',')}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            <p className="text-xs font-semibold text-gray-500 mt-3 flex items-start gap-1.5 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 shrink-0" aria-hidden="true"></span>
-                                <span>Suas taxas sao cobradas no deposito. Ao contratar, o valor debitado e exatamente o orcamento do job, sem custos extras.</span>
+                        {/* Payment method tabs — Stripe style */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Forma de pagamento</label>
+                            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                                {PAYMENT_METHODS.map(method => {
+                                    const Icon = method.icon;
+                                    const selected = billingType === method.value;
+                                    return (
+                                        <button
+                                            key={method.value}
+                                            type="button"
+                                            onClick={() => setBillingType(method.value)}
+                                            className={`flex-1 py-2 px-1 rounded-md text-center transition-all ${
+                                                selected
+                                                    ? 'bg-white shadow-sm text-gray-900 font-bold'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            <Icon size={18} className="mx-auto mb-0.5" />
+                                            <span className="text-[10px] block leading-tight">{method.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[11px] text-gray-400 mt-1.5 text-center">
+                                {PAYMENT_METHODS.find(m => m.value === billingType)?.tag}
                             </p>
                         </div>
 
-                        {/* Payment method selector */}
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Forma de Pagamento</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[
-                                    { value: 'UNDEFINED', label: 'Todas', desc: 'Escolha na fatura' },
-                                    { value: 'PIX', label: 'PIX', desc: 'Aprovacao instantanea' },
-                                    { value: 'BOLETO', label: 'Boleto', desc: 'Ate 3 dias uteis' },
-                                    { value: 'CREDIT_CARD', label: 'Cartao', desc: 'Aprovacao imediata' },
-                                ].map(opt => (
-                                    <button
-                                        key={opt.value}
-                                        type="button"
-                                        onClick={() => setBillingType(opt.value)}
-                                        className={`p-3 rounded-xl border-2 text-left transition-all ${billingType === opt.value ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-gray-400'}`}
-                                    >
-                                        <span className="font-bold text-sm block">{opt.label}</span>
-                                        <span className={`text-xs ${billingType === opt.value ? 'text-gray-300' : 'text-gray-400'}`}>{opt.desc}</span>
-                                    </button>
-                                ))}
+                        {/* Fee breakdown — only shows when amount is valid */}
+                        {isValid && (
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="divide-y divide-gray-100">
+                                    <div className="flex justify-between px-4 py-2.5 text-sm">
+                                        <span className="text-gray-500">Deposito</span>
+                                        <span className="font-semibold text-gray-900">R$ {depositVal.toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                    <div className="flex justify-between px-4 py-2.5 text-sm">
+                                        <span className="text-gray-500">Taxa Worki (8%)</span>
+                                        <span className="font-semibold text-gray-500">- R$ {serviceFee.toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                    <div className="flex justify-between px-4 py-2.5 text-sm">
+                                        <span className="text-gray-500">Operador financeiro</span>
+                                        <span className="font-semibold text-gray-500">- R$ {PROCESSING_FEE.toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+                                    <span className="font-bold text-gray-900">Credito no saldo</span>
+                                    <span className="font-bold text-lg text-green-600">R$ {creditAmount.toFixed(2).replace('.', ',')}</span>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
+                        {/* Info text */}
+                        <p className="text-[11px] text-gray-400 text-center leading-relaxed">
+                            Ao contratar, o valor debitado e exatamente o orcamento do job. Sem custos extras.
+                        </p>
+
+                        {/* Submit button */}
                         <button
                             onClick={handleInitiate}
-                            disabled={loading || !amount}
-                            className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase text-sm hover:bg-gray-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex justify-center items-center gap-2 shadow-xl shadow-black/10 disabled:opacity-50 disabled:hover:scale-100"
+                            disabled={loading || !isValid}
+                            className="w-full bg-black text-white py-3.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition-all flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Gerar Fatura'}
+                            {loading ? (
+                                <Loader2 className="animate-spin" size={18} />
+                            ) : (
+                                <>Pagar R$ {depositVal > 0 ? depositVal.toFixed(2).replace('.', ',') : '0,00'}</>
+                            )}
                         </button>
+
+                        <p className="text-[10px] text-gray-300 text-center">
+                            Pagamento processado com seguranca pelo Asaas
+                        </p>
                     </div>
                 ) : (
-                    <div className="space-y-6 text-center animate-in fade-in slide-in-from-bottom-4">
-                        <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border border-emerald-100 font-bold text-sm">
-                            <p>Fatura gerada com sucesso!</p>
-                            <p className="text-xs font-medium text-emerald-600/80 mt-1">Abra o link para pagar usando PIX, Boleto ou Cartão. O saldo será adicionado após a leitura do Asaas.</p>
+                    /* Success state */
+                    <div className="p-6 space-y-5">
+                        <div className="text-center py-2">
+                            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h4 className="text-lg font-bold text-gray-900">Fatura gerada</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Clique abaixo para abrir e pagar. O credito sera adicionado automaticamente apos a confirmacao.
+                            </p>
                         </div>
 
                         <a
                             href={invoiceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-sm hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] transition-all flex justify-center items-center gap-2 shadow-xl shadow-blue-600/20"
+                            className="w-full bg-black text-white py-3.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition-all flex justify-center items-center gap-2"
                         >
-                            <ExternalLink size={18} />
-                            Abrir Fatura de Pagamento
+                            <ExternalLink size={16} />
+                            Abrir fatura de pagamento
                         </a>
 
                         <button
                             onClick={handleClose}
-                            className="w-full px-4 py-3 text-sm font-bold uppercase text-gray-500 hover:text-gray-900 transition-colors"
+                            className="w-full py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors"
                         >
-                            Já Paguei / Fechar
+                            Ja paguei / Fechar
                         </button>
                     </div>
                 )}
